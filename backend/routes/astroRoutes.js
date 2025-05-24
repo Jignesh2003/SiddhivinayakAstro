@@ -4,7 +4,7 @@ import express from "express";
 
 const router = express.Router();
 
-router.post("/astrologer-signup",authMiddleware, astrologerSignup);
+router.post("/astrologer-signup", astrologerSignup);
 
 router.get("/list", authMiddleware, astrologerList);
 

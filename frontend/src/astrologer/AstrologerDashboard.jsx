@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { MessageSquare, CalendarDays, User } from "lucide-react";
+import { MessageSquare, User } from "lucide-react";
 import AstrologerSidebar from "./AstrologerSidebar"; // Adjust path as necessary
 
 const AstrologerDashboard = () => {
