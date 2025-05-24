@@ -31,10 +31,6 @@ const AstrologerDashboard = () => {
           <div className="bg-white p-6 rounded-xl shadow border border-gray-200">
             <div className="flex items-center gap-4">
               <CalendarDays className="w-8 h-8 text-green-500" />
-              <div>
-                <h2 className="text-lg font-medium text-gray-800">Today’s Schedule</h2>
-                <p className="text-sm text-gray-500">Check your upcoming appointments</p>
-              </div>
             </div>
           </div>
 
