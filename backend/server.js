@@ -23,7 +23,7 @@ app.use(cookieParser());
 app.use(cors({
   origin: [
     "https://siddhivinayak-astro.vercel.app/",
-    "http://localhost:5173",
+    // "http://localhost:5173",
   ],
   credentials: true,
 }));
@@ -41,7 +41,7 @@ const io = new Server(server, {
   cors: {
     origin: [
       "https://siddhivinayak-astro.vercel.app/",
-      "http://localhost:5173",
+      // "http://localhost:5173",
     ],
     credentials: true,
   },
