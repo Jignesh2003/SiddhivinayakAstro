@@ -22,7 +22,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
   origin: [
-    "https://siddhivinayak-astro.vercel.app/",
+    "https://siddhivinayak-astro.vercel.app",
     // "http://localhost:5173",
   ],
   credentials: true,
@@ -40,7 +40,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: [
-      "https://siddhivinayak-astro.vercel.app/",
+      "https://siddhivinayak-astro.vercel.app",
       // "http://localhost:5173",
     ],
     credentials: true,
