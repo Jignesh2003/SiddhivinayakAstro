@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import assets from "../assets/assets";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "react-toastify";
 import ClipLoader from "react-spinners/ClipLoader";
@@ -40,6 +40,7 @@ const AstrologerSignup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate()
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -70,6 +71,7 @@ const AstrologerSignup = () => {
 
       toast.success("Signup successful! Please verify your account.", { position: "top-right" });
       setForm(initialValues);
+      setTimeout(()=> navigate("/login"),3000)
     } catch (err) {
       console.error(err.response?.data || err.message);
       toast.error(err?.response?.data?.message || "Signup failed.", { position: "top-right" });
