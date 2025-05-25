@@ -1,17 +1,28 @@
 import Message from "../models/message.js";
 import { endSession } from "../utils/endSession.js";
 import ChatSession from "../models/chatSession.js";
+import User from "../models/User.js"; // 👈 Import User model
 
 const activeUsersInRoom = {}; // { sessionId: Set of socketIds }
+const userSocketMap = {}; // 👈 { socketId: userId }
 
 export const setupSocketHandlers = (io) => {
   io.on("connection", (socket) => {
     console.log("🟢 Socket connected:", socket.id);
 
-    socket.on("register", ({ userId }) => {
+    socket.on("register", async ({ userId }) => {
       if (userId) {
         socket.join(userId);
+        userSocketMap[socket.id] = userId;
+
         console.log(`✅ User ${userId} joined personal room`);
+
+        try {
+          await User.findByIdAndUpdate(userId, { isOnline: true });
+          console.log(`🟢 User ${userId} set isOnline: true`);
+        } catch (err) {
+          console.error("❌ Error updating isOnline true:", err.message);
+        }
       }
     });
 
@@ -50,12 +61,12 @@ export const setupSocketHandlers = (io) => {
     const handleUserLeavingSession = async (sessionId, socketId) => {
       const roomSet = activeUsersInRoom[sessionId];
       if (!roomSet) {
-        console.log(`⚠️ handleUserLeavingSession: no active room for ${sessionId}`);
+        console.log(`⚠️ No active room for ${sessionId}`);
         return;
       }
 
       if (!roomSet.has(socketId)) {
-        console.log(`⚠️ handleUserLeavingSession: socket ${socketId} not found in room ${sessionId}`);
+        console.log(`⚠️ Socket ${socketId} not found in room ${sessionId}`);
       } else {
         console.log(`👋 Socket ${socketId} is leaving room ${sessionId}`);
       }
@@ -77,7 +88,7 @@ export const setupSocketHandlers = (io) => {
             console.log(`🟡 All users left but no messages. Not ending session ${sessionId}`);
           }
         } catch (err) {
-          console.error("❌ Error checking/ending session:", err.message);
+          console.error("❌ Error ending session:", err.message);
         }
       } else {
         try {
@@ -95,11 +106,11 @@ export const setupSocketHandlers = (io) => {
     };
 
     socket.on("leave-room", async (sessionId) => {
-      if (!sessionId) 
-        {
-          console.log("⚠️ leave-room called with empty sessionId");
-          return;
-        }
+      if (!sessionId) {
+        console.log("⚠️ leave-room called with empty sessionId");
+        return;
+      }
+
       socket.leave(sessionId);
       console.log(`👋 Socket ${socket.id} requested to leave room ${sessionId}`);
 
@@ -108,6 +119,18 @@ export const setupSocketHandlers = (io) => {
 
     socket.on("disconnect", async () => {
       console.log("🔴 Socket disconnected:", socket.id);
+
+      const userId = userSocketMap[socket.id];
+      if (userId) {
+        try {
+          await User.findByIdAndUpdate(userId, { isOnline: false });
+          console.log(`🔴 User ${userId} set isOnline: false`);
+        } catch (err) {
+          console.error("❌ Error updating isOnline false:", err.message);
+        }
+        delete userSocketMap[socket.id];
+      }
+
       for (const [sessionId, socketSet] of Object.entries(activeUsersInRoom)) {
         if (socketSet.has(socket.id)) {
           console.log(`🔔 Socket ${socket.id} was in session ${sessionId} before disconnect`);

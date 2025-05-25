@@ -78,10 +78,21 @@ export const astrologerSignup = async (req, res) => {
 
 export const astrologerList = async (req, res) => {
   try {
-    const astrologers = await User.find({ role: "astrologer" })
+    const filter = { role: "astrologer" };
+
+    // Optional online filter
+    if (req.query.isOnline === "true") {
+      filter.isOnline = true;
+    }
+
+    // You can add more filters in the future, like:
+    // if (req.query.expertise) filter.expertise = req.query.expertise;
+
+    const astrologers = await User.find(filter);
     res.status(200).json(astrologers);
   } catch (err) {
     console.error("Error fetching astrologer list:", err);
     res.status(500).json({ message: "Server error while fetching astrologers" });
   }
-}
+};
+

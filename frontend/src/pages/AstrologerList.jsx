@@ -13,11 +13,13 @@ const AstrologerList = () => {
   useEffect(() => {
     const fetchAstrologers = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_ASTRO_URL}/list`, {
+        const res = await axios.get(`${import.meta.env.VITE_ASTRO_URL}/list?isOnline=true`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.status === 200) {
           setAstrologers(res.data);
+          console.log(res);
+          
         } else {
           console.error("Failed to fetch astrologers");
         }

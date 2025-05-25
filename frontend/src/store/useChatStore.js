@@ -1,10 +1,9 @@
-// store/useChatStore.js
 import { create } from "zustand";
 import { io } from "socket.io-client";
 
-let socket;
+const useChatStore = create((set, get) => {
+  let socket;
 
-const useChatStore = create(() => {
   if (!socket) {
     socket = io(`${import.meta.env.VITE_SOCKET_URL}`, {
       withCredentials: true,
@@ -12,6 +11,13 @@ const useChatStore = create(() => {
 
     socket.on("connect", () => {
       console.log("🟢 Connected to socket:", socket.id);
+      
+      // If userId already exists in state, register it now
+      const uid = get().userId;
+      if (uid) {
+        console.log("📲 Auto-registering after connect with userId:", uid);
+        socket.emit("register", { userId: uid });
+      }
     });
 
     socket.on("disconnect", () => {
@@ -21,6 +27,17 @@ const useChatStore = create(() => {
 
   return {
     socket,
+    userId: null,  // store userId here
+
+    setUserId: (id) => {
+      set({ userId: id });
+
+      // Register on socket if connected
+      if (socket.connected && id) {
+        console.log("📲 Registering user:", id);
+        socket.emit("register", { userId: id });
+      }
+    },
 
     leaveRoom: (sessionId) => {
       if (sessionId) {
@@ -30,10 +47,7 @@ const useChatStore = create(() => {
     },
 
     register: (userId) => {
-      if (userId) {
-        console.log("📲 Registering user:", userId);
-        socket.emit("register", { userId });
-      }
+      get().setUserId(userId);
     },
 
     joinRoom: (sessionId) => {
@@ -63,11 +77,10 @@ const useChatStore = create(() => {
       socket.off("session-ended");
     },
 
-    // ✅ Add this to allow emitting "session-ended"
     emitSessionEnded: (sessionId) => {
       if (sessionId) {
         console.log("📢 Emitting session-ended:", sessionId);
-        socket.emit("session-ended", { sessionId }); // ✅ FIXED: match the listener
+        socket.emit("session-ended", { sessionId });
       }
     },
   };
