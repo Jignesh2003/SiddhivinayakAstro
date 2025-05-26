@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import useChatStore from "../store/useChatStore";
 import useAuthStore from "../store/useAuthStore";
 import { SendHorizonal, LogOut } from "lucide-react";
+import assets from "../assets/assets";
 
 const ChatBox = () => {
   const userId = useAuthStore((state) => state.userId);
@@ -97,10 +98,10 @@ const ChatBox = () => {
   }, [sessionId, token, userId, isNewSession]);
 
   useEffect(() => {
-    if (!sessionId)  {
-      console.log(`📡 Joining room: ${sessionId}`)
+    if (!sessionId) {
+      console.log(`📡 Joining room: ${sessionId}`);
       return;
-    }  
+    }
 
     joinRoom(sessionId);
 
@@ -129,7 +130,7 @@ const ChatBox = () => {
 
     const handleUserLeft = ({ sessionId: leftId, socketId }) => {
       console.log("⚠️ user-left event received:", { leftId, socketId });
-            if (leftId === sessionId) {
+      if (leftId === sessionId) {
         toast("The other person has left the room.");
       }
     };
@@ -177,9 +178,17 @@ const ChatBox = () => {
   };
 
   return (
-    <div className="flex flex-col w-full max-w-2xl mx-auto h-[70vh] mt-10 border rounded-2xl shadow-lg p-4 bg-white">
+    <div
+      className="flex flex-col w-full sm:max-w-2xl max-w-full mx-auto h-[70vh] mt-6 sm:mt-10 border rounded-2xl shadow-lg p-4 bg-white"
+      style={{
+        backgroundImage: `url(${assets.GalaxyBackground})`,
+        backgroundSize: "cover",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+      }}
+    >
       <div className="flex justify-between items-center mb-4 border-b pb-2">
-        <h2 className="text-xl font-semibold text-gray-800">Chat Session</h2>
+        <h2 className="text-base sm:text-xl font-semibold text-white">Chat Session</h2>
         <button
           onClick={handleEndChat}
           className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800"
@@ -189,7 +198,7 @@ const ChatBox = () => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-2 px-2">
+      <div className="flex-1 overflow-y-auto space-y-2 px-1 sm:px-2">
         {loading ? (
           <p className="text-center text-gray-500 mt-4">Loading messages...</p>
         ) : error ? (
@@ -234,7 +243,7 @@ const ChatBox = () => {
       <div className="mt-4 flex items-center gap-2 border-t pt-4">
         <input
           type="text"
-          className="flex-1 rounded-full border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="flex-1 rounded-full border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 text-white focus:ring-blue-400"
           placeholder="Type a message..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -244,7 +253,7 @@ const ChatBox = () => {
         <button
           onClick={handleSend}
           disabled={!receiverId || loading || input.trim() === ""}
-          className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
+          className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-200 disabled:opacity-50"
         >
           <SendHorizonal className="w-5 h-5" />
         </button>

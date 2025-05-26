@@ -4,6 +4,7 @@ import { MessageSquare, User } from "lucide-react";
 import useChatStore from "../store/useChatStore";
 import useAuthStore from "../store/useAuthStore";
 import AstrologerSidebar from "./AstrologerSidebar"; // Adjust path as necessary
+import assets from "../assets/assets";
 
 const AstrologerDashboard = () => {
   const navigate = useNavigate();
@@ -19,37 +20,50 @@ const AstrologerDashboard = () => {
   }, [userId, register]);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div
+      className="flex flex-col md:flex-row min-h-screen bg-gray-50"
+      style={{
+        backgroundImage: `url(${assets.GalaxyBackground})`,
+        backgroundSize: "cover",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+      }}
+    >
       {/* Sidebar */}
-      <AstrologerSidebar />
+      <div className="w-full md:w-1/4">
+        <AstrologerSidebar />
+      </div>
 
       {/* Main Content */}
-      <main className="flex-1 p-8">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-6">
+      <main className="flex-1 p-4 sm:p-6 md:p-8">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white mb-6">
           Welcome, Astrologer
         </h1>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           <div
             onClick={() => navigate("/astrologer-chat-request")}
-            className="cursor-pointer bg-white p-6 rounded-xl shadow hover:shadow-lg transition duration-300 border border-gray-200"
+            className="cursor-pointer bg-white p-4 sm:p-6 rounded-xl shadow hover:shadow-lg transition duration-300 border border-gray-200"
           >
             <div className="flex items-center gap-4">
-              <MessageSquare className="w-8 h-8 text-blue-500" />
+              <MessageSquare className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500" />
               <div>
-                <h2 className="text-lg font-medium text-gray-800">Chat Requests</h2>
+                <h2 className="text-base sm:text-lg font-medium text-gray-800">Chat Requests</h2>
                 <p className="text-sm text-gray-500">
                   View and respond to user chat requests
                 </p>
               </div>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-xl shadow border border-gray-200">
+
+          <div className="bg-white p-4 sm:p-6 rounded-xl shadow border border-gray-200">
             <div className="flex items-center gap-4">
-              <User className="w-8 h-8 text-purple-500" />
+              <User className="w-6 h-6 sm:w-8 sm:h-8 text-purple-500" />
               <div>
-                <h2 className="text-lg font-medium text-gray-800">Profile</h2>
-                <p className="text-sm text-gray-500">Update your profile and settings</p>
+                <h2 className="text-base sm:text-lg font-medium text-gray-800">Profile</h2>
+                <p className="text-sm text-gray-500">
+                  Update your profile and settings
+                </p>
               </div>
             </div>
           </div>

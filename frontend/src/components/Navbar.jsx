@@ -1,4 +1,3 @@
-//responsive below 1017 resolution
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -20,21 +19,17 @@ const Navbar = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const menuRef = useRef(null);
-  const navigate = useNavigate();
   const audioRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const checkAuth = async () => {
-      console.log("is auth :",isAuthenticated);
-      
       try {
         const { token } = useAuthStore.getState();
-        if (!token) return
+        if (!token) return;
         const response = await axios.get(
           `${import.meta.env.VITE_BASE_URL}/checking-auth`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         if (response.status === 200) {
           const { role, isVerified, userId } = response.data;
@@ -51,16 +46,12 @@ const Navbar = () => {
   }, [login, logout]);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
         setIsOpen(false);
       }
     };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
+    if (isOpen) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
@@ -70,25 +61,15 @@ const Navbar = () => {
         try {
           await audioRef.current.play();
           setIsPlaying(true);
-        } catch (err) {
-          console.log("Autoplay Blocked:", err);
+        } catch {
           setIsPlaying(false);
-          document.addEventListener("click", playOnUserInteraction, { once: true });
+          document.addEventListener("click", playAudio, { once: true });
         }
       };
       playAudio();
     }
-
-    return () => {
-      document.removeEventListener("click", playOnUserInteraction);
-    };
+    return () => document.removeEventListener("click", () => {});
   }, []);
-
-  const playOnUserInteraction = () => {
-    if (audioRef.current) {
-      audioRef.current.play().then(() => setIsPlaying(true)).catch((err) => console.log("Error Playing Audio:", err));
-    }
-  };
 
   const handleLogout = () => {
     logout();
@@ -96,20 +77,16 @@ const Navbar = () => {
   };
 
   const toggleMusic = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play().catch((err) => console.log("Autoplay Blocked:", err));
-      }
-      setIsPlaying(!isPlaying);
-    }
+    if (!audioRef.current) return;
+    if (isPlaying) audioRef.current.pause();
+    else audioRef.current.play().catch(() => {});
+    setIsPlaying(!isPlaying);
   };
 
   return (
     <>
       {loading && (
-        <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50 z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <Loader2 className="animate-spin text-yellow-500" size={50} />
         </div>
       )}
@@ -141,18 +118,37 @@ const Navbar = () => {
           <div className="hidden lg:flex items-center gap-6">
             <Link to="/" className="text-white hover:text-purple-400 text-lg">Home</Link>
             <Link to="/products" className="text-white hover:text-purple-400 text-lg">Products</Link>
-            <Link to="/my-orders" className="text-white hover:text-purple-400 text-lg">My Orders</Link>
-            <Link to="/wishlist" className="text-white hover:text-purple-400 text-lg">Loved it</Link>
+            {isAuthenticated && role !== "astrologer" && (
+              <>
+                <Link to="/my-orders" className="text-white hover:text-purple-400 text-lg">My Orders</Link>
+                <Link to="/wishlist" className="text-white hover:text-purple-400 text-lg">Loved it</Link>
+                <Link to="/cart" className="relative text-white hover:text-purple-400">
+                  <ShoppingCart size={20} />
+                  {cartCount > 0 && (
+                    <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 transform translate-x-1/2 -translate-y-1/2">
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
+              </>
+            )}
 
-            <Link to="/cart" className="relative text-white hover:text-purple-400">
-              <ShoppingCart size={20} />
-              {cartCount > 0 && (
-                <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 transform translate-x-1/2 -translate-y-1/2">
-                  {cartCount}
-                </span>
-              )}
-            </Link>
+            {/* Astrologer-specific links */}
+            {isAuthenticated && role === "astrologer" && (
+              <>
+                <Link to="/astrologer-dashboard" className="text-white hover:text-purple-400 text-lg">
+                  Astrologer Dashboard
+                </Link>
+                <Link to="/profile" className="text-white hover:text-purple-400 text-lg">
+                  Profile
+                </Link>
+                <Link to="/astrologer-chat-request" className="text-white hover:text-purple-400 text-lg">
+                  Chat Requests
+                </Link>
+              </>
+            )}
 
+            {/* Auth buttons */}
             {isAuthenticated ? (
               <>
                 {!isVerified && (
@@ -199,9 +195,23 @@ const Navbar = () => {
           >
             <Link to="/" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Home</Link>
             <Link to="/products" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Products</Link>
-            <Link to="/my-orders" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>My Orders</Link>
-            <Link to="/wishlist" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Loved it</Link>
-            <Link to="/cart" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Cart</Link>
+
+            {isAuthenticated && role !== "astrologer" && (
+              <>
+                <Link to="/my-orders" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>My Orders</Link>
+                <Link to="/wishlist" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Loved it</Link>
+                <Link to="/cart" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Cart</Link>
+              </>
+            )}
+
+            {/* Astrologer-specific mobile */}
+            {isAuthenticated && role === "astrologer" && (
+              <>
+                <Link to="/astrologer-dashboard" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Astrologer Dashboard</Link>
+                <Link to="/profile" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Profile</Link>
+                <Link to="/astrologer-chat-request" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Chat Requests</Link>
+              </>
+            )}
 
             {isAuthenticated ? (
               <>
@@ -211,10 +221,7 @@ const Navbar = () => {
                   </button>
                 )}
                 <button
-                  onClick={() => {
-                    handleLogout();
-                    setIsOpen(false);
-                  }}
+                  onClick={() => { handleLogout(); setIsOpen(false); }}
                   className="text-white hover:text-red-500 text-lg"
                 >
                   Logout
@@ -223,6 +230,7 @@ const Navbar = () => {
             ) : (
               <>
                 <Link to="/login" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Login</Link>
+
                 <Link to="/sign-up" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Sign Up</Link>
               </>
             )}
