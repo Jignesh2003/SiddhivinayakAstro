@@ -5,8 +5,6 @@ import generateOTP from "../utils/generateOTP.js";
 import sendEmail from "../utils/sendEmail.js"; // Renamed for clarity
 import crypto from "crypto";
 import Product from "../models/Product.js";
-import Wishlist from "../models/wishlistModel.js";
-import DailyAstrology from "../models/DailyAstrology.js";
 
 
 // ✅ Signup Controller
