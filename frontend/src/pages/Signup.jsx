@@ -6,6 +6,8 @@ import toast from "react-hot-toast";
 import assets from "../assets/assets";
 import { Eye, EyeOff } from "lucide-react";
 import ClipLoader from "react-spinners/ClipLoader";
+import Select from "react-select";
+import { Country, State, City } from "country-state-city";
 
 const Signup = () => {
   const { login } = useAuthStore();
@@ -16,10 +18,15 @@ const Signup = () => {
     email: "",
     address: "",
     pincode: "",
-    city: "",
+    country: "",
     state: "",
+    city: "",
     password: "",
   });
+
+  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [selectedState, setSelectedState] = useState(null);
+  const [selectedCity, setSelectedCity] = useState(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -35,6 +42,8 @@ const Signup = () => {
 
     try {
       const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/signup`, formData);
+      console.log(formData);
+      
 
       if (response.status === 201) {
         toast.success("Account created! Logging you in...", { duration: 3000 });
@@ -61,15 +70,33 @@ const Signup = () => {
     }
   };
 
+  // Generate dropdown options
+  const countryOptions = Country.getAllCountries().map((c) => ({
+    label: c.name,
+    value: c.isoCode,
+  }));
+
+  const stateOptions = selectedCountry
+    ? State.getStatesOfCountry(selectedCountry.value).map((s) => ({
+        label: s.name,
+        value: s.isoCode,
+      }))
+    : [];
+
+  const cityOptions = selectedState
+    ? City.getCitiesOfState(selectedCountry.value, selectedState.value).map((c) => ({
+        label: c.name,
+        value: c.name,
+      }))
+    : [];
+
   return (
     <div className="relative min-h-screen w-full overflow-auto pb-20">
-      {/* Blurred background image */}
       <div
         className="absolute inset-0 z-0 bg-cover bg-center blur-md"
         style={{ backgroundImage: `url(${assets.GalaxyBackground})` }}
       ></div>
 
-      {/* Foreground content */}
       <div className="relative z-10 flex min-h-screen flex-col justify-center px-6 py-4 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-sm">
           <img className="mx-auto h-50 w-auto" src={assets.SiddhivinayakAstroLogo} alt="Logo" />
@@ -80,7 +107,6 @@ const Signup = () => {
 
         <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-md">
           <form className="space-y-4" onSubmit={handleSubmit}>
-            {/* Name Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-blue-100">
@@ -90,11 +116,11 @@ const Signup = () => {
                   type="text"
                   name="firstName"
                   id="firstName"
-                  placeholder="First Name"
                   value={formData.firstName}
                   onChange={handleChange}
                   required
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-yellow-600 sm:text-sm"
+                  placeholder="First Name"
+                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
                 />
               </div>
               <div>
@@ -105,16 +131,15 @@ const Signup = () => {
                   type="text"
                   name="lastName"
                   id="lastName"
-                  placeholder="Last Name"
                   value={formData.lastName}
                   onChange={handleChange}
                   required
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-yellow-600 sm:text-sm"
+                  placeholder="Last Name"
+                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
                 />
               </div>
             </div>
 
-            {/* Contact Info */}
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-blue-100">
                 Phone Number
@@ -123,12 +148,12 @@ const Signup = () => {
                 type="tel"
                 name="phone"
                 id="phone"
-                placeholder="Phone Number"
+                pattern="[0-9]{10}"
                 value={formData.phone}
                 onChange={handleChange}
                 required
-                pattern="[0-9]{10}"
-                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-yellow-600 sm:text-sm"
+                placeholder="Phone Number"
+                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
               />
             </div>
 
@@ -140,15 +165,14 @@ const Signup = () => {
                 type="email"
                 name="email"
                 id="email"
-                placeholder="Email"
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-yellow-600 sm:text-sm"
+                placeholder="Email"
+                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
               />
             </div>
 
-            {/* Address */}
             <div>
               <label htmlFor="address" className="block text-sm font-medium text-blue-100">
                 Address
@@ -156,66 +180,74 @@ const Signup = () => {
               <textarea
                 name="address"
                 id="address"
-                placeholder="Address"
+                rows="3"
                 value={formData.address}
                 onChange={handleChange}
                 required
-                rows="3"
-                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-yellow-600 sm:text-sm"
+                placeholder="Address"
+                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
               />
             </div>
 
-            {/* Location */}
+            {/* Location Dropdowns */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label htmlFor="city" className="block text-sm font-medium text-blue-100">
-                  City
-                </label>
-                <input
-                  type="text"
-                  name="city"
-                  id="city"
-                  placeholder="City"
-                  value={formData.city}
-                  onChange={handleChange}
-                  required
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-yellow-600 sm:text-sm"
+                <label className="block text-sm font-medium text-blue-100">Country</label>
+                <Select
+                  options={countryOptions}
+                  value={selectedCountry}
+                  onChange={(val) => {
+                    setSelectedCountry(val);
+                    setSelectedState(null);
+                    setSelectedCity(null);
+                    setFormData({ ...formData, country: val.label, state: "", city: "" });
+                  }}
                 />
               </div>
               <div>
-                <label htmlFor="state" className="block text-sm font-medium text-blue-100">
-                  State
-                </label>
-                <input
-                  type="text"
-                  name="state"
-                  id="state"
-                  placeholder="State"
-                  value={formData.state}
-                  onChange={handleChange}
-                  required
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-yellow-600 sm:text-sm"
+                <label className="block text-sm font-medium text-blue-100">State</label>
+                <Select
+                  options={stateOptions}
+                  value={selectedState}
+                  onChange={(val) => {
+                    setSelectedState(val);
+                    setSelectedCity(null);
+                    setFormData({ ...formData, state: val.label, city: "" });
+                  }}
+                  isDisabled={!selectedCountry}
                 />
               </div>
               <div>
-                <label htmlFor="pincode" className="block text-sm font-medium text-blue-100">
-                  Pincode
-                </label>
-                <input
-                  type="text"
-                  name="pincode"
-                  id="pincode"
-                  placeholder="Pincode"
-                  value={formData.pincode}
-                  onChange={handleChange}
-                  required
-                  pattern="[0-9]{6}"
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-yellow-600 sm:text-sm"
+                <label className="block text-sm font-medium text-blue-100">City</label>
+                <Select
+                  options={cityOptions}
+                  value={selectedCity}
+                  onChange={(val) => {
+                    setSelectedCity(val);
+                    setFormData({ ...formData, city: val.label });
+                  }}
+                  isDisabled={!selectedState}
                 />
               </div>
             </div>
 
-            {/* Password */}
+            <div>
+              <label htmlFor="pincode" className="block text-sm font-medium text-blue-100">
+                Pincode
+              </label>
+              <input
+                type="text"
+                name="pincode"
+                id="pincode"
+                pattern="[0-9]{6}"
+                value={formData.pincode}
+                onChange={handleChange}
+                required
+                placeholder="Pincode"
+                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
+              />
+            </div>
+
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-blue-100">
                 Password
@@ -225,11 +257,11 @@ const Signup = () => {
                   type={showPassword ? "text" : "password"}
                   name="password"
                   id="password"
-                  placeholder="Password"
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-yellow-600 sm:text-sm"
+                  placeholder="Password"
+                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
                 />
                 <button
                   type="button"
@@ -241,7 +273,6 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* Submit Button */}
             <div>
               <button
                 type="submit"
@@ -255,7 +286,7 @@ const Signup = () => {
 
           <div className="mt-4 text-center">
             <p className="text-sm text-blue-100">
-              Already have an account?{' '}
+              Already have an account?{" "}
               <a href="/login" className="font-semibold text-yellow-400 hover:text-yellow-500">
                 Log in
               </a>

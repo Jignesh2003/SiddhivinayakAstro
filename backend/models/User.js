@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema(
     pincode: { type: String },
     city: { type: String },
     state: { type: String },
+    country:{type:String},
 
     // OTP Verification
     otp: { type: String, default: "" },

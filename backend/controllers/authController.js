@@ -20,7 +20,11 @@ export const signupUser = async (req, res) => {
       city,
       state,
       password,
+      country,
     } = req.body;
+
+    console.log("REQ SIGNUP:",country);
+    
 
     // ✅ Check if user exists
     const userExists = await User.findOne({ email });
@@ -43,6 +47,7 @@ export const signupUser = async (req, res) => {
       pincode,
       city,
       state,
+      country,
       password: hashedPassword,
       isVerified: false,
     });

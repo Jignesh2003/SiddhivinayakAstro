@@ -18,7 +18,9 @@ export const astrologerSignup = async (req, res) => {
       languagesSpoken,
       pricePerMinute,
       role,
+      country,city,state
     } = req.body;
+console.log(country,city,state);
 
     // Check if user already exists with same email or phone
     const existingUser = await User.findOne({
@@ -54,6 +56,7 @@ export const astrologerSignup = async (req, res) => {
       languagesSpoken,
       pricePerMinute,
       role,
+      country,city,state
     });
 
     await newUser.save();
