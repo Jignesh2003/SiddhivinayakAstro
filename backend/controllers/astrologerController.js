@@ -20,7 +20,6 @@ export const astrologerSignup = async (req, res) => {
       role,
       country,city,state
     } = req.body;
-console.log(country,city,state);
 
     // Check if user already exists with same email or phone
     const existingUser = await User.findOne({
@@ -99,3 +98,38 @@ export const astrologerList = async (req, res) => {
   }
 };
 
+export const uploadDocuments = async (req, res) => {
+  try {
+    const userId = req.user?.id; // <- from authMiddleware
+
+    const files = req.files;
+
+    if (!userId || !files?.aadhaar || !files?.pan || !files?.education || !files?.bank) {
+      return res.status(400).json({ error: 'Missing fields or userId' });
+    }
+
+    // ✅ Extract uploaded Cloudinary URLs directly
+    const aadhaarUrl = files.aadhaar[0].path;
+    const panUrl = files.pan[0].path;
+    const educationUrl = files.education[0].path;
+    const bankUrl = files.bank[0].path;
+
+    const updated = await Astrologer.findOneAndUpdate(
+      { userId },
+      {
+        documents: {
+          aadhaar: aadhaarUrl,
+          pan: panUrl,
+          education: educationUrl,
+          bank: bankUrl,
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    res.status(201).json({ success: true, astrologer: updated });
+  } catch (err) {
+    console.error("Upload error:", err);
+    res.status(500).json({ error: "Failed to upload documents." });
+  }
+};

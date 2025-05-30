@@ -33,7 +33,7 @@ app.use(morgan("dev"));
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/astrologers", astroRoutes);
-app.use("/api/chat", authMiddleware, chatRoutes);
+app.use("/api/chat", chatRoutes);
 
 // Socket + HTTP Server
 const server = http.createServer(app);

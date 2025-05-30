@@ -50,6 +50,12 @@ const userSchema = new mongoose.Schema(
       ],
     },
     yearsOfExperience: { type: Number },
+    documents: {
+    aadhaar: String,
+    pan: String,
+    education: String,
+    bank: String
+  },
     bio: { type: String },
     languagesSpoken: [{ type: String }],
     pricePerMinute: { type: Number },
