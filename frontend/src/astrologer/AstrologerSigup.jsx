@@ -63,6 +63,7 @@ export default function AstrologerSignup() {
       return setLoading(false);
     }
     try {
+      form.email = form.email.toLowerCase()
       const payload = {
         ...form,
         country: selectedCountry?.label || "",
@@ -72,9 +73,9 @@ export default function AstrologerSignup() {
           .filter(Boolean).map(o => o.label).join(", "),
         languagesSpoken: form.languagesSpoken.split(",").map(l => l.trim()),
         role: "astrologer",
+
       };
       await axios.post(`${import.meta.env.VITE_ASTRO_URL}/astrologer-signup`, payload);
-      console.log(payload);
       
       toast.success("Signup successful! Please verify your account.", { position: "top-right" });
       setForm(initialValues);
