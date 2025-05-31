@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import Order from "../models/Order.js";
-
-
+import Product from "../models/Product.js"
+import { placeOrderSchema, updateOrderStatusSchema } from "../validation/orderValidation.js"
 // 🟢 Get single order by ID || FOr order Details
 export const getSingleOrder = async (req, res) => {
   try {
@@ -33,7 +33,11 @@ export const getAllOrders = async (req, res) => {
 // ✅ Update Order Status (Admin & Seller)
 export const updateOrderStatus = async (req, res) => {
   try {
-    const { orderId, status } = req.body;
+    const { error, value } = updateOrderStatusSchema.validate(req.body);
+    if (error) return res.status(400).json({ message: error.details[0].message });
+
+    const { orderId, status } = value;
+
     
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
@@ -52,12 +56,11 @@ export const updateOrderStatus = async (req, res) => {
 export const placeOrder = async (req, res) => {
   try {
     const userId = req.user.id;
-    const {
-      items,
-      totalAmount,
-      paymentMethod,
-      shippingAddress,
-    } = req.body;
+     const { error, value } = placeOrderSchema.validate(req.body);
+    if (error) return res.status(400).json({ message: error.details[0].message });
+
+    const { items, totalAmount, paymentMethod, shippingAddress } = value;
+
 
     if (!userId || !items || items.length === 0) {
       return res.status(400).json({ message: "Invalid order data" });
@@ -126,8 +129,6 @@ export const placeOrder = async (req, res) => {
 //getiing user order placed list
 export const getUserOrders = async (req, res) => {
   try {
-    console.log("Request user:", req.user);
-
     // ✅ Convert user ID to ObjectId
     const userId = new mongoose.Types.ObjectId(req.user.id);
 

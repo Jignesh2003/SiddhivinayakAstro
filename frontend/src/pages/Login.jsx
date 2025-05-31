@@ -76,11 +76,11 @@ const Login = () => {
             {/* Email Input */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-blue-100">
-                Email address
+                Email address / Mobile number
               </label>
               <div className="mt-2">
                 <input
-                  type="email"
+                  type="text"
                   name="email"
                   id="email"
                   autoComplete="email"

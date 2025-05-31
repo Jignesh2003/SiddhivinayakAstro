@@ -5,11 +5,17 @@ import generateOTP from "../utils/generateOTP.js";
 import sendEmail from "../utils/sendEmail.js"; // Renamed for clarity
 import crypto from "crypto";
 import Product from "../models/Product.js";
+import { signupSchema ,loginSchema} from "../validation/userValidation.js";
 
 
 // ✅ Signup Controller
 export const signupUser = async (req, res) => {
   try {
+    const { error, value } = signupSchema.validate(req.body, { abortEarly: false });
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
     const {
       email,
       firstName,
@@ -21,23 +27,15 @@ export const signupUser = async (req, res) => {
       state,
       password,
       country,
-    } = req.body;
+    } = value;
 
-    console.log("REQ SIGNUP:",country);
-    
-
-    // ✅ Check if user exists
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res
-        .status(409)
-        .json({ message: "User already exists! Please log in." });
+      return res.status(409).json({ message: "User already exists! Please log in." });
     }
 
-   
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Create new user (unverified)
     const newUser = new User({
       firstName,
       lastName,
@@ -53,21 +51,26 @@ export const signupUser = async (req, res) => {
     });
 
     await newUser.save();
-    res.status(201).json({ message: "Signup succesfully!" });
+    res.status(201).json({ message: "Signup successfully!" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-
-
 // ✅ Login Controller
 export const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { error, value } = loginSchema.validate(req.body, { abortEarly: false });
 
+    if (error) {
+      return res
+        .status(400)
+        .json({ message: error.details.map((err) => err.message).join(", ") });
+    }
+
+    const { email, password } = value;
     // ✅ Check if user exists
-    const user = await User.findOne({ email });
+    const user = await User.findOne({$or : [{email},{phone:email} ]});
     if (!user) {
       console.log("User not found");
       return res.status(404).json({ message: "User not found" });
@@ -82,7 +85,7 @@ export const loginUser = async (req, res) => {
 
     // ✅ Generate JWT Token
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "3d",
+      expiresIn: "7d",
     });
 
     return res
@@ -97,8 +100,10 @@ export const loginUser = async (req, res) => {
 // ✅ Forgot Password - Generate Reset Token & Send Email
 export const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+ const { error, value } = forgotPasswordSchema.validate(req.body);
+    if (error) return res.status(400).json({ message: error.details[0].message });
 
+    const { email } = value;
     // ✅ Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
@@ -129,8 +134,11 @@ export const forgotPassword = async (req, res) => {
 // ✅ Reset Password - Update Password
 export const resetPassword = async (req, res) => {
   try {
-    const { token } = req.params; // Get plain token from URL
-    const { password, email } = req.body;
+     const { token } = req.params;
+    const { error, value } = resetPasswordSchema.validate(req.body);
+    if (error) return res.status(400).json({ message: error.details[0].message });
+
+    const { password, email } = value;
 
     // ✅ Find user whose reset token has not expired
     const user = await User.findOne({
@@ -166,11 +174,15 @@ export const checkingAuth = (req, res) => {
   res.status(200).json({ message: "Authenticated", user: req.user });
 };
 
+
 //Add review and rating 
 export const addReviewProduct = async (req,res)=>{
-  const { userId, text, rating, media } = req.body;
-  console.log(req.body);
-  
+    try {
+
+ const { error, value } = addReviewSchema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
+
+  const { userId, text, rating, media } = value;  
   if (!userId || !text || !rating) {
     return res.status(400).json({ message: "User ID, text, and rating are required." });
   }
@@ -179,7 +191,6 @@ export const addReviewProduct = async (req,res)=>{
     return res.status(400).json({ message: "Rating must be between 1 and 5." });
   }
 
-  try {
     const product = await Product.findById(req.params.id);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
@@ -235,8 +246,11 @@ export const deleteReview = async (req, res) => {
 
 // Create and send otp to user
 export const sendOtp = async (req, res) => {
-  const { userId } = req.body;
   try {
+ const { error, value } = sendOtpSchema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
+
+  const { userId } = value;  
   const user = await User.findOne({_id:userId})
   if (!user) {
     return res.status(400).json({ message: 'User not found' });
@@ -266,9 +280,12 @@ export const sendOtp = async (req, res) => {
 
 // Verify otp 
 export const verifyOtp = async (req, res) => {
-  const { userId, otp } = req.body;  // User's email and OTP for verification
+   try {
+ const { error, value } = verifyOtpSchema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
 
-  try {
+  const { userId, otp } = value;
+ 
     // Find the user by email
     const user = await User.findOne({ _id:userId });
     if (!user) {
@@ -328,44 +345,3 @@ export const uploadCloudinary = async (req, res) => {
   }
 };
 
-// export const bulkUpdateAstrology = async (req, res) => {
-//   const { entries } = req.body;
-
-//   const user = req.user; // From auth middleware
-//   try {
-//     const validUser = await User.findById(user.id); // ✅ await + correct ID access
-//     if (!validUser || validUser.role !== "admin") {
-//       return res.status(403).json({ message: "Access denied..." });
-//     }
-
-//     if (!Array.isArray(entries) || entries.length !== 12) {
-//       return res.status(400).json({ error: 'Please provide exactly 12 entries for all zodiac signs.' });
-//     }
-
-//     const bulkOps = entries.map(({ zodiacSign, content }) => ({
-//       updateOne: {
-//         filter: { zodiacSign },
-//         update: { content },
-//         upsert: true,
-//       }
-//     }));
-
-//     await DailyAstrology.bulkWrite(bulkOps);
-//     res.json({ message: 'Daily astrology updated for all signs successfully' });
-
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'An error occurred while updating the astrology content.' });
-//   }
-// };
-
-// export const getDailyAstrology = async (req, res) => {
-//   try {
-//     const doc = await DailyAstrology.findOne({}).sort({ updatedAt: -1 }); // latest one
-//     if (!doc) return res.status(404).json({ message: "No daily astrology found" });
-//     res.json(doc.entries); // just send the array of 12 signs
-//   } catch (err) {
-//     console.error("Error fetching astrology:", err);
-//     res.status(500).json({ message: "Server error while fetching astrology." });
-//   }
-// };

@@ -1,25 +1,17 @@
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
+import { astrologerListQuerySchema, astrologerSignupSchema } from "../validation/astrologerValidation.js"
 
 export const astrologerSignup = async (req, res) => {
   try {
+     const { error, value } = astrologerSignupSchema.validate(req.body);
+    if (error) return res.status(400).json({ message: error.details[0].message });
+
     const {
-      firstName,
-      lastName,
-      email,
-      phone,
-      password,
-      gender,
-      dob,
-      location,
-      expertise,
-      yearsOfExperience,
-      bio,
-      languagesSpoken,
-      pricePerMinute,
-      role,
-      country,city,state
-    } = req.body;
+      firstName, lastName, email, phone, password, gender,
+      dob, location, expertise, yearsOfExperience, bio,
+      languagesSpoken, pricePerMinute, role, country, city, state
+    } = value;
 
     // Check if user already exists with same email or phone
     const existingUser = await User.findOne({
@@ -80,6 +72,9 @@ export const astrologerSignup = async (req, res) => {
 
 export const astrologerList = async (req, res) => {
   try {
+     const { error } = astrologerListQuerySchema.validate(req.query);
+    if (error) return res.status(400).json({ message: error.details[0].message });
+
     const filter = { role: "astrologer" };
 
     // Optional online filter
