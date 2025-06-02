@@ -75,7 +75,7 @@ export const astrologerList = async (req, res) => {
      const { error } = astrologerListQuerySchema.validate(req.query);
     if (error) return res.status(400).json({ message: error.details[0].message });
 
-    const filter = { role: "astrologer" };
+    const filter = { role: "astrologer" , kyc:"approved"};
 
     // Optional online filter
     if (req.query.isOnline === "true") {
@@ -94,37 +94,55 @@ export const astrologerList = async (req, res) => {
 };
 
 export const uploadDocuments = async (req, res) => {
+  console.log("Updating user:", req.user.id);
+
   try {
-    const userId = req.user?.id; // <- from authMiddleware
+    const { aadhaar, pan, education, bank } = req.files;
 
-    const files = req.files;
+    if (!aadhaar || !pan || !education || !bank) {
+      return res.status(400).json({ message: "All documents are required." });
+    }
+console.log("FILES:", req.files);
+const updatedUser = await User.findByIdAndUpdate(
+  req.user.id,
+  {
+    $set: {
+      "documents.aadhaar": aadhaar[0].path,
+      "documents.pan": pan[0].path,
+      "documents.education": education[0].path,
+      "documents.bank": bank[0].path,
+            kyc: "pending" // ✅ Set KYC status when documents are uploaded
+    },
+  },
+  { new: true }
+);
 
-    if (!userId || !files?.aadhaar || !files?.pan || !files?.education || !files?.bank) {
-      return res.status(400).json({ error: 'Missing fields or userId' });
+
+    res.status(200).json({ message: "Documents uploaded successfully", user: updatedUser });
+  } catch (error) {
+    console.error("Upload error:", error);
+    res.status(500).json({ message: "Failed to upload documents" });
+  }
+};
+
+
+export const getAstrologerDetails = async (req, res) => {
+  const userId = req.user.id;
+
+  if (!userId) {
+    return res.status(400).json({ message: "Invalid data" });
+  }
+
+  try {
+    const user = await User.findOne({ _id: userId });
+
+    if (!user) {
+      return res.status(404).json({ message: "Astrologer not found" });
     }
 
-    // ✅ Extract uploaded Cloudinary URLs directly
-    const aadhaarUrl = files.aadhaar[0].path;
-    const panUrl = files.pan[0].path;
-    const educationUrl = files.education[0].path;
-    const bankUrl = files.bank[0].path;
-
-    const updated = await Astrologer.findOneAndUpdate(
-      { userId },
-      {
-        documents: {
-          aadhaar: aadhaarUrl,
-          pan: panUrl,
-          education: educationUrl,
-          bank: bankUrl,
-        },
-      },
-      { upsert: true, new: true }
-    );
-
-    res.status(201).json({ success: true, astrologer: updated });
-  } catch (err) {
-    console.error("Upload error:", err);
-    res.status(500).json({ error: "Failed to upload documents." });
+    res.status(200).json({ message: "Astro data sent!", user });
+  } catch (error) {
+    console.error("Error fetching astrologer details:", error);
+    res.status(500).json({ message: "Something went wrong!", error });
   }
 };

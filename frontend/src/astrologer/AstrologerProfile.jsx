@@ -12,8 +12,9 @@ const AstrologerProfile = () => {
     education: null,
     bank: null,
   });
-
   const [loading, setLoading] = useState(false);
+  const [kycStatus, setKycStatus] = useState(""); // holds the returned kyc status
+
   const token = useAuthStore((state) => state.token);
 
   const handleFileChange = (e, field) => {
@@ -34,14 +35,24 @@ const AstrologerProfile = () => {
 
     try {
       setLoading(true);
-      await axios.post(`${import.meta.env.VITE_ASTRO_URL}/upload-documents`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await axios.post(
+        `${import.meta.env.VITE_ASTRO_URL}/upload-documents`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      toast.success("Documents uploaded successfully!");
+      // Set kyc status from response
+      if (res.data.user?.kyc) {
+        setKycStatus(res.data.user.kyc);
+      }
+
+      toast.success(res.data.message);
+      // Clear files (this will force inputs to remount)
       setFiles({ aadhaar: null, pan: null, education: null, bank: null });
     } catch (err) {
       console.error(err);
@@ -55,11 +66,22 @@ const AstrologerProfile = () => {
     <div className="flex flex-col gap-2 w-full">
       <label className="font-medium text-sm text-gray-700">{label}</label>
       <input
+        key={files[field]?.name || field} // forces remount when files[field] changes
         type="file"
         accept="image/*"
         onChange={(e) => handleFileChange(e, field)}
         className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
       />
+      {files[field] && (
+        <div className="flex items-center gap-2 mt-2">
+          <img
+            src={URL.createObjectURL(files[field])}
+            alt={field}
+            className="h-16 w-16 object-cover rounded"
+          />
+          <span className="text-sm text-gray-600">{files[field].name}</span>
+        </div>
+      )}
     </div>
   );
 
@@ -72,6 +94,24 @@ const AstrologerProfile = () => {
           <h1 className="text-2xl sm:text-3xl font-semibold mb-6 text-gray-800">
             Upload Documents
           </h1>
+
+          {/* Display current KYC status */}
+          {kycStatus && (
+            <div className="mb-6">
+              <span className="font-medium">KYC Status: </span>
+              <span
+                className={`font-semibold ${
+                  kycStatus === "approved"
+                    ? "text-green-600"
+                    : kycStatus === "rejected"
+                    ? "text-red-600"
+                    : "text-orange-600"
+                }`}
+              >
+                {kycStatus}
+              </span>
+            </div>
+          )}
 
           <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-md space-y-5 w-full">
             {renderUploadInput("Aadhaar Card", "aadhaar")}

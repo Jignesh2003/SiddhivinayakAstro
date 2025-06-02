@@ -4,9 +4,11 @@ import Joi from "joi";
 export const astrologerSignupSchema = Joi.object({
   firstName: Joi.string().trim().required(),
   lastName: Joi.string().trim().required(),
-  email: Joi.string().email().required(),
+  email: Joi.string().email().required().lowercase(),
   phone: Joi.string().required(),
   password: Joi.string().min(6).required(),
+  confirmPassword: Joi.string().min(6).required(),
+
   gender: Joi.string().valid("male", "female", "other").required(),
   dob: Joi.date().iso().required(),
   location: Joi.string().allow(""),

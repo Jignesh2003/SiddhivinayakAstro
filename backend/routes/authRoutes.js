@@ -10,6 +10,8 @@ import {
   verifyOtp,
   addReviewProduct,
   deleteReview,
+  getPendingKycAstrologers,
+  verifyAstrologerKyc,
   // bulkUpdateAstrology,
   // getDailyAstrology,
 } from "../controllers/authController.js";
@@ -22,7 +24,7 @@ import {  addToCart,  getCart,  removeFromCart,  updateCart,  clearCart,
 import {  getWishlist,  addToWishlist,  removeFromWishlist,
 } from "../controllers/wishlistController.js";
 import otpLimiter from "../utils/otpLimiter.js";
-import upload from "../middlewares/multer.js";
+import  { uploadSingleImage } from "../middlewares/multer.js";
 import authMiddleware from "../middlewares/authMiddleware.js"
 
 const router = express.Router();
@@ -84,19 +86,24 @@ router.put("/admin/update-status", authMiddleware, updateOrderStatus);
 
 //admin
 // ✅ Create Product with Image Upload
-router.post("/add-product", upload.single("image"), uploadCloudinary);
+router.post(
+  "/add-product",uploadSingleImage, uploadCloudinary
+);
 
 // edit admin page
-router.put("/products/:id",upload.single("image"), editAdminProduct);
+router.put("/products/:id",uploadSingleImage, editAdminProduct);
 
 //delete product from admin
 router.delete("/products/:id", authMiddleware, deleteAdminProduct);
 
 router.put("/admin/orders/:orderId", authMiddleware, markAsPaid)
 
-// router.post('/bulk-update', authMiddleware, bulkUpdateAstrology);
+//admin get req of astro kyc with pending
+router.get("/admin/astrologers/pending-kyc", authMiddleware,  getPendingKycAstrologers);
 
-// router.get("/daily-zodiac",getDailyAstrology);      
+// ─── 2) Approve or reject a single astrologer’s KYC ──────────────────
+router.patch("/admin/astrologers/:id/verify",authMiddleware,verifyAstrologerKyc);
+    
 
 
 

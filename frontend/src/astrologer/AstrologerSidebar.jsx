@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { LayoutDashboard, MessageSquare, User, LogOut, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import useAuthStore from "../store/useAuthStore"
 
 const AstrologerSidebar = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const logout = useAuthStore.getState().logout
 
   const menuItems = [
     {
@@ -75,7 +77,7 @@ const AstrologerSidebar = () => {
         <div className="p-4 border-t">
           <button
             onClick={() => {
-              localStorage.clear(); // or your logout logic
+              logout() // or your logout logic
               navigate("/");
             }}
             className="flex items-center gap-2 text-sm text-red-600 hover:text-red-800 transition"

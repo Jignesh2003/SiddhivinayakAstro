@@ -10,7 +10,6 @@ import connectDB from "./config/db.js";
 import chatRoutes from "./routes/chatRoute.js";
 import authRoutes from "./routes/authRoutes.js";
 import astroRoutes from "./routes/astroRoutes.js";
-import authMiddleware from "./middlewares/authMiddleware.js";
 import { setupSocketHandlers } from "./sockets/chatHandler.js";
 
 dotenv.config();
@@ -34,6 +33,9 @@ app.use(morgan("dev"));
 app.use("/api/auth", authRoutes);
 app.use("/api/astrologers", astroRoutes);
 app.use("/api/chat", chatRoutes);
+app.use((req, res, next) => {
+  res.status(404).json({ message: "Route not found" });
+});
 
 // Socket + HTTP Server
 const server = http.createServer(app);

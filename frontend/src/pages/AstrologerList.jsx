@@ -11,25 +11,39 @@ const AstrologerList = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchAstrologers = async () => {
-      try {
-        const res = await axios.get(`${import.meta.env.VITE_ASTRO_URL}/list?isOnline=true`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.status === 200) {
-          setAstrologers(res.data);
-          console.log(res);
-          
-        } else {
-          console.error("Failed to fetch astrologers");
-        }
-      } catch (error) {
-        console.error("Error fetching astrologers:", error.message);
-      }
-    };
+  let intervalId;
 
-    if (token) fetchAstrologers();
-  }, [token]);
+  const fetchAstrologers = async () => {
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_ASTRO_URL}/list?isOnline=true`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (res.status === 200) {
+        setAstrologers(res.data);
+        console.log(res);
+      } else {
+        console.error("Failed to fetch astrologers");
+      }
+    } catch (error) {
+      console.error("Error fetching astrologers:", error.message);
+    }
+  };
+
+  if (token) {
+    // Fetch immediately once
+    fetchAstrologers();
+    // Then fetch every 5 seconds
+    intervalId = setInterval(fetchAstrologers, 5000);
+  }
+
+  return () => {
+    if (intervalId) clearInterval(intervalId);
+  };
+}, [token]);
+
 
   const requestChat = async (astrologerId) => {
     if (!userId || !astrologerId) {

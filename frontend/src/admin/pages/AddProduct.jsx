@@ -19,11 +19,8 @@ const AddProduct = () => {
     formData.append("stock", stock);
     formData.append("description", description);
 
-
     try {
-      const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/add-product`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/add-product`, formData);
      toast.success("Product added successfully!", { position: "top-right" });
     } catch (error) {
       console.error("Error adding product:", error);

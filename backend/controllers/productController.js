@@ -65,20 +65,31 @@ export const editAdminProduct = async (req, res) => {
   }
 };
 
-//delete admin product
-export  const deleteAdminProduct = async (req, res) => {
+export const deleteAdminProduct = async (req, res) => {
   try {
     const productId = req.params.id;
-    const deletedProduct = await Product.findByIdAndDelete(productId);
 
-    if (!deletedProduct) {
+    // 1. Find the product first (so we know its imagePublicId)
+    const product = await Product.findById(productId);
+    if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    res.json({ message: "Product deleted successfully" });
+    // 2. Remove the image from Cloudinary
+    //    `imagePublicId` was saved when you uploaded the product
+    if (product.imagePublicId) {
+      const destroyResult = await cloudinary.uploader.destroy(product.imagePublicId);
+      // destroyResult will be { result: "ok" } if success (or "not found" if it wasn’t there)
+      // You can inspect `destroyResult` if you want to log or handle failures—but even if Cloudinary says “not found,” we’ll proceed to delete the DB doc.
+    }
+
+    // 3. Delete the product document from MongoDB
+    await Product.findByIdAndDelete(productId);
+
+    return res.json({ message: "Product and its image were deleted successfully." });
   } catch (error) {
     console.error("Error deleting product:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 

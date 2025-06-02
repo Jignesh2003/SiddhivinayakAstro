@@ -1,7 +1,7 @@
 import Joi from "joi";
 
 export const signupSchema = Joi.object({
-  email: Joi.string().email().max(50).required(),
+  email: Joi.string().email().max(50).lowercase().required(),
   firstName: Joi.string().max(30).required(),
   lastName: Joi.string().max(30).required(),
   phone: Joi.string().max(15).optional().allow(""),
@@ -15,7 +15,7 @@ export const signupSchema = Joi.object({
 
 
 export const loginSchema = Joi.object({
-  email: Joi.string().required().messages({
+  email: Joi.string().lowercase().required().messages({
     "string.empty": "Email or phone is required",
   }).min(1).max(30),
   password: Joi.string().required().messages({

@@ -139,9 +139,7 @@ const Navbar = () => {
                 <Link to="/astrologer-dashboard" className="text-white hover:text-purple-400 text-lg">
                   Astrologer Dashboard
                 </Link>
-                <Link to="/profile" className="text-white hover:text-purple-400 text-lg">
-                  Profile
-                </Link>
+               
                 <Link to="/astrologer-chat-request" className="text-white hover:text-purple-400 text-lg">
                   Chat Requests
                 </Link>

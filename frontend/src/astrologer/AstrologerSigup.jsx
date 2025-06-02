@@ -75,6 +75,7 @@ export default function AstrologerSignup() {
         role: "astrologer",
 
       };
+          delete payload.confirmPassword; // 🧹 Remove confirmPassword before sending
       await axios.post(`${import.meta.env.VITE_ASTRO_URL}/astrologer-signup`, payload);
       
       toast.success("Signup successful! Please verify your account.", { position: "top-right" });

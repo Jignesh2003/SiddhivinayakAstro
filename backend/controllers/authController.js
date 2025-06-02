@@ -5,7 +5,7 @@ import generateOTP from "../utils/generateOTP.js";
 import sendEmail from "../utils/sendEmail.js"; // Renamed for clarity
 import crypto from "crypto";
 import Product from "../models/Product.js";
-import { signupSchema ,loginSchema} from "../validation/userValidation.js";
+import { signupSchema ,loginSchema, verifyOtpSchema} from "../validation/userValidation.js";
 
 
 // ✅ Signup Controller
@@ -320,28 +320,106 @@ export const verifyOtp = async (req, res) => {
 
 //uploading products to cloudinary admin
 export const uploadCloudinary = async (req, res) => {
-  try {
+ 
+  try {    
     const { name, price, stock, description } = req.body; // ✅ Extract all required fields
 
     // ✅ Check if File Exists
     if (!req.file) {
       return res.status(400).json({ message: "No image uploaded!" });
     }
-
+    console.log("🔍 req.file (from multer‐storage‐cloudinary):", req.file);
     const imageUrl = req.file.path; // Cloudinary image URL
+    const imagePublicId = req.file.filename
 
     // ✅ Ensure all required fields are provided
     if (!name || !price || !stock || !description) {
       return res.status(400).json({ message: "All fields are required!" });
     }
 
-    const newProduct = new Product({ name, price, stock, description, image: imageUrl });
+    const newProduct = new Product({ name, price, stock, description, image: imageUrl ,imagePublicId:imagePublicId});
     await newProduct.save();
 
     res.status(201).json({ message: "Product added successfully!", product: newProduct });
   } catch (error) {
-    console.error("Error:", error); // Debugging
+    console.log("Error:", error); // Debugging
     res.status(500).json({ message: "Error adding product", error: error.message });
   }
 };
 
+
+
+export const getPendingKycAstrologers = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    // 1) Verify that the caller’s userId exists in the database
+    const caller = await User.findById(userId).select("_id role");
+    if (!caller) {
+      return res.status(401).json({ message: "Invalid user token" });
+    }
+
+    // (Optional) If you need to restrict this endpoint to admin only,
+    // you could also check: 
+    if (caller.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // 2) Fetch all astrologers whose kyc status is "pending"
+    const pendingAstrologers = await User.find({
+      role: "astrologer",
+      kyc: "pending",
+    }).select("firstName lastName email phone yearsOfExperience documents kyc");
+
+    return res.status(200).json({ astrologers: pendingAstrologers });
+  } catch (error) {
+    console.error("Error fetching pending KYC astrologers:", error);
+    return res.status(500).json({
+      message: "Server error while fetching pending KYC astrologers.",
+    });
+  }
+};
+
+export const verifyAstrologerKyc = async (req, res) => {
+  const userId = req.user.id
+  try {
+   const caller = await User.findById(userId).select("_id role");
+    if (!caller) {
+      return res.status(401).json({ message: "Invalid user token" });
+    }
+
+    // (Optional) If you need to restrict this endpoint to admin only,
+    // you could also check: 
+    if (caller.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // 2) Validate `status`
+    if (!["approved", "rejected"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    // 3) Find the astrologer by ID and update kyc
+    const updated = await User.findOneAndUpdate(
+      { _id: id, role: "astrologer" },
+      { $set: { kyc: status } },
+      { new: true }
+    ).select("firstName lastName email phone yearsOfExperience documents kyc");
+
+    if (!updated) {
+      return res.status(404).json({ message: "Astrologer not found" });
+    }
+
+    return res
+      .status(200)
+      .send({ message: `KYC ${status}`, astrologer: updated });
+  } catch (error) {
+    console.error("Error verifying astrologer KYC:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error while verifying KYC." });
+  }
+};

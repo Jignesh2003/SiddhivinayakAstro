@@ -26,6 +26,7 @@ const userSchema = new mongoose.Schema(
     otp: { type: String, default: "" },
     otpExpiry: { type: Date, default: "" },
     isVerified: { type: Boolean, default: false },
+    kyc:{type:String,default:"notYet" , enum:["pending", "rejected","approved","notYet"]},
 
     // Password Reset
     resetPasswordToken: String,

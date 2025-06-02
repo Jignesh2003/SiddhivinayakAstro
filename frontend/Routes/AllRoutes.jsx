@@ -35,13 +35,13 @@ import SacredYantras from "../src/pages/blogs/SacredYantras";
 import PlanetaryInfluence from "../src/pages/blogs/PlanetaryInfluence";
 import SingleProduct from "../src/pages/SingleProuduct";
 import ReviewPage from "../src/pages/ReviewPage";
-import AdminDailyAstrology from "../src/admin/pages/AdminDailyAstrology";
 import AstrologerSignup from "../src/astrologer/AstrologerSigup";
 import AstrologerDashboard from "../src/astrologer/AstrologerDashboard";
 import ChatBox from "../src/chatContext/ChatBot";
 import AstrologerList from "../src/pages/AstrologerList";
   import AstrologerChatRequests from "../src/astrologer/AstrologerChatRequests";
 import AstrologerProfile from "../src/astrologer/AstrologerProfile";
+import AdminVerifyAstrologers from "../src/admin/pages/AdminVerifyAstrologers";
 
 const AppRoutes = () => {
   return (
@@ -98,10 +98,10 @@ const AppRoutes = () => {
           <Route element={<AdminLayout />}>
             <Route index element={<AdminHome />} />
             <Route path="dashboard" element={<DashboardAdmin />} />
+            <Route path="verify-astrologers" element={<AdminVerifyAstrologers />} />
             <Route path="add-product" element={<AddProduct />} />
             <Route path="manage-products" element={<ManageProducts />} />
             <Route path="orders" element={<AdminOrders />} />
-            <Route path="daily-astrology" element={<AdminDailyAstrology />} />
 
           </Route>
         </Route>
