@@ -19,6 +19,7 @@ const ResetPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+      console.log(token);
 
     if (formData.password !== formData.confirmPassword) {
       return toast.error("Passwords do not match!");
@@ -35,6 +36,7 @@ const ResetPassword = () => {
         `${import.meta.env.VITE_BASE_URL}/reset-password/${token}`,
         { password: formData.password }
       );
+      
 
       if (response.status === 200) {
         toast.success("Password reset successful! Redirecting...");

@@ -131,43 +131,79 @@ export const loginUser = async (req, res) => {
   };
 
 // ✅ Reset Password - Update Password
+// export const resetPassword = async (req, res) => {
+//   try {
+//      const { token } = req.params;
+     
+
+//     const { password, email } = req.body;
+
+//     // ✅ Find user whose reset token has not expired
+//     const user = await User.findOne({
+//       email,
+//       resetPasswordToken: { $exists: true }, // ✅ Ensures token exists
+//       resetPasswordExpires: { $gt: Date.now() }, // ✅ Ensures token is not expired
+//     });
+
+//     if (!user) {
+//       return res.status(400).json({ message: "Invalid or expired token!" });
+//     }
+
+//     // ✅ Compare the stored hashed token with the received plain token
+//     const isMatch = await bcrypt.compare(token, user.resetPasswordToken);
+//     if (!isMatch) {
+//       return res.status(400).json({ message: "Invalid token!" });
+//     }
+
+//     // ✅ Hash the new password and update user
+//     user.password = await bcrypt.hash(password, 10);
+//     user.resetPasswordToken = undefined; // Remove token after use
+//     user.resetPasswordExpires = undefined;
+//     await user.save();
+
+//     res.status(200).json({ message: "Password reset successful!" });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 export const resetPassword = async (req, res) => {
   try {
-     const { token } = req.params;
+    const rawToken = req.params.token;
+    // 1) Validate only `{ password }`
     const { error, value } = resetPasswordSchema.validate(req.body);
-    if (error) return res.status(400).json({ message: error.details[0].message });
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    const { password } = value;
 
-    const { password, email } = value;
-
-    // ✅ Find user whose reset token has not expired
+    // 2) Look up user by ANY account that still has a reset token
+    //    (we'll compare it next with bcrypt)
     const user = await User.findOne({
-      email,
-      resetPasswordToken: { $exists: true }, // ✅ Ensures token exists
-      resetPasswordExpires: { $gt: Date.now() }, // ✅ Ensures token is not expired
+      resetPasswordToken: { $exists: true },
+      resetPasswordExpires: { $gt: Date.now() },
     });
-
     if (!user) {
       return res.status(400).json({ message: "Invalid or expired token!" });
     }
 
-    // ✅ Compare the stored hashed token with the received plain token
-    const isMatch = await bcrypt.compare(token, user.resetPasswordToken);
+    // 3) Compare the raw URL token with the hashed token in DB
+    const isMatch = await bcrypt.compare(rawToken, user.resetPasswordToken);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid token!" });
     }
 
-    // ✅ Hash the new password and update user
+    // 4) Everything’s good—hash the new password and clear the reset fields
     user.password = await bcrypt.hash(password, 10);
-    user.resetPasswordToken = undefined; // Remove token after use
+    user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();
 
-    res.status(200).json({ message: "Password reset successful!" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(200).json({ message: "Password reset successful!" });
+  } catch (err) {
+    console.error("resetPassword error:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 };
-
 //checking authorization in navbar of fe
 export const checkingAuth = (req, res) => {
   res.status(200).json({ message: "Authenticated", user: req.user });
