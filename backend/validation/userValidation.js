@@ -17,7 +17,7 @@ export const signupSchema = Joi.object({
 export const loginSchema = Joi.object({
   email: Joi.string().lowercase().required().messages({
     "string.empty": "Email or phone is required",
-  }).min(1).max(30),
+  }).min(1).max(99),
   password: Joi.string().required().messages({
     "string.empty": "Password is required",
   }),
