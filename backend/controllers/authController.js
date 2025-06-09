@@ -5,7 +5,7 @@ import generateOTP from "../utils/generateOTP.js";
 import sendEmail from "../utils/sendEmail.js"; // Renamed for clarity
 import crypto from "crypto";
 import Product from "../models/Product.js";
-import { signupSchema ,loginSchema, verifyOtpSchema, resetPasswordSchema} from "../validation/userValidation.js";
+import { signupSchema ,loginSchema, verifyOtpSchema} from "../validation/userValidation.js";
 
 
 // ✅ Signup Controller
@@ -120,7 +120,7 @@ export const loginUser = async (req, res) => {
 
       // ✅ Send Reset Email
       // const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
-            const resetUrl = `http://localhost:5000/reset-password/${resetToken}`;
+            const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
 
       const message = `Click the link below to reset your password. This link is valid for 10 minutes.\n\n${resetUrl}`;
 
