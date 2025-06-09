@@ -8,6 +8,7 @@ const AstrologerList = () => {
   const [requesting, setRequesting] = useState({});
   const userId = useAuthStore((state) => state.userId);
   const token = useAuthStore((state) => state.token);
+  // const logout = useAuthStore.getState.logout
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -65,7 +66,7 @@ const AstrologerList = () => {
 
       const session = res.data.sessionData || res.data.session;
       if (session?._id) {
-        navigate(`/astro-user-chat/${session._id}?new=true`);
+  navigate(`/chat-waiting/${session._id}`)
       } else {
         console.error("❌ No valid session data returned");
       }
@@ -118,8 +119,8 @@ const AstrologerList = () => {
                 } text-white px-4 py-2 rounded-lg transition duration-200`}
               >
                 {!userId
-                  ? "Loading..."
-                  : isRequesting
+                  ? "Loading..." 
+                  : isRequesting 
                   ? "Requesting..."
                   : "Request Chat"}
               </button>

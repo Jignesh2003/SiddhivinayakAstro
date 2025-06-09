@@ -73,8 +73,8 @@ const ChatBox = () => {
             const welcomeMsg = {
               senderId: astrologerIdInSession,
               receiverId: userIdInSession,
-              content:
-                "Hi, I’ve just connected. Looking forward to guiding you! ✨ Please share your full name and birth details.",
+              // content:
+              //   "Hi, I’ve just connected. Looking forward to guiding you! ✨ Please share your full name and birth details.",
               createdAt: new Date().toISOString(),
               _id: `local-${Date.now()}-auto`,
             };

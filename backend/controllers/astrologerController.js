@@ -94,7 +94,6 @@ export const astrologerList = async (req, res) => {
 };
 
 export const uploadDocuments = async (req, res) => {
-  console.log("Updating user:", req.user.id);
 
   try {
     const { aadhaar, pan, education, bank } = req.files;

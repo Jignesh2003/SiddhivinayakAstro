@@ -23,9 +23,7 @@ export const loginSchema = Joi.object({
   }),
 });
 
-export const forgotPasswordSchema = Joi.object({
-  email: Joi.string().email().required(),
-});
+
 
 export const resetPasswordSchema = Joi.object({
   token: Joi.string().required(), // This might come from `req.params`, validate manually in controller

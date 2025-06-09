@@ -5,7 +5,7 @@ import generateOTP from "../utils/generateOTP.js";
 import sendEmail from "../utils/sendEmail.js"; // Renamed for clarity
 import crypto from "crypto";
 import Product from "../models/Product.js";
-import { signupSchema ,loginSchema, verifyOtpSchema} from "../validation/userValidation.js";
+import { signupSchema ,loginSchema, verifyOtpSchema, resetPasswordSchema} from "../validation/userValidation.js";
 
 
 // ✅ Signup Controller
@@ -98,38 +98,37 @@ export const loginUser = async (req, res) => {
 };
 
 // ✅ Forgot Password - Generate Reset Token & Send Email
-export const forgotPassword = async (req, res) => {
-  try {
- const { error, value } = forgotPasswordSchema.validate(req.body);
-    if (error) return res.status(400).json({ message: error.details[0].message });
+  export const forgotPassword = async (req, res) => {
+    try {
+  const {email} = req.body
+      // ✅ Check if user exists
+      console.log(email);
+      
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(404).json({ message: "User not found!" });
+      }
 
-    const { email } = value;
-    // ✅ Check if user exists
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: "User not found!" });
+      // ✅ Generate Reset Token
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      const hashedToken = await bcrypt.hash(resetToken, 10);
+
+      // ✅ Store Hashed Token in Database with Expiry
+      user.resetPasswordToken = hashedToken;
+      user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+      await user.save();
+
+      // ✅ Send Reset Email
+      const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+      const message = `Click the link below to reset your password. This link is valid for 10 minutes.\n\n${resetUrl}`;
+
+      await sendEmail(email, "Password Reset Request", message);
+
+      res.status(200).json({ message: "Password reset email sent!", email });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
-
-    // ✅ Generate Reset Token
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    const hashedToken = await bcrypt.hash(resetToken, 10);
-
-    // ✅ Store Hashed Token in Database with Expiry
-    user.resetPasswordToken = hashedToken;
-    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-    await user.save();
-
-    // ✅ Send Reset Email
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
-    const message = `Click the link below to reset your password. This link is valid for 10 minutes.\n\n${resetUrl}`;
-
-    await sendEmail(email, "Password Reset Request", message);
-
-    res.status(200).json({ message: "Password reset email sent!", email });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+  };
 
 // ✅ Reset Password - Update Password
 export const resetPassword = async (req, res) => {

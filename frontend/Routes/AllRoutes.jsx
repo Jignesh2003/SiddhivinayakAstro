@@ -42,6 +42,7 @@ import AstrologerList from "../src/pages/AstrologerList";
   import AstrologerChatRequests from "../src/astrologer/AstrologerChatRequests";
 import AstrologerProfile from "../src/astrologer/AstrologerProfile";
 import AdminVerifyAstrologers from "../src/admin/pages/AdminVerifyAstrologers";
+import ChatRequestTimer from "../src/pages/ChatRequestTimer";
 
 const AppRoutes = () => {
   return (
@@ -77,7 +78,7 @@ const AppRoutes = () => {
         <Route element={<ProtectedRoute />}>
           <Route path="/astrologer-dashboard" element={<AstrologerDashboard />} />
                     <Route path="/astrologer-profile" element={<AstrologerProfile />} />
-
+<Route path="/chat-waiting/:sessionId" element={<ChatRequestTimer />} />
           <Route path="/astrologer-chat-request" element={<AstrologerChatRequests />} />
           <Route path="/astro-user-chat/:sessionId" element={<ChatBox />} />
           <Route path="/astro-list" element={<AstrologerList />} />

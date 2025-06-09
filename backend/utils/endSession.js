@@ -15,7 +15,7 @@ export const endSession = async (sessionId, io) => {
     const endTime = new Date();
     const durationMs = endTime - session.startTime;
     const minutes = Math.ceil(durationMs / 60000);
-    const ratePerMinute = 10;
+    const ratePerMinute = 50;
     const amountCharged = minutes * ratePerMinute;
 
     session.endTime = endTime;

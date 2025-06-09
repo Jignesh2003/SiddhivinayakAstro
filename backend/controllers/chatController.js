@@ -123,3 +123,31 @@ export const respondToRequest = async (req, res) => {
     }
   };
   
+
+ // controllers/chatSession.controller.js
+
+export const getSessionStatus = async (req, res) => {
+  const { sessionId } = req.params;
+  const session = await ChatSession.findById(sessionId).select("status");
+  if (!session) return res.status(404).json({ message: "Session not found" });
+  return res.json({ status: session.status });
+};
+
+// controllers/chatSession.controller.js
+
+//user side
+export const updateSessionStatus = async (req, res) => {
+  const { sessionId } = req.params;
+  const { status } = req.body;
+  if (!["approved", "rejected", "ended"].includes(status)) {
+    return res.status(400).json({ message: "Invalid status" });
+  }
+
+  const session = await ChatSession.findByIdAndUpdate(
+    sessionId,
+    { status, approvedAt: status === "approved" ? Date.now() : undefined },
+    { new: true }
+  );
+  if (!session) return res.status(404).json({ message: "Session not found" });
+  return res.json({ session });
+};

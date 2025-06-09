@@ -24,6 +24,8 @@ const ForgotPassword = () => {
         `${import.meta.env.VITE_BASE_URL}/forgot-password`,
         { email: trimmedEmail }
       );
+      console.log(response);
+      
 
       toast.success("📩 Password reset link sent! Check your email.");
       setEmail(""); // Clear input field after success
