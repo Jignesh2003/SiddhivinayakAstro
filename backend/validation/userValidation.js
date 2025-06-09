@@ -23,11 +23,7 @@ export const loginSchema = Joi.object({
   }),
 });
 
-export const resetPasswordSchema = Joi.object({
-  token: Joi.string().required(), // This might come from `req.params`, validate manually in controller
-  email: Joi.string().email().required(),
-  password: Joi.string().min(8).required(),
-});
+
 
 export const sendOtpSchema = Joi.object({
   userId: Joi.string().required(),
