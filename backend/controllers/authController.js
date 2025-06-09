@@ -119,7 +119,9 @@ export const loginUser = async (req, res) => {
       await user.save();
 
       // ✅ Send Reset Email
-      const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+      // const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+            const resetUrl = `http://localhost:5000/reset-password/${resetToken}`;
+
       const message = `Click the link below to reset your password. This link is valid for 10 minutes.\n\n${resetUrl}`;
 
       await sendEmail(email, "Password Reset Request", message);
