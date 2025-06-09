@@ -170,11 +170,7 @@ export const resetPassword = async (req, res) => {
   try {
     const rawToken = req.params.token;
     // 1) Validate only `{ password }`
-    const { error, value } = resetPasswordSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({ message: error.details[0].message });
-    }
-    const { password } = value;
+    const { password } = req.body;
 
     // 2) Look up user by ANY account that still has a reset token
     //    (we'll compare it next with bcrypt)
