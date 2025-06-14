@@ -39,8 +39,8 @@ export default function AstrologerSignup() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const inputClass = 
-    "block w-full rounded-md bg-white bg-opacity-30 px-3 py-2 text-gray-800 placeholder-gray-600 focus:bg-opacity-50 focus:outline-none";
+  const inputClass =
+    "block w-full rounded-md bg-white bg-opacity-90 px-3 py-2 text-gray-800 placeholder-gray-600 focus:bg-opacity-100 focus:outline-none";
 
   const countryOptions = Country.getAllCountries().map(c => ({ label: c.name, value: c.isoCode }));
   const stateOptions = selectedCountry
@@ -63,7 +63,7 @@ export default function AstrologerSignup() {
       return setLoading(false);
     }
     try {
-      form.email = form.email.toLowerCase()
+      form.email = form.email.toLowerCase();
       const payload = {
         ...form,
         country: selectedCountry?.label || "",
@@ -73,11 +73,11 @@ export default function AstrologerSignup() {
           .filter(Boolean).map(o => o.label).join(", "),
         languagesSpoken: form.languagesSpoken.split(",").map(l => l.trim()),
         role: "astrologer",
-
       };
-          delete payload.confirmPassword; // 🧹 Remove confirmPassword before sending
+      delete payload.confirmPassword;
+
       await axios.post(`${import.meta.env.VITE_ASTRO_URL}/astrologer-signup`, payload);
-      
+
       toast.success("Signup successful! Please verify your account.", { position: "top-right" });
       setForm(initialValues);
       setSelectedCountry(null);
@@ -93,25 +93,24 @@ export default function AstrologerSignup() {
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden">
+    <div className="relative min-h-screen w-full overflow-hidden text-gray-900">
       {/* Blurred full-screen background */}
       <div
         className="absolute inset-0 bg-cover bg-center filter blur-lg"
         style={{ backgroundImage: `url(${assets.GalaxyBackground})` }}
       />
-      {/* Gradient overlay to improve contrast */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-indigo-900 opacity-10" />
+      <div className="absolute inset-0 bg-white/30 backdrop-blur-sm" />
 
       {/* Centered form container */}
       <div className="relative z-10 flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-        <div className="max-w-3xl w-full bg-white bg-opacity-10 backdrop-blur-lg rounded-xl p-8 shadow-xl">
+        <div className="max-w-3xl w-full bg-white bg-opacity-80 backdrop-blur-md rounded-xl p-8 shadow-xl">
           <div className="text-center mb-8">
             <img
               src={assets.SiddhivinayakAstroLogo}
               alt="Logo"
               className="mx-auto h-20 w-auto"
             />
-            <h1 className="mt-4 text-3xl font-bold text-yellow-300">
+            <h1 className="mt-4 text-3xl font-bold text-gray-800">
               Astrologer Registration
             </h1>
           </div>
@@ -119,86 +118,30 @@ export default function AstrologerSignup() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Personal Info */}
             <div>
-              <h2 className="text-lg font-semibold text-yellow-200 mb-2">
+              <h2 className="text-lg font-semibold text-gray-800 mb-2">
                 Personal Information
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  name="firstName"
-                  type="text"
-                  placeholder="First Name"
-                  value={form.firstName}
-                  onChange={handleChange}
-                  required
-                  className={inputClass}
-                />
-                <input
-                  name="lastName"
-                  type="text"
-                  placeholder="Last Name"
-                  value={form.lastName}
-                  onChange={handleChange}
-                  required
-                  className={inputClass}
-                />
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="Email Address"
-                  value={form.email}
-                  onChange={handleChange}
-                  required
-                  className={inputClass}
-                />
-                <input
-                  name="phone"
-                  type="tel"
-                  placeholder="Phone Number"
-                  value={form.phone}
-                  onChange={handleChange}
-                  required
-                  className={inputClass}
-                />
+                <input name="firstName" type="text" placeholder="First Name" value={form.firstName} onChange={handleChange} required className={inputClass} />
+                <input name="lastName" type="text" placeholder="Last Name" value={form.lastName} onChange={handleChange} required className={inputClass} />
+                <input name="email" type="email" placeholder="Email Address" value={form.email} onChange={handleChange} required className={inputClass} />
+                <input name="phone" type="tel" placeholder="Phone Number" value={form.phone} onChange={handleChange} required className={inputClass} />
               </div>
             </div>
 
             {/* Security */}
             <div>
-              <h2 className="text-lg font-semibold text-yellow-200 mb-2">
-                Security
-              </h2>
+              <h2 className="text-lg font-semibold text-gray-800 mb-2">Password</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="relative">
-                  <input
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Password"
-                    value={form.password}
-                    onChange={handleChange}
-                    required
-                    className={`${inputClass} pr-10`}
-                  />
-                  <div
-                    className="absolute inset-y-0 right-3 flex items-center text-gray-600 cursor-pointer"
-                    onClick={() => setShowPassword(v => !v)}
-                  >
+                  <input name="password" type={showPassword ? "text" : "password"} placeholder="Password" value={form.password} onChange={handleChange} required className={`${inputClass} pr-10`} />
+                  <div className="absolute inset-y-0 right-3 flex items-center text-gray-600 cursor-pointer" onClick={() => setShowPassword(v => !v)}>
                     {showPassword ? <EyeOff /> : <Eye />}
                   </div>
                 </div>
                 <div className="relative">
-                  <input
-                    name="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm Password"
-                    value={form.confirmPassword}
-                    onChange={handleChange}
-                    required
-                    className={`${inputClass} pr-10`}
-                  />
-                  <div
-                    className="absolute inset-y-0 right-3 flex items-center text-gray-600 cursor-pointer"
-                    onClick={() => setShowConfirmPassword(v => !v)}
-                  >
+                  <input name="confirmPassword" type={showConfirmPassword ? "text" : "password"} placeholder="Confirm Password" value={form.confirmPassword} onChange={handleChange} required className={`${inputClass} pr-10`} />
+                  <div className="absolute inset-y-0 right-3 flex items-center text-gray-600 cursor-pointer" onClick={() => setShowConfirmPassword(v => !v)}>
                     {showConfirmPassword ? <EyeOff /> : <Eye />}
                   </div>
                 </div>
@@ -207,73 +150,19 @@ export default function AstrologerSignup() {
 
             {/* Professional Details */}
             <div>
-              <h2 className="text-lg font-semibold text-yellow-200 mb-2">
-                Professional Details
-              </h2>
+              <h2 className="text-lg font-semibold text-gray-800 mb-2">Professional Details</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <select
-                  name="gender"
-                  value={form.gender}
-                  onChange={handleChange}
-                  required
-                  className={inputClass}
-                >
+                <select name="gender" value={form.gender} onChange={handleChange} required className={inputClass}>
                   <option value="">Gender</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                   <option value="other">Other</option>
                 </select>
-                <input
-                  name="dob"
-                  type="date"
-                  value={form.dob}
-                  onChange={handleChange}
-                  required
-                  className={inputClass}
-                />
-                <Select
-                  className="react-select-container"
-                  classNamePrefix="react-select"
-                  styles={{ menu: m => ({ ...m, zIndex: 1000 }) }}
-                  options={countryOptions}
-                  value={selectedCountry}
-                  onChange={c => {
-                    setSelectedCountry(c);
-                    setSelectedState(null);
-                    setSelectedCity(null);
-                  }}
-                  placeholder="Country"
-                />
-                <Select
-                  className="react-select-container"
-                  classNamePrefix="react-select"
-                  styles={{ menu: m => ({ ...m, zIndex: 1000 }) }}
-                  options={stateOptions}
-                  value={selectedState}
-                  onChange={s => {
-                    setSelectedState(s);
-                    setSelectedCity(null);
-                  }}
-                  isDisabled={!selectedCountry}
-                  placeholder="State"
-                />
-                <Select
-                  className="react-select-container"
-                  classNamePrefix="react-select"
-                  styles={{ menu: m => ({ ...m, zIndex: 1000 }) }}
-                  options={cityOptions}
-                  value={selectedCity}
-                  onChange={setSelectedCity}
-                  isDisabled={!selectedState}
-                  placeholder="City"
-                />
-                <select
-                  name="expertise"
-                  value={form.expertise}
-                  onChange={handleChange}
-                  required
-                  className={inputClass}
-                >
+                <input name="dob" type="date" value={form.dob} onChange={handleChange} required className={inputClass} />
+                <Select classNamePrefix="react-select" styles={{ menu: m => ({ ...m, zIndex: 1000 }) }} options={countryOptions} value={selectedCountry} onChange={c => { setSelectedCountry(c); setSelectedState(null); setSelectedCity(null); }} placeholder="Country" />
+                <Select classNamePrefix="react-select" styles={{ menu: m => ({ ...m, zIndex: 1000 }) }} options={stateOptions} value={selectedState} onChange={s => { setSelectedState(s); setSelectedCity(null); }} isDisabled={!selectedCountry} placeholder="State" />
+                <Select classNamePrefix="react-select" styles={{ menu: m => ({ ...m, zIndex: 1000 }) }} options={cityOptions} value={selectedCity} onChange={setSelectedCity} isDisabled={!selectedState} placeholder="City" />
+                <select name="expertise" value={form.expertise} onChange={handleChange} required className={inputClass}>
                   <option value="">Expertise</option>
                   {EXPERTISE_OPTIONS.map(o => (
                     <option key={o} value={o}>{o}</option>
@@ -284,59 +173,26 @@ export default function AstrologerSignup() {
 
             {/* More About You */}
             <div>
-              <h2 className="text-lg font-semibold text-yellow-200 mb-2">
-                More About You
-              </h2>
+              <h2 className="text-lg font-semibold text-gray-800 mb-2">More About You</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  name="yearsOfExperience"
-                  type="number"
-                  placeholder="Years of Experience"
-                  value={form.yearsOfExperience}
-                  onChange={handleChange}
-                  className={inputClass}
-                />
-                <input
-                  name="languagesSpoken"
-                  placeholder="Languages (comma separated)"
-                  value={form.languagesSpoken}
-                  onChange={handleChange}
-                  className={inputClass}
-                />
-                <input
-                  name="pricePerMinute"
-                  type="number"
-                  placeholder="Price Per Minute"
-                  value={form.pricePerMinute}
-                  onChange={handleChange}
-                  className={inputClass}
-                />
+                <input name="yearsOfExperience" type="number" placeholder="Years of Experience" value={form.yearsOfExperience} onChange={handleChange} className={inputClass} />
+                <input name="languagesSpoken" placeholder="Languages (comma separated)" value={form.languagesSpoken} onChange={handleChange} className={inputClass} />
+                <input name="pricePerMinute" type="number" placeholder="Price Per Minute" value={form.pricePerMinute} onChange={handleChange} className={inputClass} />
               </div>
-              <textarea
-                name="bio"
-                rows={4}
-                placeholder="Short Bio"
-                value={form.bio}
-                onChange={handleChange}
-                className={`${inputClass} mt-4`}
-              />
+              <textarea name="bio" rows={4} placeholder="Short Bio" value={form.bio} onChange={handleChange} className={`${inputClass} mt-4`} />
             </div>
 
             {/* Submit */}
             <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center items-center bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-2 rounded-md transition"
-              >
+              <button type="submit" disabled={loading} className="w-full flex justify-center items-center bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-2 rounded-md transition">
                 {loading ? <ClipLoader size={20} /> : "Register as Astrologer"}
               </button>
             </div>
           </form>
 
-          <p className="mt-6 text-center text-yellow-200">
+          <p className="mt-6 text-center text-gray-800">
             Already a user?{" "}
-            <Link to="/sign-up" className="font-medium underline">
+            <Link to="/sign-up" className="font-semibold underline text-indigo-600">
               Sign up here
             </Link>
           </p>

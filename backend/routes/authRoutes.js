@@ -4,7 +4,6 @@ import {
   loginUser,
   forgotPassword,
   resetPassword,
-  uploadCloudinary,
   checkingAuth,
   sendOtp,
   verifyOtp,
@@ -12,6 +11,7 @@ import {
   deleteReview,
   getPendingKycAstrologers,
   verifyAstrologerKyc,
+  addProduct,
   // bulkUpdateAstrology,
   // getDailyAstrology,
 } from "../controllers/authController.js";
@@ -24,7 +24,7 @@ import {  addToCart,  getCart,  removeFromCart,  updateCart,  clearCart,
 import {  getWishlist,  addToWishlist,  removeFromWishlist,
 } from "../controllers/wishlistController.js";
 import otpLimiter from "../utils/otpLimiter.js";
-import  { uploadSingleImage } from "../middlewares/multer.js";
+import  { uploadMultipleImages } from "../middlewares/multer.js";
 import authMiddleware from "../middlewares/authMiddleware.js"
 
 const router = express.Router();
@@ -87,11 +87,11 @@ router.put("/admin/update-status", authMiddleware, updateOrderStatus);
 //admin
 // ✅ Create Product with Image Upload
 router.post(
-  "/add-product",uploadSingleImage, uploadCloudinary
+  "/add-product",uploadMultipleImages, addProduct
 );
 
 // edit admin page
-router.put("/products/:id",uploadSingleImage, editAdminProduct);
+router.put("/products/:id",uploadMultipleImages, editAdminProduct);
 
 //delete product from admin
 router.delete("/products/:id", authMiddleware, deleteAdminProduct);
@@ -104,6 +104,7 @@ router.get("/admin/astrologers/pending-kyc", authMiddleware,  getPendingKycAstro
 // ─── 2) Approve or reject a single astrologer’s KYC ──────────────────
 router.patch("/admin/astrologers/:id/verify",authMiddleware,verifyAstrologerKyc);
     
+
 
 
 

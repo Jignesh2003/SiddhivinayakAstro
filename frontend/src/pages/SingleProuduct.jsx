@@ -5,124 +5,242 @@ import useCartStore from "../store/useCartStore";
 import useAuthStore from "../store/useAuthStore";
 import axios from "axios";
 import { toast } from "react-toastify";
+import ImageGallery from "react-image-gallery";
+import "react-image-gallery/styles/css/image-gallery.css";
 
 const SingleProduct = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSize, setSelectedSize] = useState("");
 
   const addToCart = useCartStore((state) => state.addToCart);
-  const { userId, token ,logout} = useAuthStore();
-  
+  const { userId, token, logout } = useAuthStore();
+
   useEffect(() => {
-    const fetchProduct = async () => {
+    (async () => {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/products/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setProduct(response.data);
-        setReviews(response.data.reviews || []);
-      } catch (error) {
-        console.error("Error fetching product:", error);
+        const { data } = await axios.get(
+          `${import.meta.env.VITE_BASE_URL}/products/${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setProduct(data);
+        setReviews(
+          (data.reviews || []).sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+          )
+        );
+        if (data.sizeType !== "Quantity" && data.stock.length > 0) {
+          setSelectedSize(data.stock[0].size);
+        }
+      } catch (err) {
+        console.error("Error fetching product:", err);
+        toast.error("Failed to load product.");
       } finally {
         setLoading(false);
       }
-    };
-    fetchProduct();
-  }, [id, token]); // ✅ Added `token` dependency for security
+    })();
+  }, [id, token]);
 
-  const handleAddToCart = async (product) => {
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p>Loading product...</p>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p>Product not found.</p>
+      </div>
+    );
+  }
+
+  const totalStock = product.stock.reduce((sum, v) => sum + v.quantity, 0);
+  const variant = product.stock.find((v) => v.size === selectedSize);
+  const selectedStock = variant?.quantity || 0;
+
+  const handleAddToCart = async () => {
     if (!userId) {
       toast.error("Please log in first!");
-      logout()
+      logout();
       return navigate("/login");
     }
-    if (product.stock === 0) {
-      toast.error("Out of stock!");
-      return;
+
+    if (product.sizeType !== "Quantity" && !selectedSize) {
+      return toast.error("Please select a size!");
     }
-    await addToCart(product, userId, 1);
-    toast.success("Added to cart!");
+    if (product.sizeType !== "Quantity" && selectedStock === 0) {
+      return toast.error(`Size ${selectedSize} is out of stock!`);
+    }
+    if (product.sizeType === "Quantity" && totalStock === 0) {
+      return toast.error("Out of stock!");
+    }
+
+    try {
+      await addToCart({
+        product: product._id,
+        size: selectedSize,
+        quantity: 1,
+      });
+      toast.success("Added to cart!");
+    } catch {
+      /* handled */
+    }
   };
 
-  const handleBuyNow = async (product) => {
-    await handleAddToCart(product); // Adds to cart first
-    navigate("/cart"); // Redirect to the cart page
+  const handleBuyNow = async () => {
+    await handleAddToCart();
+    navigate("/cart");
   };
 
-  if (loading) return <p>Loading product...</p>;
-  if (!product) return <p>Product not found.</p>;
+  const avgRating = reviews.length
+    ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+    : null;
 
-  const averageRating = reviews.length
-    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
-    : "No Ratings";
+  const galleryImages = product.image.map((img) => ({
+    original: img,
+    thumbnail: img,
+  }));
 
   return (
-    <div className="max-w-5xl mx-auto p-6 bg-white shadow-lg rounded-lg">
-      <div className="flex flex-col md:flex-row gap-6">
-        <img
-          src={product.image}
-          alt={product.name}
-          className="w-full md:w-1/2 h-80 object-cover rounded-md"
-        />
-        <div>
-          <h2 className="text-3xl font-bold">{product.name}</h2>
-          <p className="text-gray-600 mt-2">{product.description}</p>
-          <p className="text-lg font-semibold mt-3">Price: ₹{product.price}</p>
+    <div className="max-w-4xl mx-auto p-6 bg-white shadow-xl rounded-lg mt-6">
+      <div className="flex flex-col md:flex-row gap-8">
+        {/* Product Image Gallery */}
+        <div className="w-full md:w-1/2">
+          <ImageGallery
+            items={galleryImages}
+            showPlayButton={false}
+            showFullscreenButton={true}
+            showNav={true}
+            slideDuration={200}
+          />
+        </div>
 
-          {/* ⭐ Display Average Rating */}
-          <p className="mt-2 flex items-center text-yellow-500">
-            ★ {averageRating}
+        {/* Product Info */}
+        <div className="flex-1 flex flex-col">
+          <h1 className="text-4xl font-bold mb-2">{product.name}</h1>
+          <p className="text-sm text-gray-500 mb-4">
+            Brand: <span className="font-medium">{product.brand}</span> |{" "}
+            Category: <span className="font-medium">{product.category}</span>
+          </p>
+          <p className="text-lg text-gray-800 mb-4">{product.description}</p>
+
+          <p className="text-2xl font-semibold mb-2">₹{product.price}</p>
+          <p
+            className={`mb-4 font-semibold ${
+              totalStock ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {totalStock ? "In Stock" : "Out of Stock"}
           </p>
 
-          {/* Add to Cart and Buy Now Buttons */}
-          <div className="flex gap-2 mt-4">
+          {product.sizeType !== "Quantity" && (
+            <div className="mb-4">
+              <label className="block text-gray-700 mb-1">
+                Select {product.sizeType}:
+              </label>
+              <select
+                value={selectedSize}
+                onChange={(e) => setSelectedSize(e.target.value)}
+                className="border p-2 rounded"
+              >
+                {product.stock.map((v) => (
+                  <option key={v._id} value={v.size}>
+                    {v.size}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {avgRating && (
+            <div className="flex items-center mb-6">
+              <span className="text-xl font-medium mr-2">{avgRating}</span>
+              <div className="flex">
+                {[1, 2, 3, 4, 5].map((val) => (
+                  <Star
+                    key={val}
+                    size={20}
+                    className={
+                      val <= Math.round(avgRating)
+                        ? "text-yellow-500"
+                        : "text-gray-300"
+                    }
+                  />
+                ))}
+              </div>
+              <span className="text-sm text-gray-500 ml-2">
+                ({reviews.length} review{reviews.length !== 1 && "s"})
+              </span>
+            </div>
+          )}
+
+          <div className="flex gap-4 mt-auto">
             <button
-              className="bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600 flex items-center gap-2"
-              onClick={() => handleAddToCart(product)}
-              disabled={product.stock === 0}
+              onClick={handleAddToCart}
+              disabled={
+                (product.sizeType !== "Quantity" && selectedStock === 0) ||
+                (product.sizeType === "Quantity" && totalStock === 0)
+              }
+              className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-lg flex items-center justify-center gap-2 disabled:bg-gray-300"
             >
-              <ShoppingCart size={16} /> Add to Cart
+              <ShoppingCart size={20} /> Add to Cart
             </button>
             <button
-              className="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600 flex items-center gap-2"
-              onClick={() => handleBuyNow(product)}
-              disabled={product.stock === 0}
+              onClick={handleBuyNow}
+              disabled={
+                (product.sizeType !== "Quantity" && selectedStock === 0) ||
+                (product.sizeType === "Quantity" && totalStock === 0)
+              }
+              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg flex items-center justify-center gap-2 disabled:bg-gray-300"
             >
-              <CreditCard size={16} /> Buy Now
+              <CreditCard size={20} /> Buy Now
             </button>
           </div>
         </div>
       </div>
 
-      {/* Reviews Section */}
-      <div className="mt-8">
-        <h3 className="text-2xl font-semibold">Reviews</h3>
-        <div className="mt-4">
-          {reviews.length > 0 ? (
-            reviews.map((review) => (
-              <div key={review._id} className="border p-4 rounded-md mb-4">
-                <p>{review.text}</p>
-                <div className="flex items-center text-yellow-500">
-                  {[...Array(review.rating)].map((_, i) => (
-                    <Star key={i} size={16} />
-                  ))}
-                </div>
-                {review.media && (
+      {/* Reviews */}
+      <div className="mt-12">
+        <h2 className="text-2xl font-semibold mb-4">Customer Reviews</h2>
+        {reviews.length > 0 ? (
+          reviews.map((r) => (
+            <div key={r._id} className="border rounded-lg p-4 mb-4 bg-gray-50">
+              {r.userId && (
+                <div className="flex items-center gap-2 mb-2">
                   <img
-                    src={review.media}
-                    alt="Review Media"
-                    className="mt-2 w-32 h-32 object-cover rounded-md"
+                    src={r.userId.avatar || "/user-avatar.png"}
+                    alt={r.userId.name}
+                    className="w-8 h-8 rounded-full object-cover"
                   />
-                )}
+                  <span className="font-medium text-sm">{r.userId.name}</span>
+                </div>
+              )}
+              <div className="flex items-center mb-2">
+                {[...Array(r.rating)].map((_, i) => (
+                  <Star key={i} className="text-yellow-500" size={18} />
+                ))}
               </div>
-            ))
-          ) : (
-            <p className="text-gray-500">No reviews yet.</p>
-          )}
-        </div>
+              {r.text && <p className="mb-2">{r.text}</p>}
+              {r.media && (
+                <img
+                  src={r.media}
+                  onError={(e) => (e.target.src = "/fallback.jpg")}
+                  alt="Review media"
+                  className="w-32 h-32 object-contain rounded-md"
+                />
+              )}
+            </div>
+          ))
+        ) : (
+          <p className="text-gray-500">No reviews yet.</p>
+        )}
       </div>
     </div>
   );

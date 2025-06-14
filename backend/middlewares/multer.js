@@ -14,16 +14,10 @@ const productStorage = new CloudinaryStorage({
   },
 });
 
-const productUpload = multer({
+export const uploadMultipleImages = multer({
   storage: productStorage,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10 MB
-  },
-});
-
-// Export a single‐file middleware for product images
-export const uploadSingleImage = productUpload.single("image");
-
+  limits: { fileSize: 10 * 1024 * 1024 },
+}).array("image", 5); // accepts up to 5 files under fieldname "images"
 //
 // ─── 2) KYC STORAGE ────────────────────────────────────────────────────────────
 //

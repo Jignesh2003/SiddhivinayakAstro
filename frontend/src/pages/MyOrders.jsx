@@ -8,13 +8,14 @@ import useAuthStore from "../store/useAuthStore";
 
 const MyOrders = () => {
   const { orders, fetchUserOrders, loading } = useOrderStore();
-  const { userId } = useAuthStore();
+  const { userId, logout } = useAuthStore();
 
   useEffect(() => {
     if (userId) {
       console.log("Fetching orders for user:", userId);
       fetchUserOrders();
     } else {
+      logout();
       console.log("User ID not found, cannot fetch orders.");
     }
   }, [userId]);
@@ -73,17 +74,29 @@ const MyOrders = () => {
 
               {/* Display Product Details */}
               <div className="space-y-3 mb-4">
-                {order.items.map((item) => (
-                  <div key={item.product._id} className="flex items-center gap-4">
-                    <img
-                      src={item.product.image} // Product image
-                      alt={item.product.name}
-                      className="w-16 h-16 object-cover rounded-lg"
-                    />
-                    <div>
-                      <p className="text-lg font-medium">{item.product.name}</p> {/* Product name */}
-                      <p className="text-sm text-gray-400">Quantity: {item.quantity}</p> {/* Quantity */}
-                    </div>
+                {order.items.map((item, index) => (
+                  <div
+                    key={item?.product?._id || index}
+                    className="flex items-center gap-4"
+                  >
+                    {item.product ? (
+                      <>
+                        <img
+                          src={item.product?.image?.[0]}
+                          alt={item.product.name}
+                          className="w-16 h-16 object-cover rounded-lg"
+                        />
+                        <div>
+                          <p className="text-lg font-medium">{item.product.name}</p>
+                          <p className="text-sm text-gray-400">Quantity: {item.quantity}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-red-400">
+                        <p className="font-medium">Product not found (may have been deleted)</p>
+                        <p className="text-sm text-gray-400">Quantity: {item.quantity}</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

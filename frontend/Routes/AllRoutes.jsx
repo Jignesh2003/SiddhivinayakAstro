@@ -26,7 +26,7 @@ import MyOrders from "../src/pages/MyOrders";
 import AdminOrders from "../src/admin/pages/AdminOrders";
 import Checkout from "../src/payment/Checkout";
 import OrderConfirmation from "../src/pages/OrderConfirmation";
-import SingleOrder from "../src/pages/SingleOrder";
+import SingleOrderDetails from "../src/pages/SingleOrderDetails";
 import Wishlist from "../src/pages/Wishlist";
 import DailyBlog from "../src/pages/blogs/DailyBlog";
 import AstrologyAndYou from "../src/pages/blogs/AstrologyAndYou";
@@ -86,8 +86,7 @@ const AppRoutes = () => {
           <Route path="/my-orders" element={<MyOrders />} />
           <Route path="/otp" element={<Otp />} />
           <Route path="/checkout" element={<Checkout />} />
-          <Route path="/orders" element={<MyOrders />} />
-          <Route path="/orders/:id" element={<SingleOrder />} />
+          <Route path="/orders/:id" element={<SingleOrderDetails />} />
           <Route path="/order-confirmation" element={<OrderConfirmation />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/single-product/:id" element={<SingleProduct />} />

@@ -1,49 +1,321 @@
 import { useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import useAuthStore from "../../store/useAuthStore";
 
-const AddProduct = () => {
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [image, setImage] = useState(null);
-  const [stock, setStock] = useState("");
-  const [description, setDescription] = useState("");
+const CATEGORY_OPTIONS = [
+  "Gifts", "Gemstones", "Necklaces", "Rings",
+  "Braclets", "Puja samagri", "Turtle",
+  "Rudraksha", "Customized",
+];
+const SIZE_TYPE_OPTIONS = ["Ring", "Quantity", "Mukhi", "Gemstone"];
+const SIZE_OPTIONS = {
+  Ring: ["3","3.5","4","4.5","5","5.5","6","6.5","7","7.5","8","8.5","9","9.5","10","10.5","11","11.5","12","12.5","13"],
+  Quantity: [],
+  Mukhi: ["1 Mukhi","2 Mukhi","3 Mukhi","4 Mukhi","5 Mukhi","6 Mukhi","7 Mukhi","8 Mukhi","9 Mukhi","10 Mukhi","11 Mukhi","12 Mukhi","13 Mukhi","14 Mukhi"],
+  Gemstone: ["Amethyst","Rose Quartz","Citrine","Emerald","Ruby","Sapphire","Garnet","Turquoise","Topaz","Peridot"],
+};
+
+export default function AddProduct() {
+  const token = useAuthStore((s) => s.token);
+
+  const [form, setForm] = useState({
+    name: "",
+    price: "",
+    description: "",
+    category: CATEGORY_OPTIONS[0],
+    subcategory: "",
+    brand: "",
+    sizeType: SIZE_TYPE_OPTIONS[0],
+    stockRows: [{ size: "", quantity: "" }],
+  });
+  const [files, setFiles] = useState([]);      // File[]
+  const [previews, setPreviews] = useState([]); // data URIs
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+  };
+
+  const handleStockChange = (idx, field, val) => {
+    const rows = [...form.stockRows];
+    rows[idx][field] = val;
+    setForm((f) => ({ ...f, stockRows: rows }));
+  };
+
+  const addStockRow = () =>
+    setForm((f) => ({
+      ...f,
+      stockRows: [...f.stockRows, { size: "", quantity: "" }],
+    }));
+
+  const removeStockRow = (idx) =>
+    setForm((f) => ({
+      ...f,
+      stockRows: f.stockRows.filter((_, i) => i !== idx),
+    }));
+
+  const handleFileSelect = (e) => {
+    const selected = Array.from(e.target.files).slice(0, 5);
+    setFiles(selected);
+    Promise.all(
+      selected.map((file) =>
+        new Promise((res) => {
+          const reader = new FileReader();
+          reader.onloadend = () => res(reader.result);
+          reader.readAsDataURL(file);
+        })
+      )
+    ).then(setPreviews);
+  };
+
+  const resetForm = () => {
+    setForm({
+      name: "",
+      price: "",
+      description: "",
+      category: CATEGORY_OPTIONS[0],
+      subcategory: "",
+      brand: "",
+      sizeType: SIZE_TYPE_OPTIONS[0],
+      stockRows: [{ size: "", quantity: "" }],
+    });
+    setFiles([]);
+    setPreviews([]);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    const formData = new FormData();
-    formData.append("name", name);
-    formData.append("price", price);
-    formData.append("image", image);
-    formData.append("stock", stock);
-    formData.append("description", description);
+
+    // Prevent double submits
+    if (loading) return;
+    setLoading(true);
+
+    // validate stock
+    for (let { size, quantity } of form.stockRows) {
+      if (form.sizeType !== "Quantity" && !size) {
+        toast.error("❌ Please select a size for every row.");
+        setLoading(false);
+        return;
+      }
+      if (!quantity) {
+        toast.error("❌ Please specify quantity for every row.");
+        setLoading(false);
+        return;
+      }
+    }
+    if (files.length === 0) {
+      toast.error("❌ Please upload at least one image.");
+      setLoading(false);
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append("name", form.name);
+    fd.append("price", form.price);
+    fd.append("description", form.description);
+    fd.append("category", form.category);
+    fd.append("subcategory", form.subcategory);
+    fd.append("brand", form.brand);
+    fd.append("sizeType", form.sizeType);
+    fd.append(
+      "stock",
+      JSON.stringify(
+        form.stockRows.map(({ size, quantity }) => ({
+          size,
+          quantity: Number(quantity),
+        }))
+      )
+    );
+    files.forEach((file) => fd.append("image", file)); // field name "image"
 
     try {
-      const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/add-product`, formData);
-     toast.success("Product added successfully!", { position: "top-right" });
-    } catch (error) {
-      console.error("Error adding product:", error);
+      await axios.post(
+        `${import.meta.env.VITE_BASE_URL}/add-product`,
+        fd,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      toast.success("✅ Product added successfully!");
+      resetForm();
+    } catch (err) {
+      console.error("Error adding product:", err.response || err);
+      toast.error(err.response?.data?.message || "❌ Failed to add product.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white shadow-lg rounded-lg p-6">
-      <h2 className="text-2xl font-bold mb-4">Add Product</h2>
-      <form onSubmit={handleSubmit}>
-        <input type="text" placeholder="Product Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full border p-2 rounded mb-2" required />
-        <input type="number" placeholder="Price" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full border p-2 rounded mb-2" required />
-        <input type="number" placeholder="Stocks" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full border p-2 rounded mb-2" required />
+    <div className="max-w-xl mx-auto p-6 bg-white shadow rounded">
+      <h2 className="text-2xl font-bold mb-4">Add New Product</h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Name & Price */}
+        <input
+          name="name"
+          value={form.name}
+          onChange={handleChange}
+          placeholder="Product Name"
+          className="w-full border p-2 rounded"
+          required
+        />
+        <input
+          name="price"
+          type="number"
+          value={form.price}
+          onChange={handleChange}
+          placeholder="Price (₹)"
+          className="w-full border p-2 rounded"
+          required
+        />
 
-        <input type="text" placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full border p-2 rounded mb-2" required />
+        {/* Category & Subcategory */}
+        <div className="flex gap-2">
+          <select
+            name="category"
+            value={form.category}
+            onChange={handleChange}
+            className="flex-1 border p-2 rounded"
+          >
+            {CATEGORY_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+          <input
+            name="subcategory"
+            value={form.subcategory}
+            onChange={handleChange}
+            placeholder="Subcategory"
+            className="flex-1 border p-2 rounded"
+          />
+        </div>
 
-        <input type="file" onChange={(e) => setImage(e.target.files[0])} className="w-full border p-2 rounded mb-2" required />
-        <button type="submit" className="bg-yellow-500 text-white py-2 px-4 rounded w-full hover:bg-yellow-600 transition">
-          Add Product
+        {/* Brand & Size Type */}
+        <input
+          name="brand"
+          value={form.brand}
+          onChange={handleChange}
+          placeholder="Brand"
+          className="w-full border p-2 rounded"
+        />
+        <select
+          name="sizeType"
+          value={form.sizeType}
+          onChange={handleChange}
+          className="w-full border p-2 rounded"
+        >
+          {SIZE_TYPE_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+
+        {/* Stock Details */}
+        <div>
+          <h3 className="font-semibold mb-2">Stock Details</h3>
+          {form.stockRows.map((row, idx) => (
+            <div key={idx} className="flex gap-2 items-center mb-2">
+              {form.sizeType !== "Quantity" && (
+                <select
+                  value={row.size}
+                  onChange={(e) =>
+                    handleStockChange(idx, "size", e.target.value)
+                  }
+                  className="flex-1 border p-2 rounded"
+                  required
+                >
+                  <option value="">Select size</option>
+                  {SIZE_OPTIONS[form.sizeType].map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <input
+                type="number"
+                placeholder="Quantity"
+                value={row.quantity}
+                onChange={(e) =>
+                  handleStockChange(idx, "quantity", e.target.value)
+                }
+                className="w-24 border p-2 rounded"
+                required
+              />
+              {form.stockRows.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeStockRow(idx)}
+                  className="text-red-500 text-xl"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addStockRow}
+            className="text-sm text-blue-600"
+          >
+            + Add another{" "}
+            {form.sizeType === "Quantity" ? "quantity" : "size"} row
+          </button>
+        </div>
+
+        {/* Description */}
+        <textarea
+          name="description"
+          value={form.description}
+          onChange={handleChange}
+          placeholder="Description"
+          className="w-full border p-2 rounded"
+          rows={4}
+          required
+        />
+
+        {/* Image Upload & Preview */}
+        <input
+          name="image"
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFileSelect}
+          className="w-full border p-2 rounded"
+          required
+        />
+        {previews.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {previews.map((src, i) => (
+              <img
+                key={i}
+                src={src}
+                alt={`Preview ${i}`}
+                className="h-24 object-contain border rounded"
+              />
+            ))}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className={`w-full py-2 rounded text-white ${
+            loading
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-yellow-500 hover:bg-yellow-600"
+          }`}
+        >
+          {loading ? "Submitting…" : "Submit Product"}
         </button>
       </form>
     </div>
   );
-};
-
-export default AddProduct;
+}

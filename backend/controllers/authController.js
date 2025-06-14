@@ -132,42 +132,6 @@ export const loginUser = async (req, res) => {
     }
   };
 
-// ✅ Reset Password - Update Password
-// export const resetPassword = async (req, res) => {
-//   try {
-//      const { token } = req.params;
-     
-
-//     const { password, email } = req.body;
-
-//     // ✅ Find user whose reset token has not expired
-//     const user = await User.findOne({
-//       email,
-//       resetPasswordToken: { $exists: true }, // ✅ Ensures token exists
-//       resetPasswordExpires: { $gt: Date.now() }, // ✅ Ensures token is not expired
-//     });
-
-//     if (!user) {
-//       return res.status(400).json({ message: "Invalid or expired token!" });
-//     }
-
-//     // ✅ Compare the stored hashed token with the received plain token
-//     const isMatch = await bcrypt.compare(token, user.resetPasswordToken);
-//     if (!isMatch) {
-//       return res.status(400).json({ message: "Invalid token!" });
-//     }
-
-//     // ✅ Hash the new password and update user
-//     user.password = await bcrypt.hash(password, 10);
-//     user.resetPasswordToken = undefined; // Remove token after use
-//     user.resetPasswordExpires = undefined;
-//     await user.save();
-
-//     res.status(200).json({ message: "Password reset successful!" });
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
 export const resetPassword = async (req, res) => {
   try {
     const rawToken = req.params.token;
@@ -351,34 +315,93 @@ export const verifyOtp = async (req, res) => {
   }
 };
 
-//uploading products to cloudinary admin
-export const uploadCloudinary = async (req, res) => {
- 
-  try {    
-    const { name, price, stock, description } = req.body; // ✅ Extract all required fields
 
-    // ✅ Check if File Exists
-    if (!req.file) {
-      return res.status(400).json({ message: "No image uploaded!" });
-    }
-    console.log("🔍 req.file (from multer‐storage‐cloudinary):", req.file);
-    const imageUrl = req.file.path; // Cloudinary image URL
-    const imagePublicId = req.file.filename
-
-    // ✅ Ensure all required fields are provided
-    if (!name || !price || !stock || !description) {
-      return res.status(400).json({ message: "All fields are required!" });
+export const addProduct = async (req, res) => {
+  try {
+    // ensure files
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "At least one image is required." });
     }
 
-    const newProduct = new Product({ name, price, stock, description, image: imageUrl ,imagePublicId:imagePublicId});
-    await newProduct.save();
+    // basic fields
+    const {
+      name, price, description,
+      category, subcategory, brand,
+      sizeType, stock: stockRaw
+    } = req.body;
 
-    res.status(201).json({ message: "Product added successfully!", product: newProduct });
-  } catch (error) {
-    console.log("Error:", error); // Debugging
-    res.status(500).json({ message: "Error adding product", error: error.message });
+    if (!name || !price || !description || !category || !stockRaw) {
+      return res.status(400).json({
+        message: "name, price, description, category and stock are required."
+      });
+    }
+
+    // parse & validate stock
+    let stock;
+    try {
+      stock = JSON.parse(stockRaw);
+      if (!Array.isArray(stock) || stock.length === 0) throw new Error();
+      stock.forEach(entry => {
+        if (typeof entry.quantity !== "number") throw new Error("Quantity must be numeric");
+        if (sizeType !== "Quantity" && !entry.size) throw new Error("Size is required");
+      });
+    } catch {
+      return res.status(400).json({ message: "Invalid stock format." });
+    }
+
+    // map files → arrays
+    const image        = req.files.map(f => f.path);
+    const imagePublicId = req.files.map(f => f.filename);
+
+    const product = await Product.create({
+      name, price, description,
+      category, subcategory, brand, sizeType,
+      stock, image, imagePublicId
+    });
+
+    res.status(201).json({ message: "Product added!", product });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+// export const updateProduct = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     // parse incoming fields same as addProduct...
+//     const {
+//       name, price, description,
+//       category, subcategory, brand,
+//       sizeType, stock: stockRaw
+//     } = req.body;
+
+//     // parse stock
+//     let stock;
+//     try {
+//       stock = JSON.parse(stockRaw);
+//     } catch {
+//       return res.status(400).json({ message: "Invalid stock." });
+//     }
+
+//     // build update doc
+//     const update = { name, price, description, category, subcategory, brand, sizeType, stock };
+
+//     // if new files arrived, overwrite images arrays
+//     if (req.files && req.files.length > 0) {
+//       update.image     = req.files.map(f => f.path);
+//       update.imagePublicId = req.files.map(f => f.filename);
+//     }
+
+//     const prod = await Product.findByIdAndUpdate(id, update, { new: true });
+//     if (!prod) return res.status(404).json({ message: "Not found." });
+
+//     res.json({ message: "Product updated!", product: prod });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Server error", error: err.message });
+//   }
+// };
 
 
 

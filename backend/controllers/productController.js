@@ -1,22 +1,25 @@
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
+import cloudinary from "../config/cloudinary.js"; // wherever you configure your Cloudinary SDK
 
-//get products list for user
+// get products list for user
 export const getProducts = async (req, res) => {
   try {
-    const products = await Product.find(); // Fetch all products from DB
+    const products = await Product.find()
+      .select("-reviews")               // omit reviews if you don’t need them here
+      .sort({ createdAt: -1 });         // maybe newest first
     res.json(products);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error fetching products", error: error.message });
+    res.status(500).json({ message: "Error fetching products", error: error.message });
   }
 };
 
-//get single product detail
-export const getSingleProductDetail = async(req,res)=>{
+// get single product detail (including reviews)
+export const getSingleProductDetail = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);    
+    const product = await Product.findById(req.params.id)
+      .populate("reviews.userId", "name avatar").lean() // bring in user info if desired
+
     if (!product) return res.status(404).json({ message: "Product not found" });
 
     res.status(200).json(product);
@@ -24,93 +27,135 @@ export const getSingleProductDetail = async(req,res)=>{
     console.error("Error fetching product:", error);
     res.status(500).json({ message: "Server error" });
   }
-}
+};
 
+// edit an existing product (admin)
 export const editAdminProduct = async (req, res) => {
   const { id } = req.params;
-  const { name, price, description, stock } = req.body;
+  const {
+    name,
+    price,
+    description,
+    category,
+    subcategory,
+    brand,
+    sizeType,
+    stock: stockRaw,
+  } = req.body;
 
   try {
     const product = await Product.findById(id);
-    if (!product) return res.status(404).json({ message: "Product not found" });
-
-    let imageUrl = product.image; // Keep existing image if no new one is uploaded
-
-    if (req.file) {
-      // Delete old image from Cloudinary if it exists
-      if (product.image) {
-        const publicId = product.image.split("/").pop().split(".")[0]; // Extract Cloudinary public ID
-        await cloudinary.uploader.destroy(`products/${publicId}`);
-      }
-      imageUrl = req.file.path; // Multer uploads to Cloudinary, path contains new image URL
-    }
-
-    // Update product with new values
-    const updatedProduct = await Product.findByIdAndUpdate(
-      id,
-      {
-        name: name || product.name,
-        price: price || product.price,
-        description: description || product.description,
-        stock: stock || product.stock,
-        image: imageUrl,
-      },
-      { new: true } // Return updated document
-    );
-
-    res.status(200).json(updatedProduct);
-  } catch (error) {
-    console.error("Error updating product:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
-
-export const deleteAdminProduct = async (req, res) => {
-  try {
-    const productId = req.params.id;
-
-    // 1. Find the product first (so we know its imagePublicId)
-    const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // 2. Remove the image from Cloudinary
-    //    `imagePublicId` was saved when you uploaded the product
-    if (product.imagePublicId) {
-      const destroyResult = await cloudinary.uploader.destroy(product.imagePublicId);
-      // destroyResult will be { result: "ok" } if success (or "not found" if it wasn’t there)
-      // You can inspect `destroyResult` if you want to log or handle failures—but even if Cloudinary says “not found,” we’ll proceed to delete the DB doc.
+    // Parse stock
+    let incomingStock;
+    if (typeof stockRaw === "string") {
+      try {
+        incomingStock = JSON.parse(stockRaw);
+      } catch {
+        return res.status(400).json({ message: "Invalid stock JSON" });
+      }
+    } else {
+      incomingStock = stockRaw;
     }
 
-    // 3. Delete the product document from MongoDB
-    await Product.findByIdAndDelete(productId);
+    if (!Array.isArray(incomingStock)) {
+      return res.status(400).json({ message: "Stock must be an array" });
+    }
 
-    return res.json({ message: "Product and its image were deleted successfully." });
-  } catch (error) {
-    console.error("Error deleting product:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    // Build final stock array, falling back to old sizes
+    const finalStock = incomingStock.map((entry, idx) => {
+      const quantity = Number(entry.quantity) || 0;
+      let size = entry.size || "";
+
+      if (sizeType !== "Quantity" && !size && product.stock[idx]) {
+        size = product.stock[idx].size;
+      }
+
+      return { size, quantity };
+    });
+
+    // Handle image replacement
+    let newImages = product.image.slice();
+    let newPublicIds = product.imagePublicId.slice();
+
+    if (req.files && req.files.length) {
+      for (let pubId of product.imagePublicId) {
+        await cloudinary.uploader.destroy(pubId);
+      }
+      newImages = req.files.map((f) => f.path);
+      newPublicIds = req.files.map((f) => f.filename);
+    }
+
+    // Build update object
+    const updates = {
+      name: name ?? product.name,
+      price: price ?? product.price,
+      description: description ?? product.description,
+      category: category ?? product.category,
+      subcategory: subcategory ?? product.subcategory,
+      brand: brand ?? product.brand,
+      sizeType: sizeType ?? product.sizeType,
+      stock: finalStock,
+      image: newImages,
+      imagePublicId: newPublicIds,
+    };
+
+    const updated = await Product.findByIdAndUpdate(id, updates, {
+      new: true,
+      runValidators: true,
+      context: "ignoreSizeRequired",
+    });
+
+    return res.status(200).json(updated);
+  } catch (err) {
+    console.error("Error in editAdminProduct:", err);
+    if (err.name === "ValidationError") {
+      return res.status(400).json({ message: err.message });
+    }
+    return res.status(500).json({ message: "Internal server error", error: err.message });
   }
 };
 
-//admin payment status || Mark an Order as Paid
+
+// delete a product (admin)
+export const deleteAdminProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findById(id);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+
+    // Remove image from Cloudinary
+    if (product.imagePublicId) {
+      await cloudinary.uploader.destroy(product.imagePublicId);
+    }
+
+    // Delete product document
+    await Product.findByIdAndDelete(id);
+
+    res.json({ message: "Product and its image were deleted successfully." });
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// admin: mark an order as paid
 export const markAsPaid = async (req, res) => {
   try {
     const { orderId } = req.params;
-
-    // Find and update order payment status
     const updatedOrder = await Order.findByIdAndUpdate(
       orderId,
       { paymentStatus: "paid" },
-      { new: true } // Return updated order
+      { new: true }
     );
+    if (!updatedOrder) return res.status(404).json({ message: "Order not found" });
 
-    if (!updatedOrder) {
-      return res.status(404).json({ message: "Order not found" });
-    }
     res.status(200).json({ message: "Order marked as paid", order: updatedOrder });
   } catch (error) {
     console.error("Error updating payment status:", error);
     res.status(500).json({ message: "Internal server error" });
   }
-}
+};

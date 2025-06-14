@@ -1,13 +1,12 @@
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import useWishlistStore from "../store/useWishlistStore";
-import useCartStore from "../store/useCartStore";
-import useAuthStore from "../store/useAuthStore";
+// import useAuthStore from "../store/useAuthStore";
 
 const Wishlist = () => {
   const { wishlist, removeFromWishlist, fetchWishlist, loading } = useWishlistStore();
-  const { userId } = useAuthStore.getState();
-  const { addToCart } = useCartStore();
+  // const { userId } = useAuthStore.getState(); // still available if needed
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchWishlist(); // Fetch wishlist on mount
@@ -33,16 +32,15 @@ const Wishlist = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {wishlist.map((product) => (
               <div key={product._id} className="bg-white p-4 rounded-lg shadow-md">
-                <img src={product.image} alt={product.name} className="w-full h-40 object-cover rounded" />
+                <img src={product?.image?.[0]} alt={product.name} className="w-full h-40 object-cover rounded" />
                 <h3 className="text-lg font-semibold mt-2">{product.name}</h3>
                 <p className="text-gray-600">Rs {product.price}</p>
                 <div className="flex mt-3 gap-2">
                   <button
-                    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
-                    onClick={() => { addToCart(product._id, userId, 1); removeFromWishlist(product._id); }}
-                    disabled={loading}
+                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                    onClick={() => navigate(`/single-product/${product._id}`)}
                   >
-                    Move to Cart
+                    Show Product
                   </button>
                   <button
                     className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 disabled:opacity-50"

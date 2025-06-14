@@ -1,15 +1,13 @@
 import Cart from "../models/cart.js";
-import { addToCartSchema, updateCartSchema } from "../validation/cartValidation.js";
+import {  updateCartSchema } from "../validation/cartValidation.js";
 
 // 📌 Add item to cart
 export const addToCart = async (req, res) => {
   try {
-    const { error } = addToCartSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({ message: error.details[0].message });
-    }
-
-    const { product, quantity = 1 } = req.body;
+ 
+    const { product, size, quantity = 1 } = req.body;
+    console.log(product);
+    
     const userId = req.user.id;
 
     let cart = await Cart.findOne({ userId });
@@ -21,7 +19,7 @@ export const addToCart = async (req, res) => {
     if (existingItem) {
       existingItem.quantity += quantity;
     } else {
-      cart.items.push({ product, quantity });
+      cart.items.push({ product, quantity ,size});
     }
 
     await cart.save();

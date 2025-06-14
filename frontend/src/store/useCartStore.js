@@ -1,44 +1,42 @@
 import { create } from "zustand";
 import axios from "axios";
 import useAuthStore from "./useAuthStore";
+import { toast } from "react-toastify";
 
+const BASE = import.meta.env.VITE_BASE_URL;
 const useCartStore = create((set, get) => ({
   cart: [],
   cartCount: 0, // ✅ Add cartCount
   loading: false,
 
-  addToCart: async (product, userId, quantity = 1) => {
-    console.log("Adding to Cart:", product, userId);
-
-    if (!product || !product._id || !product.price) {
-      console.error("Invalid product object:", product);
-      return;
-    }
-
+ // ⚠️ Notice the field is called 'product', not 'productId'
+  addToCart: async ({ product, size = "", quantity = 1 }) => {
+    set({ loading: true });
     try {
-      set({ loading: true });
-      const token = useAuthStore.getState().token;
+      const { token } = useAuthStore.getState();
       if (!token) {
-        console.error("No token found. Please log in.");
+        toast.error("Please log in first!");
         return;
       }
 
-      const response = await axios.post(
-        `${import.meta.env.VITE_BASE_URL}/add-cart`,
-        { product: product._id, userId, quantity },
+      // <-- This body shape must match your controller’s destructuring
+      const { data } = await axios.post(
+        `${BASE}/add-cart`,
+        { product, size, quantity },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      console.log("Response from backend:", response.data);
-
-      if (response.status === 200) {
-        set((state) => ({
-          cart: [...state.cart, { product, quantity, _id: response.data.cartItemId }],
-          cartCount: state.cartCount + quantity, // ✅ Update cartCount
-        }));
-      }
-    } catch (error) {
-      console.error("Error adding to cart:", error.response?.data || error.message);
+      const items = data.items;
+      set({
+        cart: items,
+        cartCount: items.reduce((sum, i) => sum + i.quantity, 0),
+      });
+      toast.success("Added to cart!");
+      return data;
+    } catch (err) {
+      console.error("addToCart error:", err.response?.data || err);
+      toast.error("Failed to add to cart.");
+      throw err;
     } finally {
       set({ loading: false });
     }

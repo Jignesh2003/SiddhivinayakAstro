@@ -14,36 +14,52 @@ const Cart = () => {
   useEffect(() => {
     // Remove out-of-stock items automatically
     cart.forEach((item) => {
-      if (item.product?.stock === 0) {
+      const availableStock =
+        item.product?.stock?.[0]?.quantity ?? 0;
+
+      if (availableStock === 0) {
         removeFromCart(item.product._id);
-        toast.warn(`Removed ${item.product.name} (Out of Stock)`, { position: "top-right" });
+        toast.warn(
+          `Removed ${item.product.name} (Out of Stock)`,
+          { position: "top-right" }
+        );
       }
     });
   }, [cart]);
 
-  const handleUpdateCart = async (productId, newQuantity, stock) => {
-    if (newQuantity > stock) {
-      toast.error("Cannot exceed available stock!", { position: "top-right" });
+  const handleUpdateCart = async (productId, newQuantity, stockQty) => {
+    if (newQuantity > stockQty) {
+      toast.error("Cannot exceed available stock!", {
+        position: "top-right",
+      });
       return;
     }
     try {
       await updateCart(productId, newQuantity);
-      toast.success("Cart updated successfully!", { position: "top-right" });
+      toast.success("Cart updated successfully!", {
+        position: "top-right",
+      });
       await fetchCart(); // ✅ Always re-fetch to ensure latest state
     } catch (error) {
       console.error("Error updating cart:", error);
-      toast.error("Failed to update cart.", { position: "top-right" });
+      toast.error("Failed to update cart.", {
+        position: "top-right",
+      });
     }
   };
 
   const handleRemoveFromCart = async (productId) => {
     try {
       await removeFromCart(productId);
-      toast.success("Item removed from cart!", { position: "top-right" });
+      toast.success("Item removed from cart!", {
+        position: "top-right",
+      });
       await fetchCart(); // ✅ Re-fetch cart after removal
     } catch (error) {
       console.error("Error removing item:", error);
-      toast.error("Failed to remove item.", { position: "top-right" });
+      toast.error("Failed to remove item.", {
+        position: "top-right",
+      });
     }
   };
 
@@ -65,40 +81,71 @@ const Cart = () => {
       ) : (
         <div>
           {cart.map((item) => {
-            if (!item.product) {
-              console.warn("Cart item missing product data:", item);
-              return null;
-            }
+            if (!item.product) return null;
+
+            const availableStock =
+              item.product.stock?.[0]?.quantity ?? 0;
 
             return (
-              <div key={item._id} className="flex items-center justify-between border-b py-3">
+              <div
+                key={item._id}
+                className="flex items-center justify-between border-b py-3"
+              >
                 {/* Product Image */}
                 <img
-                  src={item.product.image || "/placeholder.png"}
+                  src={item.product?.image?.[0] || "/placeholder.png"}
                   alt={item.product.name || "Product Image"}
                   className="w-30 h-30 object-cover rounded-md mr-4"
                 />
 
                 <div className="flex-1">
-                  <h3 className="font-semibold">{item.product.name || "Unknown Product"}</h3>
+                  <h3 className="font-semibold">
+                    {item.product.name || "Unknown Product"}
+                  </h3>
                   <p>Price: ₹{item.product.price ?? "N/A"}</p>
-                  <p className={item.product.stock < 10 ? "text-red-500" : "text-green-500"}>
-                    Stock: {item.product.stock > 0 ? `Only ${item.product.stock} left hurry !` : "SORRY ! Out of Stock"}
+                  <p
+                    className={
+                      availableStock === 0
+                        ? "text-red-600"
+                        : availableStock < 10
+                        ? "text-orange-600"
+                        : "text-green-600"
+                    }
+                  >
+                    {availableStock > 0
+                      ? `Stock: Hurry ! Only few left.`
+                      : "SORRY! Out of Stock"}
                   </p>
-                  <p className="font-semibold">Quantity: {item.quantity}</p>
+                  <p className="font-semibold">
+                    Quantity: {item.quantity}
+                  </p>
 
                   <div className="flex gap-2 mt-2">
                     <button
-                      onClick={() => handleUpdateCart(item.product._id, item.quantity + 1, item.product.stock)}
-                      className={`px-2 py-1 rounded ${item.quantity >= item.product.stock ? "bg-gray-400 cursor-not-allowed" : "bg-green-500 text-white"}`}
-                      disabled={item.quantity >= item.product.stock}
+                      onClick={() =>
+                        handleUpdateCart(
+                          item.product._id,
+                          item.quantity + 1,
+                          availableStock
+                        )
+                      }
+                      className={`px-2 py-1 rounded ${
+                        item.quantity >= availableStock
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-green-500 text-white"
+                      }`}
+                      disabled={item.quantity >= availableStock}
                     >
                       +
                     </button>
                     <button
                       onClick={() => {
                         if (item.quantity > 1) {
-                          handleUpdateCart(item.product._id, item.quantity - 1, item.product.stock);
+                          handleUpdateCart(
+                            item.product._id,
+                            item.quantity - 1,
+                            availableStock
+                          );
                         }
                       }}
                       className="px-2 py-1 bg-yellow-500 text-white rounded"
@@ -113,15 +160,22 @@ const Cart = () => {
                     </button>
                   </div>
                 </div>
-                <p className="font-bold">₹{item.product.price ? item.product.price * item.quantity : "N/A"}</p>
+                <p className="font-bold">
+                  ₹{item.product.price * item.quantity}
+                </p>
               </div>
             );
           })}
 
           {/* Display total price */}
-          <div className="mt-4 text-xl font-bold text-right">Total: ₹{totalPrice}</div>
+          <div className="mt-4 text-xl font-bold text-right">
+            Total: ₹{totalPrice}
+          </div>
 
-          <Link to="/checkout" className="block w-full mt-4 text-center bg-blue-500 text-white py-2 rounded">
+          <Link
+            to="/checkout"
+            className="block w-full mt-4 text-center bg-blue-500 text-white py-2 rounded"
+          >
             Proceed to Checkout
           </Link>
         </div>

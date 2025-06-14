@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js"
-import { placeOrderSchema, updateOrderStatusSchema } from "../validation/orderValidation.js"
+import {  updateOrderStatusSchema } from "../validation/orderValidation.js"
+import Cart from "../models/cart.js"
 // 🟢 Get single order by ID || FOr order Details
 export const getSingleOrder = async (req, res) => {
   try {
@@ -56,73 +57,60 @@ export const updateOrderStatus = async (req, res) => {
 export const placeOrder = async (req, res) => {
   try {
     const userId = req.user.id;
-     const { error, value } = placeOrderSchema.validate(req.body);
-    if (error) return res.status(400).json({ message: error.details[0].message });
+    const { items, totalAmount, paymentMethod, shippingAddress } = req.body;
 
-    const { items, totalAmount, paymentMethod, shippingAddress } = value;
-
-
-    if (!userId || !items || items.length === 0) {
-      return res.status(400).json({ message: "Invalid order data" });
+    if (!items?.length) {
+      return res.status(400).json({ message: "No items in the order." });
     }
 
     const orderItems = [];
 
     for (const item of items) {
-      // Attempt to find and update product stock atomically
+      // 1. Find exactly the array entry whose quantity is ≥ the requested amount:
       const updatedProduct = await Product.findOneAndUpdate(
         {
           _id: item.product,
-          stock: { $gte: item.quantity }, // Ensure enough stock
+          "stock.quantity": { $gte: item.quantity }
         },
         {
-          $inc: { stock: -item.quantity }, // Deduct stock
+          // 2. Decrement that matching array element’s quantity
+          $inc: { "stock.$.quantity": -item.quantity }
         },
         { new: true }
       );
 
-      // If product not found or not enough stock
       if (!updatedProduct) {
         return res.status(400).json({
-          message: `Not enough stock for product ID ${item.product} or product not found.`,
+          message: `Not enough stock for product ${item.product}.`
         });
       }
 
-      console.log(
-        `Updated stock for ${updatedProduct.name}: ${updatedProduct.stock}`
-      );
-
       orderItems.push({
         product: updatedProduct._id,
-        quantity: item.quantity,
-        size: item.size || null, // Optional field for future
+        quantity: item.quantity
+        // — don’t push `size` unless you’ve added it to your Order schema
       });
     }
 
     const order = new Order({
-      user: new mongoose.Types.ObjectId(userId),
+      user: userId,
       items: orderItems,
       totalAmount,
       paymentMethod: paymentMethod || "cod",
       paymentStatus: paymentMethod === "cod" ? "pending" : "paid",
       orderStatus: "pending",
-      shippingAddress,
+      shippingAddress
     });
-    try {
-      await order.save();
-      console.log("Order saved successfully:", order);
-    } catch (error) {
-      console.log("Error While saving Order",error);
-      
-    }
 
-    // Clear user's cart after successful order
+    await order.save();
+
+    // Clear the cart
     await Cart.findOneAndDelete({ user: userId });
 
-    res.status(201).json({ message: "Order placed successfully", order });
-  } catch (error) {
-    console.error("Place Order Error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return res.status(201).json({ message: "Order placed", order });
+  } catch (err) {
+    console.error("Place Order Error:", err);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
