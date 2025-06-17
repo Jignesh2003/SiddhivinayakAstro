@@ -30,8 +30,8 @@ const orderSchema = new mongoose.Schema(
     },
     orderStatus: {
       type: String,
-      enum: ["pending", "shipped", "out-for-delivery", "delivered", "cancelled"], // ✅ Fixed "on-way" to "out-for-delivery"
-      default: "pending",
+      enum: ["Pending", "Shipped", "Out-for-delivery", "Delivered", "Cancelled","On-way"], // ✅ Fixed "on-way" to "out-for-delivery"
+      default: "Pending",
     },
 
     // ✅ Shipping Address

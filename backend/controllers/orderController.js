@@ -34,10 +34,8 @@ export const getAllOrders = async (req, res) => {
 // ✅ Update Order Status (Admin & Seller)
 export const updateOrderStatus = async (req, res) => {
   try {
-    const { error, value } = updateOrderStatusSchema.validate(req.body);
-    if (error) return res.status(400).json({ message: error.details[0].message });
-
-    const { orderId, status } = value;
+  
+    const { orderId, status } = req.body;
 
     
     const order = await Order.findById(orderId);

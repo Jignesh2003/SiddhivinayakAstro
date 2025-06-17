@@ -159,7 +159,7 @@ console.log(products);
                   <img
                     src={product?.image?.[0]}
                     alt={product.name}
-                    className="w-full h-70 object-contain rounded-md cursor-pointer"
+                    className="w-full h-70 object-contain  rounded-md cursor-pointer"
                     onClick={() => navigate(`/single-product/${product._id}`)}
                   />
                   <h3 className="mt-2 text-lg font-semibold">

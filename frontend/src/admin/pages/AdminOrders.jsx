@@ -129,11 +129,11 @@ const AdminOrders = () => {
                     }
                     className="border p-1 rounded"
                   >
-                    <option value="pending">Pending</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="on-way">On Way</option>
-                    <option value="delivered">Delivered</option>
                     <option value="cancelled">Cancelled</option>
+                    <option value="On-way">On Way</option>
+                    <option value="Shipped">Shipped</option>
+                    <option value="Out-for-delivery">Out-for-delivery</option>
+                    <option value="Delivered">Delivered</option>
                   </select>
                 </td>
                 <td className="border p-2">

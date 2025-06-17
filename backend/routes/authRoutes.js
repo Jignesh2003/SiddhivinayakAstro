@@ -44,7 +44,7 @@ router.get("/checking-auth", authMiddleware, checkingAuth);
 
 router.get("/products", getProducts);
 
-router.get("/products/:id",authMiddleware,getSingleProductDetail)
+router.get("/products/:id",getSingleProductDetail)
 
 router.post("/add-cart", authMiddleware, addToCart);
 

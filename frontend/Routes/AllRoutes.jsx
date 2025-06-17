@@ -39,7 +39,7 @@ import AstrologerSignup from "../src/astrologer/AstrologerSigup";
 import AstrologerDashboard from "../src/astrologer/AstrologerDashboard";
 import ChatBox from "../src/chatContext/ChatBot";
 import AstrologerList from "../src/pages/AstrologerList";
-  import AstrologerChatRequests from "../src/astrologer/AstrologerChatRequests";
+import AstrologerChatRequests from "../src/astrologer/AstrologerChatRequests";
 import AstrologerProfile from "../src/astrologer/AstrologerProfile";
 import AdminVerifyAstrologers from "../src/admin/pages/AdminVerifyAstrologers";
 import ChatRequestTimer from "../src/pages/ChatRequestTimer";
@@ -52,7 +52,7 @@ const AppRoutes = () => {
         <Route path="/" element={<Dashboard />} />
         <Route path="/login" element={<Login />} />
         <Route path="/sign-up" element={<Signup />} />
-        <Route path="/astrologer-signup" element={< AstrologerSignup/>} />
+        <Route path="/astrologer-signup" element={< AstrologerSignup />} />
         <Route path="/forgot-my-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/about-us" element={<AboutUs />} />
@@ -67,6 +67,8 @@ const AppRoutes = () => {
         <Route path="/blogs-sacred-yantras" element={<SacredYantras />} />
         <Route path="/blogs-planetary-influence" element={<PlanetaryInfluence />} />
         <Route path="/products" element={<Products />} />
+        <Route path="/single-product/:id" element={<SingleProduct />} />
+
 
         {/* ✅ 404 Not Found Page */}
         <Route path="*" element={<NotFound />} />
@@ -77,8 +79,8 @@ const AppRoutes = () => {
         {/* ✅ Protected Routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/astrologer-dashboard" element={<AstrologerDashboard />} />
-                    <Route path="/astrologer-profile" element={<AstrologerProfile />} />
-<Route path="/chat-waiting/:sessionId" element={<ChatRequestTimer />} />
+          <Route path="/astrologer-profile" element={<AstrologerProfile />} />
+          <Route path="/chat-waiting/:sessionId" element={<ChatRequestTimer />} />
           <Route path="/astrologer-chat-request" element={<AstrologerChatRequests />} />
           <Route path="/astro-user-chat/:sessionId" element={<ChatBox />} />
           <Route path="/astro-list" element={<AstrologerList />} />
@@ -89,7 +91,6 @@ const AppRoutes = () => {
           <Route path="/orders/:id" element={<SingleOrderDetails />} />
           <Route path="/order-confirmation" element={<OrderConfirmation />} />
           <Route path="/wishlist" element={<Wishlist />} />
-          <Route path="/single-product/:id" element={<SingleProduct />} />
           <Route path="/product/:productId/reviews" element={<ReviewPage />} />
         </Route>
 
