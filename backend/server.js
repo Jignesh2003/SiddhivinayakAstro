@@ -22,6 +22,8 @@ app.use(cookieParser());
 app.use(cors({
   origin: [
     "https://siddhivinayak-astro.vercel.app/",
+    "https://www.siddhivinayakastroworld.com",
+     "https:www.siddhivinayakastroworld.in",
     "http://localhost:5173",
   ],
   credentials: true,
