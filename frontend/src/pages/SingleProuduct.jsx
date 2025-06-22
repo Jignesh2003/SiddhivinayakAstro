@@ -7,6 +7,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import ImageGallery from "react-image-gallery";
 import "react-image-gallery/styles/css/image-gallery.css";
+import assets from "../assets/assets";
 
 const SingleProduct = () => {
   const { id } = useParams();
@@ -37,7 +38,8 @@ const SingleProduct = () => {
           setSelectedSize(data.stock[0].size);
         }
       } catch (err) {
-        console.error("Error fetching product:", err);
+        console.log(err);
+        
         toast.error("Failed to load product.");
       } finally {
         setLoading(false);
@@ -47,16 +49,16 @@ const SingleProduct = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <p>Loading product...</p>
+      <div className="flex justify-center items-center h-64 text-white">
+        Loading product...
       </div>
     );
   }
 
   if (!product) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <p>Product not found.</p>
+      <div className="flex justify-center items-center h-64 text-white">
+        Product not found.
       </div>
     );
   }
@@ -90,7 +92,7 @@ const SingleProduct = () => {
       });
       toast.success("Added to cart!");
     } catch {
-      /* handled */
+      toast.error("Failed to add to cart.");
     }
   };
 
@@ -109,138 +111,173 @@ const SingleProduct = () => {
   }));
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white shadow-xl rounded-lg mt-6">
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* Product Image Gallery */}
-        <div className="w-full md:w-1/2">
-          <ImageGallery
-            items={galleryImages}
-            showPlayButton={false}
-            showFullscreenButton={true}
-            showNav={true}
-            slideDuration={200}
-          />
-        </div>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Blurred Background Image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: `url(${assets.GalaxyBackground})`,
+          filter: "blur(8px)",
+          zIndex: -1,
+        }}
+      />
 
-        {/* Product Info */}
-        <div className="flex-1 flex flex-col">
-          <h1 className="text-4xl font-bold mb-2">{product.name}</h1>
-          <p className="text-sm text-gray-500 mb-4">
-            Brand: <span className="font-medium">{product.brand}</span> |{" "}
-            Category: <span className="font-medium">{product.category}</span>
-          </p>
-          <p className="text-lg text-gray-800 mb-4">{product.description}</p>
+      {/* Overlay for darkening */}
+      <div className="absolute inset-0  bg-opacity-60 backdrop-blur-md z-0" />
 
-          <p className="text-2xl font-semibold mb-2">₹{product.price}</p>
-          <p
-            className={`mb-4 font-semibold ${
-              totalStock ? "text-green-600" : "text-red-600"
-            }`}
-          >
-            {totalStock ? "In Stock" : "Out of Stock"}
-          </p>
+      {/* Main Content */}
+      <div className="relative z-10 text-white py-10 px-4 md:px-10">
+        <div className="max-w-6xl mx-auto bg-black bg-opacity-70 backdrop-blur-md rounded-lg shadow-xl p-6">
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Image Gallery */}
+            <div className="w-full md:w-1/2">
+              <ImageGallery
+                items={galleryImages}
+                showPlayButton={false}
+                showFullscreenButton
+                showNav
+                slideDuration={200}
+              />
+            </div>
 
-          {product.sizeType !== "Quantity" && (
-            <div className="mb-4">
-              <label className="block text-gray-700 mb-1">
-                Select {product.sizeType}:
-              </label>
-              <select
-                value={selectedSize}
-                onChange={(e) => setSelectedSize(e.target.value)}
-                className="border p-2 rounded"
+            {/* Product Info */}
+            <div className="flex-1 flex flex-col">
+              <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
+              <p className="text-sm text-gray-300 mb-4">
+                Brand:{" "}
+                <span className="font-medium text-white">
+                  {product.brand}
+                </span>{" "}
+                | Category:{" "}
+                <span className="font-medium text-white">
+                  {product.category}
+                </span>
+              </p>
+              <p className="text-md text-gray-100 mb-4">{product.description}</p>
+
+              <p className="text-2xl font-semibold text-yellow-400 mb-2">
+                ₹{product.price}
+              </p>
+              <p
+                className={`mb-4 font-semibold ${
+                  totalStock ? "text-green-400" : "text-red-500"
+                }`}
               >
-                {product.stock.map((v) => (
-                  <option key={v._id} value={v.size}>
-                    {v.size}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+                {totalStock ? "In Stock" : "Out of Stock"}
+              </p>
 
-          {avgRating && (
-            <div className="flex items-center mb-6">
-              <span className="text-xl font-medium mr-2">{avgRating}</span>
-              <div className="flex">
-                {[1, 2, 3, 4, 5].map((val) => (
-                  <Star
-                    key={val}
-                    size={20}
-                    className={
-                      val <= Math.round(avgRating)
-                        ? "text-yellow-500"
-                        : "text-gray-300"
-                    }
-                  />
-                ))}
-              </div>
-              <span className="text-sm text-gray-500 ml-2">
-                ({reviews.length} review{reviews.length !== 1 && "s"})
-              </span>
-            </div>
-          )}
-
-          <div className="flex gap-4 mt-auto">
-            <button
-              onClick={handleAddToCart}
-              disabled={
-                (product.sizeType !== "Quantity" && selectedStock === 0) ||
-                (product.sizeType === "Quantity" && totalStock === 0)
-              }
-              className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-lg flex items-center justify-center gap-2 disabled:bg-gray-300"
-            >
-              <ShoppingCart size={20} /> Add to Cart
-            </button>
-            <button
-              onClick={handleBuyNow}
-              disabled={
-                (product.sizeType !== "Quantity" && selectedStock === 0) ||
-                (product.sizeType === "Quantity" && totalStock === 0)
-              }
-              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg flex items-center justify-center gap-2 disabled:bg-gray-300"
-            >
-              <CreditCard size={20} /> Buy Now
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Reviews */}
-      <div className="mt-12">
-        <h2 className="text-2xl font-semibold mb-4">Customer Reviews</h2>
-        {reviews.length > 0 ? (
-          reviews.map((r) => (
-            <div key={r._id} className="border rounded-lg p-4 mb-4 bg-gray-50">
-              {r.userId && (
-                <div className="flex items-center gap-2 mb-2">
-                  <img
-                    src={r.userId.avatar || "/user-avatar.png"}
-                    alt={r.userId.name}
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
-                  <span className="font-medium text-sm">{r.userId.name}</span>
+              {product.sizeType !== "Quantity" && (
+                <div className="mb-4">
+                  <label className="block text-gray-300 mb-1">
+                    Select {product.sizeType}:
+                  </label>
+                  <select
+                    value={selectedSize}
+                    onChange={(e) => setSelectedSize(e.target.value)}
+                    className="bg-white text-black border rounded p-2 w-full"
+                  >
+                    {product.stock.map((v) => (
+                      <option key={v._id} value={v.size}>
+                        {v.size}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
-              <div className="flex items-center mb-2">
-                {[...Array(r.rating)].map((_, i) => (
-                  <Star key={i} className="text-yellow-500" size={18} />
-                ))}
-              </div>
-              {r.text && <p className="mb-2">{r.text}</p>}
-              {r.media && (
-                <img
-                  src={r.media}
-                  onError={(e) => (e.target.src = "/fallback.jpg")}
-                  alt="Review media"
-                  className="w-32 h-32 object-contain rounded-md"
-                />
+
+              {avgRating && (
+                <div className="flex items-center mb-6">
+                  <span className="text-xl font-medium mr-2">{avgRating}</span>
+                  <div className="flex">
+                    {[1, 2, 3, 4, 5].map((val) => (
+                      <Star
+                        key={val}
+                        size={20}
+                        className={
+                          val <= Math.round(avgRating)
+                            ? "text-yellow-400"
+                            : "text-gray-600"
+                        }
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-400 ml-2">
+                    ({reviews.length} review{reviews.length !== 1 && "s"})
+                  </span>
+                </div>
               )}
+
+              <div className="flex gap-4 mt-auto">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={
+                    (product.sizeType !== "Quantity" &&
+                      selectedStock === 0) ||
+                    (product.sizeType === "Quantity" && totalStock === 0)
+                  }
+                  className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black py-3 rounded-lg flex items-center justify-center gap-2 disabled:bg-gray-400"
+                >
+                  <ShoppingCart size={20} /> Add to Cart
+                </button>
+                <button
+                  onClick={handleBuyNow}
+                  disabled={
+                    (product.sizeType !== "Quantity" &&
+                      selectedStock === 0) ||
+                    (product.sizeType === "Quantity" && totalStock === 0)
+                  }
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg flex items-center justify-center gap-2 disabled:bg-gray-400"
+                >
+                  <CreditCard size={20} /> Buy Now
+                </button>
+              </div>
             </div>
-          ))
-        ) : (
-          <p className="text-gray-500">No reviews yet.</p>
-        )}
+          </div>
+
+          {/* Reviews */}
+          <div className="mt-12">
+            <h2 className="text-2xl font-semibold mb-4 text-yellow-400">
+              Customer Reviews
+            </h2>
+            {reviews.length > 0 ? (
+              reviews.map((r) => (
+                <div
+                  key={r._id}
+                  className="border border-gray-700 rounded-lg p-4 mb-4 bg-black bg-opacity-60"
+                >
+                  {r.userId && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <img
+                        src={r.userId.avatar || "/user-avatar.png"}
+                        alt={r.userId.name}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                      <span className="font-medium text-sm text-white">
+                        {r.userId.name}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center mb-2">
+                    {[...Array(r.rating)].map((_, i) => (
+                      <Star key={i} className="text-yellow-400" size={18} />
+                    ))}
+                  </div>
+                  {r.text && <p className="text-gray-100 mb-2">{r.text}</p>}
+                  {r.media && (
+                    <img
+                      src={r.media}
+                      onError={(e) => (e.target.src = "/fallback.jpg")}
+                      alt="Review media"
+                      className="w-32 h-32 object-contain rounded-md"
+                    />
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-400">No reviews yet.</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

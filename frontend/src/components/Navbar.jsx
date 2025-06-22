@@ -91,17 +91,20 @@ const Navbar = () => {
         </div>
       )}
 
-      <nav
-        className="fixed top-0 w-full h-24 flex items-center justify-center shadow-md z-50"
-        style={{
-          backgroundImage: `url(${assets.GalaxyBackground})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
+      <nav className="fixed top-0 left-0 w-full z-50 h-24 flex items-center backdrop-blur-md bg-black/80">
+        <div
+          className="absolute inset-0 z-[-1]"
+          style={{
+            backgroundImage: `url(${assets.GalaxyBackground})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            opacity: 0.2,
+          }}
+        />
+
         <audio ref={audioRef} src="/om_om_om.mp3" loop />
 
-        <div className="w-full max-w-7xl px-4 flex items-center justify-between">
+        <div className="w-full max-w-7xl px-4 mx-auto flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3">
             <img
@@ -125,7 +128,7 @@ const Navbar = () => {
                 <Link to="/cart" className="relative text-white hover:text-purple-400">
                   <ShoppingCart size={20} />
                   {cartCount > 0 && (
-                    <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 transform translate-x-1/2 -translate-y-1/2">
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">
                       {cartCount}
                     </span>
                   )}
@@ -133,34 +136,21 @@ const Navbar = () => {
               </>
             )}
 
-            {/* Astrologer-specific links */}
             {isAuthenticated && role === "astrologer" && (
               <>
-                <Link to="/astrologer-dashboard" className="text-white hover:text-purple-400 text-lg">
-                  Astrologer Dashboard
-                </Link>
-               
-                <Link to="/astrologer-chat-request" className="text-white hover:text-purple-400 text-lg">
-                  Chat Requests
-                </Link>
+                <Link to="/astrologer-dashboard" className="text-white hover:text-purple-400 text-lg">Astrologer Dashboard</Link>
+                <Link to="/astrologer-chat-request" className="text-white hover:text-purple-400 text-lg">Chat Requests</Link>
               </>
             )}
 
-            {/* Auth buttons */}
             {isAuthenticated ? (
               <>
                 {!isVerified && (
-                  <button
-                    onClick={() => navigate("/otp")}
-                    className="text-red-500 text-sm"
-                  >
+                  <button onClick={() => navigate("/otp")} className="text-red-500 text-sm">
                     Please verify
                   </button>
                 )}
-                <button
-                  onClick={handleLogout}
-                  className="text-white hover:text-red-500 text-lg"
-                >
+                <button onClick={handleLogout} className="text-white hover:text-red-500 text-lg">
                   Logout
                 </button>
               </>
@@ -176,7 +166,7 @@ const Navbar = () => {
             </button>
           </div>
 
-          {/* Mobile Nav Button */}
+          {/* Mobile Nav Toggle */}
           <div className="lg:hidden flex items-center gap-4">
             <button className="text-white" onClick={() => setIsOpen(!isOpen)}>
               {isOpen ? <X size={24} /> : <Menu size={24} />}
@@ -184,12 +174,11 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile Dropdown */}
+        {/* Mobile Menu */}
         {isOpen && (
           <div
             ref={menuRef}
-            className="absolute top-24 left-0 w-full bg-black bg-opacity-95 flex flex-col items-center space-y-4 py-6 lg:hidden"
-            style={{ backgroundImage: `url(${assets.GalaxyBackground})` }}
+            className="absolute top-24 left-0 w-full bg-black/90 backdrop-blur-md flex flex-col items-center space-y-4 py-6 lg:hidden"
           >
             <Link to="/" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Home</Link>
             <Link to="/products" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Products</Link>
@@ -202,7 +191,6 @@ const Navbar = () => {
               </>
             )}
 
-            {/* Astrologer-specific mobile */}
             {isAuthenticated && role === "astrologer" && (
               <>
                 <Link to="/astrologer-dashboard" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Astrologer Dashboard</Link>
@@ -218,17 +206,13 @@ const Navbar = () => {
                     Please verify
                   </button>
                 )}
-                <button
-                  onClick={() => { handleLogout(); setIsOpen(false); }}
-                  className="text-white hover:text-red-500 text-lg"
-                >
+                <button onClick={() => { handleLogout(); setIsOpen(false); }} className="text-white hover:text-red-500 text-lg">
                   Logout
                 </button>
               </>
             ) : (
               <>
                 <Link to="/login" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Login</Link>
-
                 <Link to="/sign-up" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Sign Up</Link>
               </>
             )}
@@ -240,7 +224,7 @@ const Navbar = () => {
         )}
       </nav>
 
-      {/* Spacer to prevent content overlap */}
+      {/* Prevent content from being hidden behind nav */}
       <div className="h-24" />
     </>
   );

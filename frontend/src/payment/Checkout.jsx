@@ -90,8 +90,8 @@ export default function Checkout() {
         0
       ),
       paymentMethod: selectedMethod,
-      paymentStatus: selectedMethod === "cod" ? "pending" : "paid",
-      orderStatus: "pending",
+      paymentStatus: selectedMethod === "cod" ? "Pending" : "Paid",
+      orderStatus: "Pending",
       shippingAddress,
     };
 
