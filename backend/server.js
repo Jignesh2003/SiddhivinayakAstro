@@ -46,6 +46,8 @@ const io = new Server(server, {
     origin: [
       "https://siddhivinayak-astro.vercel.app",
       "http://localhost:5173",
+      "https://www.siddhivinayakastroworld.com",
+     "https://www.siddhivinayakastroworld.in"
     ],
     credentials: true,
   },
