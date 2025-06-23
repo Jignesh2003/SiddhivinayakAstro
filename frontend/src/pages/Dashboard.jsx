@@ -108,7 +108,6 @@ const Home = () => {
           <ChevronRight className="text-white" />
         </button>
       </div>
-
       {/* Products */}
       <section className="py-10 px-4 sm:px-6">
         <h2 className="text-3xl sm:text-4xl font-bold text-center mb-8">
@@ -127,6 +126,7 @@ const Home = () => {
             1280: { slidesPerView: 4 },
           }}
         >
+ 
           {products.map((p) => {
             const stock = getTotalStock(p.stock);
             const reviews = Array.isArray(p.reviews) ? p.reviews : [];
@@ -229,7 +229,12 @@ const Home = () => {
           })}
         </Swiper>
       </section>
-
+            <div className="w-full pt-70 " onClick={()=>navigate("/astro-list")}>
+  <img
+    src={assets.ChatWithAstroLogo}
+    alt="Chat With Astrologer" 
+className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-10"  />
+</div>
       {/* Testimonials */}
       <section className="py-12 px-4 sm:px-6 bg-black/80 text-center text-white">
         <h2 className="text-xl sm:text-2xl font-semibold mb-4">Testimonials</h2>
