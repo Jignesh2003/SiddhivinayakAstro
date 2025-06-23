@@ -1,18 +1,18 @@
 import SiddhivinayakAstroLogo from './b491975a-9997-4f16-a1ae-cecb73bd11e9-CMttJqCQ.jpeg'
 import GalaxyBackground from './beautiful-7305546_1280.jpg'
 import HeroSelectionBackground from './HeroSectionBackground.jpg'
-import Aquarius from "./Aquarius.gif"
-import Aries from "./Capricorn.gif"
-import Cancer from "./Cancer.gif"
-import Capricorn from "./Capricorn.gif"
+import Aquarius from "./Aquarius.jpeg"
+import Aries from "./Capricorn.jpeg"
+import Cancer from "./Cancer.jpeg"
+import Capricorn from "./Capricorn.jpeg"
 import ChatWithAstroLogo from "./Chat-with-astrologer.gif"
-import Gemini from "./Gemini.gif"
-import Leo from "./Leo.gif"
-import Libra from "./Libra.gif"
-import Pisces from "./Pisces.gif"
-import Sagittarius from "./Sagittarius.gif"
-import Taurus from "./Taurus.gif"
-import Virgo from "./Virgo.gif"
+import Gemini from "./Gemini.jpeg"
+import Leo from "./Leo.jpeg"
+import Libra from "./Libra.jpeg"
+import Pisces from "./Pisces.jpeg"
+import Sagittarius from "./Saggitarius.jpeg"
+import Taurus from "./Taurus.jpeg"
+import Virgo from "./Virgo.jpeg"
 
 
 
