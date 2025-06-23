@@ -282,10 +282,10 @@ const SingleProduct = () => {
               navigation
               pagination={{ clickable: true }}
               spaceBetween={20}
-              slidesPerView={3}
+              slidesPerView={2}
               breakpoints={{
-                640: { slidesPerView: 1 },
-                768: { slidesPerView: 2 },
+                500: { slidesPerView: 1.5 },
+                768: { slidesPerView: 2.5 },
                 1024: { slidesPerView: 3 },
               }}
             >
