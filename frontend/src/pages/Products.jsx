@@ -105,7 +105,7 @@ const Products = () => {
             </div>
 
             {/* Product Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {loading ? (
                 <p className="text-center col-span-full text-white">
                   Loading products...

@@ -34,7 +34,7 @@ const Home = () => {
   const { logout, userId, isAuthenticated } = useAuthStore();
   const { addToWishlist, removeFromWishlist, wishlist } = useWishlistStore();
 
-  const slides = [assets.GaneshJi, assets.Meditation, assets.girlAstro];
+  const slides = [assets.Aquarius, assets.Aries, assets.Cancer,assets.Capricorn,assets.Gemini,assets.Leo,assets.Libra,assets.Pisces,assets.Sagittarius,assets.Taurus,assets.Virgo,];
   const nextSlide = () => setCurrentSlide((i) => (i + 1) % slides.length);
   const prevSlide = () => setCurrentSlide((i) => (i - 1 + slides.length) % slides.length);
 
@@ -89,11 +89,11 @@ const Home = () => {
   return (
     <div className="bg-gradient-to-b from-indigo-900 via-black to-indigo-900 text-white">
       {/* Hero Slider */}
-      <div className="relative h-56 sm:h-72 md:h-96 overflow-hidden">
+      <div className="relative h-56 sm:h-72 md:h-150 overflow-hidden">
         <img
           src={slides[currentSlide]}
           alt="Hero"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-fill"
         />
         <button
           onClick={prevSlide}
@@ -238,7 +238,7 @@ const Home = () => {
         </p>
         <p className="font-medium mb-6">— Siddhivinayak Astro</p>
         <Button
-          onClick={() => navigate("/astro-user-chat")}
+          onClick={() => navigate("/astro-list")}
           className="text-sm sm:text-base bg-gradient-to-r from-yellow-500 to-yellow-700 text-black hover:from-yellow-600 hover:to-yellow-800 py-1 sm:py-2 px-4 sm:px-6"
         >
           Chat with Astrologer
