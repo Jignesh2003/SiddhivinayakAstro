@@ -45,6 +45,8 @@ const Home = () => {
     assets.Sagittarius,
     assets.Taurus,
     assets.Virgo,
+    assets.Scorpio,
+
   ];
 
   const getTotalStock = (stockArr) =>
@@ -94,7 +96,7 @@ const Home = () => {
         className="w-full cursor-pointer"
         onClick={() => navigate("/astro-list")}
       >
-        <img
+        <img 
           src={assets.ChatWithAstroLogo}
           alt="Chat With Astrologer"
           className="w-full max-w-screen-xl mx-auto px-0 sm:px-6 md:px-8 py-7 md:py-10"
@@ -118,7 +120,7 @@ const Home = () => {
         >
           {zodiacImages.map((src, idx) => (
             <SwiperSlide key={idx} className="w-full h-24 sm:h-32 md:h-40">
-              <img
+              <img onClick={()=>navigate("/daily-prediction")}
                 src={src}
                 alt={`Zodiac ${idx}`}
                 className="w-full h-full object-cover"
@@ -139,8 +141,8 @@ const Home = () => {
             const reviews = Array.isArray(p.reviews) ? p.reviews : [];
             const rating = reviews.length
               ? Math.round(
-                  reviews.reduce((a, r) => a + r.rating, 0) / reviews.length
-                )
+                reviews.reduce((a, r) => a + r.rating, 0) / reviews.length
+              )
               : 0;
 
             return (
@@ -191,19 +193,18 @@ const Home = () => {
                     )}
                   </div>
                   <p
-                    className={`mt-1 text-xs sm:text-sm font-medium ${
-                      stock === 0
+                    className={`mt-1 text-xs sm:text-sm font-medium ${stock === 0
                         ? "text-red-400"
                         : stock < 10
-                        ? "text-yellow-400"
-                        : "text-green-400"
-                    }`}
+                          ? "text-yellow-400"
+                          : "text-green-400"
+                      }`}
                   >
                     {stock === 0
                       ? "Out of Stock"
                       : stock < 10
-                      ? "Only a few left!"
-                      : "In Stock"}
+                        ? "Only a few left!"
+                        : "In Stock"}
                   </p>
 
                   <div className="mt-1 flex items-center text-yellow-300">

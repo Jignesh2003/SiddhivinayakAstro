@@ -13,6 +13,8 @@ import Pisces from "./Pisces.jpeg"
 import Sagittarius from "./Saggitarius.jpeg"
 import Taurus from "./Taurus.jpeg"
 import Virgo from "./Virgo.jpeg"
+import Scorpio from "./Scorpio.jpeg"
+
 
 
 
@@ -21,7 +23,7 @@ const assets = {
  GalaxyBackground,
  HeroSelectionBackground,
  
- Aquarius,Aries,Cancer,Capricorn,ChatWithAstroLogo,Gemini,Leo,Libra,Pisces,Sagittarius,Taurus,Virgo
+ Aquarius,Aries,Cancer,Capricorn,ChatWithAstroLogo,Gemini,Leo,Libra,Pisces,Sagittarius,Taurus,Virgo,Scorpio
 };
 
 export default assets;

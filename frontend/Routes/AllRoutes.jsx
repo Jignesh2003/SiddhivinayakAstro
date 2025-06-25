@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoutes";
 import Layout from "./Layout"; // Import the Layout component
+import DailyPrediction from "../src/pages/DailyPrediction"
 
 // Import all your pages
 import Dashboard from "../src/pages/Dashboard";
@@ -59,8 +60,10 @@ const AppRoutes = () => {
         <Route path="/contact-us" element={<ContactUs />} />
         <Route path="/tmc" element={<Tmc />} />
         <Route path="/partners" element={<Partners />} />
+        <Route path="/daily-prediction" element={<DailyPrediction />} />
 
-        {/* ✅ Blog Pages */}
+
+          {/* ✅ Blog Pages */}
         <Route path="/blogs-astrology-and-you" element={<AstrologyAndYou />} />
         <Route path="/blogs-daily" element={<DailyBlog />} />
         <Route path="/blogs-power-of-meditation" element={<PowerOfMeditation />} />
