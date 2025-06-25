@@ -11,6 +11,9 @@ import chatRoutes from "./routes/chatRoute.js";
 import authRoutes from "./routes/authRoutes.js";
 import astroRoutes from "./routes/astroRoutes.js";
 import { setupSocketHandlers } from "./sockets/chatHandler.js";
+import horoscopeRoutes from "./routes/horoscope.js"
+import cron from 'node-cron';
+import { fetchHoroscopes } from './jobs/fetchHoroscope.js';
 
 dotenv.config();
 const app = express();
@@ -35,6 +38,7 @@ app.use(morgan("dev"));
 app.use("/api/auth", authRoutes);
 app.use("/api/astrologers", astroRoutes);
 app.use("/api/chat", chatRoutes);
+app.use('/api/horoscope', horoscopeRoutes);
 app.use((req, res, next) => {
   res.status(404).json({ message: "Route not found" });
 });
@@ -61,4 +65,11 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+<<<<<<< HEAD
 // 
+=======
+// Run at 00:00 UTC → 05:30 IST every day
+cron.schedule('30 0 * * *', fetchHoroscopes, {
+  timezone: 'Asia/Kolkata'
+});
+>>>>>>> 01af53eb399490f8de26c6016a9dbed8ff0f0143

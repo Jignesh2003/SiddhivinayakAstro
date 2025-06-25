@@ -171,7 +171,6 @@ export const checkingAuth = (req, res) => {
   res.status(200).json({ message: "Authenticated", user: req.user });
 };
 
-
 //Add review and rating 
 export const addReviewProduct = async (req,res)=>{
     try {
@@ -315,7 +314,6 @@ export const verifyOtp = async (req, res) => {
   }
 };
 
-
 export const addProduct = async (req, res) => {
   try {
     // ensure files
@@ -365,45 +363,6 @@ export const addProduct = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-
-// export const updateProduct = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     // parse incoming fields same as addProduct...
-//     const {
-//       name, price, description,
-//       category, subcategory, brand,
-//       sizeType, stock: stockRaw
-//     } = req.body;
-
-//     // parse stock
-//     let stock;
-//     try {
-//       stock = JSON.parse(stockRaw);
-//     } catch {
-//       return res.status(400).json({ message: "Invalid stock." });
-//     }
-
-//     // build update doc
-//     const update = { name, price, description, category, subcategory, brand, sizeType, stock };
-
-//     // if new files arrived, overwrite images arrays
-//     if (req.files && req.files.length > 0) {
-//       update.image     = req.files.map(f => f.path);
-//       update.imagePublicId = req.files.map(f => f.filename);
-//     }
-
-//     const prod = await Product.findByIdAndUpdate(id, update, { new: true });
-//     if (!prod) return res.status(404).json({ message: "Not found." });
-
-//     res.json({ message: "Product updated!", product: prod });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// };
-
-
 
 export const getPendingKycAstrologers = async (req, res) => {
   const userId = req.user.id;
