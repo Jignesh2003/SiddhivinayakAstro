@@ -121,6 +121,9 @@ const Navbar = () => {
           <div className="hidden lg:flex items-center gap-6">
             <Link to="/" className="text-white hover:text-purple-400 text-lg">Home</Link>
             <Link to="/products" className="text-white hover:text-purple-400 text-lg">Products</Link>
+            <Link to="/daily-prediction" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Daily Prediction</Link>
+            <Link to="/kundli-details" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Kundli</Link>
+
             {isAuthenticated && role !== "astrologer" && (
               <>
                 <Link to="/my-orders" className="text-white hover:text-purple-400 text-lg">My Orders</Link>
@@ -182,6 +185,8 @@ const Navbar = () => {
           >
             <Link to="/" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Home</Link>
             <Link to="/products" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Products</Link>
+            <Link to="/daily-prediction" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Daily Prediction</Link>
+            <Link to="/kundli-details" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Kundli</Link>
 
             {isAuthenticated && role !== "astrologer" && (
               <>
@@ -194,7 +199,6 @@ const Navbar = () => {
             {isAuthenticated && role === "astrologer" && (
               <>
                 <Link to="/astrologer-dashboard" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Astrologer Dashboard</Link>
-                <Link to="/profile" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Profile</Link>
                 <Link to="/astrologer-chat-request" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Chat Requests</Link>
               </>
             )}

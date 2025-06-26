@@ -44,6 +44,7 @@ import AstrologerChatRequests from "../src/astrologer/AstrologerChatRequests";
 import AstrologerProfile from "../src/astrologer/AstrologerProfile";
 import AdminVerifyAstrologers from "../src/admin/pages/AdminVerifyAstrologers";
 import ChatRequestTimer from "../src/pages/ChatRequestTimer";
+import KundliForm from "../src/astrology/KundliForm"
 
 const AppRoutes = () => {
   return (
@@ -95,6 +96,7 @@ const AppRoutes = () => {
           <Route path="/order-confirmation" element={<OrderConfirmation />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/product/:productId/reviews" element={<ReviewPage />} />
+          <Route path="/kundli-details" element={<KundliForm />} />
         </Route>
 
         {/* ✅ Admin Panel */}
