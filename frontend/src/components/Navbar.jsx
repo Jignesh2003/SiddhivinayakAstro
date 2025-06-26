@@ -122,7 +122,7 @@ const Navbar = () => {
             <Link to="/" className="text-white hover:text-purple-400 text-lg">Home</Link>
             <Link to="/products" className="text-white hover:text-purple-400 text-lg">Products</Link>
             <Link to="/daily-prediction" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Daily Prediction</Link>
-            <Link to="/kundli-details" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Kundli</Link>
+            {/* <Link to="/kundli-details" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Kundli</Link> */}
 
             {isAuthenticated && role !== "astrologer" && (
               <>
@@ -186,7 +186,7 @@ const Navbar = () => {
             <Link to="/" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Home</Link>
             <Link to="/products" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Products</Link>
             <Link to="/daily-prediction" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Daily Prediction</Link>
-            <Link to="/kundli-details" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Kundli</Link>
+            {/* <Link to="/kundli-details" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Kundli</Link> */}
 
             {isAuthenticated && role !== "astrologer" && (
               <>

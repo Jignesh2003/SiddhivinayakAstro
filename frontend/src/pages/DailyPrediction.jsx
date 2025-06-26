@@ -6,7 +6,6 @@ import {
   CardTitle,
   CardContent,
 } from "@/components/ui/card";
-import { Loader2, Sun } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -14,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Loader2, Sun, BookOpen } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 
@@ -23,10 +23,9 @@ import { Navigation, Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 
-// Your zodiac images imported from your assets file
+// Zodiac images
 import assets from "../assets/assets";
 
-// Map sign names (lowercase) to their image
 const SIGN_IMAGES = {
   aries: assets.Aries,
   taurus: assets.Taurus,
@@ -42,13 +41,28 @@ const SIGN_IMAGES = {
   pisces: assets.Pisces,
 };
 
+const ZODIAC_INFO = {
+  aries: "Aries are bold, ambitious, and confident leaders.",
+  taurus: "Taurus are reliable, patient, and enjoy the finer things.",
+  gemini: "Geminis are curious, witty, and always full of ideas.",
+  cancer: "Cancers are intuitive, emotional, and nurturing.",
+  leo: "Leos are charismatic, creative, and love attention.",
+  virgo: "Virgos are detail-oriented, analytical, and loyal.",
+  libra: "Libras value balance, harmony, and are social butterflies.",
+  scorpio: "Scorpios are passionate, mysterious, and powerful.",
+  sagittarius: "Sagittarius are adventurous, optimistic, and honest.",
+  capricorn: "Capricorns are disciplined, practical, and ambitious.",
+  aquarius: "Aquarius are innovative, independent, and humanitarian.",
+  pisces: "Pisces are compassionate, dreamy, and artistic.",
+};
+
 export default function DailyPrediction() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSign, setSelectedSign] = useState("");
+  const [knowledgeSign, setKnowledgeSign] = useState("");
   const cardRefs = useRef({});
 
-  // Fetch all predictions once
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -73,14 +87,12 @@ export default function DailyPrediction() {
     })();
   }, []);
 
-  // Default select first sign when data arrives
   useEffect(() => {
     if (!selectedSign && data.length) {
       setSelectedSign(data[0].sign);
     }
   }, [data]);
 
-  // Scroll to card on select change
   useEffect(() => {
     if (selectedSign && cardRefs.current[selectedSign]) {
       cardRefs.current[selectedSign].scrollIntoView({
@@ -103,7 +115,7 @@ export default function DailyPrediction() {
           </p>
         </div>
 
-        {/* Zodiac Image Slider */}
+        {/* Zodiac Image Swiper */}
         {!loading && data.length > 0 && (
           <Swiper
             modules={[Navigation, Autoplay]}
@@ -141,7 +153,7 @@ export default function DailyPrediction() {
           </Swiper>
         )}
 
-        {/* Dropdown Fallback */}
+        {/* Select Dropdown */}
         {!loading && data.length > 0 && (
           <div className="flex justify-center">
             <Select
@@ -173,7 +185,7 @@ export default function DailyPrediction() {
           </div>
         )}
 
-        {/* Cards */}
+        {/* Zodiac Prediction Cards */}
         {!loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {data.map(({ sign, displayName, prediction }) => (
@@ -189,7 +201,6 @@ export default function DailyPrediction() {
                 <Card className="bg-gray-800/80 border border-gray-700 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all">
                   <CardHeader className="pb-4">
                     <CardTitle className="flex items-center gap-3">
-                      <span className="text-4xl">{SIGN_IMAGES[sign] && ""}</span>
                       <span className="text-2xl font-bold text-yellow-300 capitalize">
                         {displayName}
                       </span>
@@ -203,6 +214,46 @@ export default function DailyPrediction() {
             ))}
           </div>
         )}
+
+        {/* Zodiac Traits Section */}
+        <div className="mt-12 border-t border-gray-700 pt-8 space-y-6">
+          <h2 className="text-3xl font-bold flex items-center gap-2">
+            <BookOpen className="text-purple-400" /> Know More About Zodiac Signs
+          </h2>
+
+          <div className="max-w-md">
+            <Select
+              value={knowledgeSign}
+              onValueChange={(val) => setKnowledgeSign(val)}
+            >
+              <SelectTrigger className="bg-gray-800 border border-gray-700 text-white">
+                <SelectValue placeholder="Select a zodiac sign" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 text-white">
+                {Object.keys(ZODIAC_INFO).map((sign) => (
+                  <SelectItem
+                    key={sign}
+                    value={sign}
+                    className="capitalize hover:bg-gray-700"
+                  >
+                    {sign}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {knowledgeSign && (
+            <div className="bg-gray-800/80 border border-gray-700 rounded-xl p-5 text-gray-300 shadow-lg max-w-3xl">
+              <h3 className="text-xl font-semibold capitalize text-yellow-300 mb-2">
+                {knowledgeSign}
+              </h3>
+              <p className="text-sm sm:text-base leading-relaxed">
+                {ZODIAC_INFO[knowledgeSign]}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
