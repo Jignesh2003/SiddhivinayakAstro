@@ -13,7 +13,7 @@ export async function fetchHoroscopes() {
   const now = new Date().toISOString();
 
   for (const sign of SIGNS) {
-   const url = `${process.env.PROKERALA_API}` +
+   const url = `${process.env.PROKERALA_DAILY_API}` +
             `?sign=${encodeURIComponent(sign)}` +
             `&type=general` + // <-- Already added
             `&datetime=${encodeURIComponent(now)}`;
