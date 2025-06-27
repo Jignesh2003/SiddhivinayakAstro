@@ -162,12 +162,15 @@ const Products = () => {
 
                       {/* Info */}
                       <div className="mt-3 flex-1">
-                        <h3 className="text-lg font-semibold line-clamp-2 text-white">
+                      <b>    <h3 className="text-lg font-semibold line-clamp-2 text-white">
                           {product.name}
-                        </h3>
+                        </h3></b>
                         <p className="text-sm text-gray-400 mb-1">
                           Brand: {product.brand} | Category: {product.category}
                         </p>
+                     <b> <p className="text-sm text-gray-400 mb-1 pt-1">
+                           {product?.miniDesc} 
+                        </p></b>
                         <p className="text-xl font-bold mb-1 text-white">
                           ₹{product.price}
                         </p>

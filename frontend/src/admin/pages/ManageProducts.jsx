@@ -3,11 +3,11 @@ import axios from "axios";
 import useAuthStore from "../../store/useAuthStore";
 
 const CATEGORY_OPTIONS = [
-  "Gifts", "Gemstones", "Necklaces", "Rings",
-  "Braclets", "Puja samagri", "Turtle",
-  "Rudraksha", "Customized",
+  "Gifts","Gemstones","Necklaces","Rings",
+  "Braclets","Puja samagri","Turtle",
+  "Rudraksha","Customized",
 ];
-const SIZE_TYPE_OPTIONS = ["Ring", "Quantity", "Mukhi", "Gemstone"];
+const SIZE_TYPE_OPTIONS = ["Ring","Quantity","Mukhi","Gemstone"];
 const SIZE_OPTIONS = {
   Ring: ["3","3.5","4","4.5","5","5.5","6","6.5","7","7.5","8","8.5","9","9.5","10","10.5","11","11.5","12","12.5","13"],
   Quantity: [],
@@ -18,16 +18,22 @@ const SIZE_OPTIONS = {
 export default function ManageProducts() {
   const token = useAuthStore(s => s.token);
 
-  const [products, setProducts]     = useState([]);
-  const [editingId, setEditingId]   = useState(null);
-  const [form, setForm]             = useState({
-    name: "", price: "", category: CATEGORY_OPTIONS[0],
-    subcategory: "", brand: "", sizeType: SIZE_TYPE_OPTIONS[0],
-    description: ""
+  const [products, setProducts]   = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({
+    name: "",
+    price: "",
+    category: CATEGORY_OPTIONS[0],
+    subcategory: "",
+    brand: "",
+    sizeType: SIZE_TYPE_OPTIONS[0],
+    description: "",
+    miniDesc: "",
+    tags: "",           // comma-separated
   });
-  const [stockRows, setStockRows]   = useState([]);
-  const [newFiles, setNewFiles]     = useState([]);
-  const [previews, setPreviews]     = useState([]);
+  const [stockRows, setStockRows] = useState([]);
+  const [newFiles, setNewFiles]   = useState([]);
+  const [previews, setPreviews]   = useState([]);
 
   useEffect(() => { fetchProducts(); }, []);
   async function fetchProducts() {
@@ -45,10 +51,12 @@ export default function ManageProducts() {
       name:        prod.name,
       price:       prod.price.toString(),
       category:    prod.category,
-      subcategory: prod.subcategory||"",
-      brand:       prod.brand||"",
+      subcategory: prod.subcategory || "",
+      brand:       prod.brand || "",
       sizeType:    prod.sizeType,
-      description: prod.description
+      description: prod.description,
+      miniDesc:    prod.miniDesc || "",
+      tags:        (prod.tags || []).join(","),
     });
     setStockRows(
       prod.stock.length
@@ -56,7 +64,7 @@ export default function ManageProducts() {
         : [{ id: Date.now(), size: "", quantity: 0 }]
     );
     setNewFiles([]);
-    setPreviews(prod.image||[]);
+    setPreviews(prod.image || []);
   }
 
   function handleFieldChange(e) {
@@ -82,7 +90,7 @@ export default function ManageProducts() {
   }
 
   function removeStockRow(rowId) {
-    setStockRows(rows => rows.length > 1 ? rows.filter(r => r.id!==rowId) : rows);
+    setStockRows(rows => rows.length > 1 ? rows.filter(r => r.id !== rowId) : rows);
   }
 
   function handleFileSelect(e) {
@@ -98,13 +106,12 @@ export default function ManageProducts() {
   }
 
   async function saveProduct(id) {
-    // ■■ 1) CLEAN & VALIDATE stockRows ■■
+    // ■■ CLEAN & VALIDATE stockRows ■■
     let cleaned = stockRows
-      .filter(r => form.sizeType==="Quantity" || r.size.trim()!=="" )
+      .filter(r => form.sizeType==="Quantity" || r.size.trim() !== "")
       .map(r => ({ size: r.size, quantity: Number(r.quantity) }));
-    // ensure no blanks remain
     for (let { size, quantity } of cleaned) {
-      if (form.sizeType!=="Quantity" && !size) {
+      if (form.sizeType !== "Quantity" && !size) {
         return alert("❌ Please select a size for every row.");
       }
       if (!quantity) {
@@ -113,7 +120,14 @@ export default function ManageProducts() {
     }
 
     const fd = new FormData();
-    Object.entries(form).forEach(([k,v]) => fd.append(k,v));
+    // append text fields
+    for (let [k,v] of Object.entries(form)) {
+      if (k === "tags") {
+        fd.append(k, JSON.stringify(v.split(",").map(t => t.trim()).filter(Boolean)));
+      } else {
+        fd.append(k, v);
+      }
+    }
     fd.append("stock", JSON.stringify(cleaned));
     newFiles.forEach(f => fd.append("image", f));
 
@@ -162,6 +176,8 @@ export default function ManageProducts() {
             <th className="border p-2">Brand</th>
             <th className="border p-2">SizeType</th>
             <th className="border p-2">Stock</th>
+            <th className="border p-2">Mini Desc</th>
+            <th className="border p-2">Tags</th>
             <th className="border p-2">Description</th>
             <th className="border p-2">Images</th>
             <th className="border p-2">Actions</th>
@@ -172,7 +188,7 @@ export default function ManageProducts() {
             <tr key={prod._id} className="border-b align-top">
               <td className="border p-1">{idx+1}</td>
 
-              {editingId===prod._id ? (
+              {editingId === prod._id ? (
                 <>
                   <td className="border p-1">
                     <input
@@ -192,7 +208,7 @@ export default function ManageProducts() {
                       onChange={handleFieldChange}
                       className="w-full border p-1"
                     >
-                      {CATEGORY_OPTIONS.map(o=>(
+                      {CATEGORY_OPTIONS.map(o => (
                         <option key={o} value={o}>{o}</option>
                       ))}
                     </select>
@@ -217,34 +233,34 @@ export default function ManageProducts() {
                       onChange={handleFieldChange}
                       className="w-full border p-1"
                     >
-                      {SIZE_TYPE_OPTIONS.map(o=>(
+                      {SIZE_TYPE_OPTIONS.map(o => (
                         <option key={o} value={o}>{o}</option>
                       ))}
                     </select>
                   </td>
                   <td className="border p-1">
-                    {stockRows.map(r=>(
+                    {stockRows.map(r => (
                       <div key={r.id} className="flex gap-1 mb-1">
-                        {form.sizeType!=="Quantity" && (
+                        {form.sizeType !== "Quantity" && (
                           <select
                             value={r.size}
-                            onChange={e=>handleStockChange(r.id,"size",e.target.value)}
+                            onChange={e => handleStockChange(r.id, "size", e.target.value)}
                             className="border p-1"
                           >
                             <option value="">Size</option>
-                            {SIZE_OPTIONS[form.sizeType].map(s=>(
+                            {SIZE_OPTIONS[form.sizeType].map(s => (
                               <option key={s} value={s}>{s}</option>
                             ))}
                           </select>
                         )}
                         <input
                           type="number" value={r.quantity}
-                          onChange={e=>handleStockChange(r.id,"quantity",e.target.value)}
+                          onChange={e => handleStockChange(r.id, "quantity", e.target.value)}
                           className="w-16 border p-1"
                         />
-                        {stockRows.length>1 && (
+                        {stockRows.length > 1 && (
                           <button
-                            onClick={()=>removeStockRow(r.id)}
+                            onClick={() => removeStockRow(r.id)}
                             className="text-red-500">&times;</button>
                         )}
                       </div>
@@ -252,6 +268,23 @@ export default function ManageProducts() {
                     <button
                       onClick={addStockRow}
                       className="text-xs text-blue-600">+ Add row</button>
+                  </td>
+                  <td className="border p-1">
+                    <textarea
+                      name="miniDesc" rows={2}
+                      value={form.miniDesc}
+                      onChange={handleFieldChange}
+                      className="w-full border p-1 mb-1"
+                      placeholder="Short description"
+                    />
+                  </td>
+                  <td className="border p-1">
+                    <input
+                      name="tags" value={form.tags}
+                      onChange={handleFieldChange}
+                      className="w-full border p-1"
+                      placeholder="comma-separated tags"
+                    />
                   </td>
                   <td className="border p-1">
                     <textarea
@@ -269,7 +302,7 @@ export default function ManageProducts() {
                       className="border p-1 mb-1"
                     />
                     <div className="flex flex-wrap gap-1">
-                      {previews.map((src,i)=>(
+                      {previews.map((src,i) => (
                         <img key={i} src={src}
                           className="h-16 object-contain border" />
                       ))}
@@ -277,10 +310,10 @@ export default function ManageProducts() {
                   </td>
                   <td className="border p-1 space-y-1">
                     <button
-                      onClick={()=>saveProduct(prod._id)}
+                      onClick={() => saveProduct(prod._id)}
                       className="text-green-600">Save</button>
                     <button
-                      onClick={()=>setEditingId(null)}
+                      onClick={() => setEditingId(null)}
                       className="text-gray-500 block">Cancel</button>
                   </td>
                 </>
@@ -294,26 +327,28 @@ export default function ManageProducts() {
                   <td className="border p-1">{prod.subcategory}</td>
                   <td className="border p-1">{prod.brand}</td>
                   <td className="border p-1">{prod.sizeType}</td>
-                  <td className="border+p-1">
-                    {prod.stock.map(s=>(
+                  <td className="border p-1">
+                    {prod.stock.map(s => (
                       <div key={s._id||s.size}>
                         {s.size||"Qty"}×{s.quantity}
                       </div>
                     ))}
                   </td>
+                  <td className="border p-1">{prod.miniDesc}</td>
+                  <td className="border p-1">{(prod.tags||[]).join(", ")}</td>
                   <td className="border p-1">{prod.description}</td>
                   <td className="border p-1 flex gap-1 flex-wrap">
-                    {prod.image.map((url,i)=>( 
+                    {prod.image.map((url,i) => ( 
                       <img key={i} src={url}
                         className="h-16 object-contain border" />
                     ))}
                   </td>
                   <td className="border p-1 space-y-1">
                     <button
-                      onClick={()=>startEdit(prod)}
+                      onClick={() => startEdit(prod)}
                       className="text-blue-600">Edit</button>
                     <button
-                      onClick={()=>deleteProduct(prod._id)}
+                      onClick={() => deleteProduct(prod._id)}
                       className="text-red-600 block">Delete</button>
                   </td>
                 </>

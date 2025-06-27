@@ -4,9 +4,6 @@ const stockItemSchema = new mongoose.Schema({
   size: {
     type: String,
     trim: true,
-    // required: function () {
-    //   return this.ownerDocument().sizeType !== "Quantity";
-    // },
   },
   quantity: {
     type: Number,
@@ -29,6 +26,8 @@ const reviewSchema = new mongoose.Schema(
 const productSchema = new mongoose.Schema({
   name:           { type: String, required: true, trim: true },
   description:    { type: String, required: true },
+    tags:       [{ type: String }],   // ← new tags array
+    miniDesc:   { type: String , required: true},                   // ← new “mini description”
   price:          { type: Number, required: true, min: 0 },
   category:       { type: String, enum: [/* your categories */], required: true },
   subcategory:    String,

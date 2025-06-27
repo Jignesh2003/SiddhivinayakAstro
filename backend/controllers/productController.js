@@ -29,13 +29,15 @@ export const getSingleProductDetail = async (req, res) => {
   }
 };
 
-// edit an existing product (admin)
+
 export const editAdminProduct = async (req, res) => {
   const { id } = req.params;
   const {
     name,
     price,
     description,
+    miniDesc,
+    tags,
     category,
     subcategory,
     brand,
@@ -94,6 +96,8 @@ export const editAdminProduct = async (req, res) => {
       name: name ?? product.name,
       price: price ?? product.price,
       description: description ?? product.description,
+      miniDesc: miniDesc ?? product.miniDesc,
+      tags: Array.isArray(tags) ? tags : product.tags,
       category: category ?? product.category,
       subcategory: subcategory ?? product.subcategory,
       brand: brand ?? product.brand,
@@ -106,7 +110,6 @@ export const editAdminProduct = async (req, res) => {
     const updated = await Product.findByIdAndUpdate(id, updates, {
       new: true,
       runValidators: true,
-      context: "ignoreSizeRequired",
     });
 
     return res.status(200).json(updated);
@@ -118,6 +121,7 @@ export const editAdminProduct = async (req, res) => {
     return res.status(500).json({ message: "Internal server error", error: err.message });
   }
 };
+
 
 
 // delete a product (admin)

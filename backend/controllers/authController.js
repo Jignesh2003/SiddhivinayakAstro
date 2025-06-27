@@ -323,9 +323,16 @@ export const addProduct = async (req, res) => {
 
     // basic fields
     const {
-      name, price, description,
-      category, subcategory, brand,
-      sizeType, stock: stockRaw
+      name,
+      price,
+      description,
+      miniDesc,        // ← new
+      tags,            // ← new
+      category,
+      subcategory,
+      brand,
+      sizeType,
+      stock: stockRaw
     } = req.body;
 
     if (!name || !price || !description || !category || !stockRaw) {
@@ -348,13 +355,40 @@ export const addProduct = async (req, res) => {
     }
 
     // map files → arrays
-    const image        = req.files.map(f => f.path);
+    const image         = req.files.map(f => f.path);
     const imagePublicId = req.files.map(f => f.filename);
 
+    // build tags array if provided as comma-string or JSON
+    let tagsArray = [];
+    if (tags) {
+      if (typeof tags === "string") {
+        try {
+          // allow JSON-encoded or comma-separated
+          tagsArray = JSON.parse(tags);
+        } catch {
+          tagsArray = tags
+            .split(",")
+            .map(t => t.trim())
+            .filter(Boolean);
+        }
+      } else if (Array.isArray(tags)) {
+        tagsArray = tags;
+      }
+    }
+
     const product = await Product.create({
-      name, price, description,
-      category, subcategory, brand, sizeType,
-      stock, image, imagePublicId
+      name,
+      price,
+      description,
+      miniDesc: miniDesc ?? "",    // ensure it’s present
+      tags:     tagsArray,
+      category,
+      subcategory,
+      brand,
+      sizeType,
+      stock,
+      image,
+      imagePublicId
     });
 
     res.status(201).json({ message: "Product added!", product });
@@ -363,6 +397,7 @@ export const addProduct = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
 
 export const getPendingKycAstrologers = async (req, res) => {
   const userId = req.user.id;
