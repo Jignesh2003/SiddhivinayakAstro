@@ -1,8 +1,7 @@
 import express from 'express';
-import { dailyPrediction } from '../controllers/horoscopeController.js';
+import { allGeneralPredictions } from '../controllers/horoscopeController.js';
 
 const router = express.Router();
 
-router.get('/:sign',dailyPrediction );
-
+router.get('/all', allGeneralPredictions);
 export default router;

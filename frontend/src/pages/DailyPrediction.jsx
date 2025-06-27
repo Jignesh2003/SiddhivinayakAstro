@@ -17,7 +17,7 @@ import { Loader2, Sun, BookOpen } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 
-// Swiper
+// Swiper components & styles
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay } from "swiper/modules";
 import "swiper/css";
@@ -63,6 +63,7 @@ export default function DailyPrediction() {
   const [knowledgeSign, setKnowledgeSign] = useState("");
   const cardRefs = useRef({});
 
+  // Fetch all 12 daily predictions once
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -87,12 +88,14 @@ export default function DailyPrediction() {
     })();
   }, []);
 
+  // Default to first sign once data is loaded
   useEffect(() => {
     if (!selectedSign && data.length) {
       setSelectedSign(data[0].sign);
     }
   }, [data]);
 
+  // Scroll into view when selectedSign changes
   useEffect(() => {
     if (selectedSign && cardRefs.current[selectedSign]) {
       cardRefs.current[selectedSign].scrollIntoView({
@@ -111,18 +114,18 @@ export default function DailyPrediction() {
             <Sun className="text-yellow-400" /> Daily Zodiac Predictions
           </h1>
           <p className="text-gray-400 text-lg">
-            Swipe or select your zodiac sign below
+            Swipe or tap your zodiac sign below
           </p>
         </div>
 
-        {/* Zodiac Image Swiper */}
+        {/* Zodiac Swiper */}
         {!loading && data.length > 0 && (
           <Swiper
             modules={[Navigation, Autoplay]}
-            spaceBetween={12}
-            slidesPerView={6}
             navigation
-            autoplay={{ delay: 2000, disableOnInteraction: false }}
+            autoplay={{ delay: 2500, disableOnInteraction: false }}
+            spaceBetween={16}
+            slidesPerView={6}
             breakpoints={{
               320: { slidesPerView: 3 },
               640: { slidesPerView: 5 },
@@ -134,18 +137,16 @@ export default function DailyPrediction() {
               <SwiperSlide key={sign}>
                 <button
                   onClick={() => setSelectedSign(sign)}
-                  className={`w-full h-24 sm:h-28 flex flex-col items-center justify-center rounded-xl overflow-hidden transition 
-                    ${
-                      selectedSign === sign
-                        ? "ring-2 ring-yellow-400"
-                        : "hover:ring-1 hover:ring-gray-600"
-                    }
-                  `}
+                  className={`w-full h-24 sm:h-28 flex items-center justify-center rounded-xl overflow-hidden transition ${
+                    sign === selectedSign
+                      ? "ring-4 ring-yellow-400"
+                      : "hover:ring-2 hover:ring-gray-600"
+                  }`}
                 >
                   <img
                     src={SIGN_IMAGES[sign]}
                     alt={displayName}
-                    className="object-fit w-full h-full"
+                    className="object-contain w-full h-full"
                   />
                 </button>
               </SwiperSlide>
@@ -153,7 +154,7 @@ export default function DailyPrediction() {
           </Swiper>
         )}
 
-        {/* Select Dropdown */}
+        {/* Fallback Dropdown */}
         {!loading && data.length > 0 && (
           <div className="flex justify-center">
             <Select
@@ -178,14 +179,14 @@ export default function DailyPrediction() {
           </div>
         )}
 
-        {/* Loading Spinner */}
+        {/* Loading */}
         {loading && (
           <div className="flex justify-center items-center gap-2 text-gray-400 text-base">
             <Loader2 className="animate-spin w-6 h-6" /> Fetching predictions...
           </div>
         )}
 
-        {/* Zodiac Prediction Cards */}
+        {/* Prediction Cards */}
         {!loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {data.map(({ sign, displayName, prediction }) => (
@@ -193,20 +194,18 @@ export default function DailyPrediction() {
                 key={sign}
                 ref={(el) => (cardRefs.current[sign] = el)}
                 className={`transition-all rounded-2xl ${
-                  selectedSign === sign
-                    ? "ring-2 ring-yellow-400"
-                    : "hover:ring-1 hover:ring-gray-600"
+                  sign === selectedSign
+                    ? "ring-4 ring-yellow-400"
+                    : "hover:ring-2 hover:ring-gray-600"
                 }`}
               >
-                <Card className="bg-gray-800/80 border border-gray-700 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all">
+                <Card className="bg-gray-800/80 border border-gray-700 p-6 rounded-2xl shadow-lg">
                   <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-3">
-                      <span className="text-2xl font-bold text-yellow-300 capitalize">
-                        {displayName}
-                      </span>
+                    <CardTitle className="text-2xl font-bold text-yellow-300 capitalize">
+                      {displayName}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="text-sm sm:text-base text-gray-200 leading-relaxed whitespace-pre-line min-h-[150px]">
+                  <CardContent className="text-gray-200 leading-relaxed whitespace-pre-line min-h-[150px]">
                     {prediction}
                   </CardContent>
                 </Card>
@@ -215,7 +214,7 @@ export default function DailyPrediction() {
           </div>
         )}
 
-        {/* Zodiac Traits Section */}
+        {/* Zodiac Traits Dropdown */}
         <div className="mt-12 border-t border-gray-700 pt-8 space-y-6">
           <h2 className="text-3xl font-bold flex items-center gap-2">
             <BookOpen className="text-purple-400" /> Know More About Zodiac Signs
@@ -245,10 +244,10 @@ export default function DailyPrediction() {
 
           {knowledgeSign && (
             <div className="bg-gray-800/80 border border-gray-700 rounded-xl p-5 text-gray-300 shadow-lg max-w-3xl">
-              <h3 className="text-xl font-semibold capitalize text-yellow-300 mb-2">
+              <h3 className="text-xl font-semibold text-yellow-300 capitalize mb-2">
                 {knowledgeSign}
               </h3>
-              <p className="text-sm sm:text-base leading-relaxed">
+              <p className="leading-relaxed text-gray-100">
                 {ZODIAC_INFO[knowledgeSign]}
               </p>
             </div>

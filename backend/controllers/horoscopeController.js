@@ -2,29 +2,48 @@ import axios from 'axios';
 import redisClient from '../utils/redisClient.js';
 import { getProkeralaToken } from '../utils/prokerelaClient.js';
 
-export const dailyPrediction = async (req, res) => {
-  const sign = req.params.sign.toLowerCase();
-  const now = new Date().toISOString();
+const ALL_SIGNS = [
+  'aries','taurus','gemini','cancer','leo','virgo',
+  'libra','scorpio','sagittarius','capricorn','aquarius','pisces'
+];
 
-  const url = `${process.env.PROKERALA_API}` +
-              `?sign=${encodeURIComponent(sign)}` +
-              `&type=general` + // <-- ADDED
-              `&datetime=${encodeURIComponent(now)}`;
+export const allGeneralPredictions = async (req, res) => {
+  const nowIso   = new Date().toISOString();
+  const dateKey  = nowIso.slice(0,10);
+  const baseUrl  = process.env.PROKERALA_DAILY_API;
+  if (!baseUrl) {
+    return res.status(500).json({ error: 'PROKERALA_DAILY_API not set' });
+  }
 
-  const cacheKey = `horoscope:${sign}:${now.slice(0,10)}`;
   try {
-    const cached = await redisClient.get(cacheKey);
-    if (cached) return res.json(JSON.parse(cached));
-
     const token = await getProkeralaToken();
-    const { data } = await axios.get(url, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
 
-    await redisClient.setEx(cacheKey, 86400, JSON.stringify(data));
-    res.json(data);
+    const results = await Promise.all(
+      ALL_SIGNS.map(async sign => {
+        const cacheKey = `horoscope:${sign}:general:${dateKey}`;
+        // check cache
+        const cached = await redisClient.get(cacheKey);
+        if (cached) return { sign, data: JSON.parse(cached) };
+
+        // fetch fresh
+        const url = new URL(baseUrl);
+        url.searchParams.set('sign', sign);
+        url.searchParams.set('type', 'general');
+        url.searchParams.set('datetime', nowIso);
+
+        const { data } = await axios.get(url.toString(), {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        await redisClient.setEx(cacheKey, 86400, JSON.stringify(data));
+        return { sign, data };
+      })
+    );
+
+    const payload = Object.fromEntries(results.map(r => [r.sign, r.data]));
+    return res.json({ data: payload });
+
   } catch (err) {
-    console.error('DailyPrediction Error:', err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({ error: 'Failed to fetch horoscope' });
+    console.error('AllGeneralPredictions Error:', err.response?.data || err.message);
+    return res.status(500).json({ error: 'Failed to fetch predictions' });
   }
 };
