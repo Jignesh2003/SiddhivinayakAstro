@@ -24,7 +24,7 @@ export const detailedKundli = async (req, res) => {
     // Fetch OAuth token & call Prokerala
     const token = await getProkeralaToken()
     const { data } = await axios.get(
-      `${process.env.PROKERALA_API_KUNDLI_ADVANCED}?${params.toString()}`,
+      `${process.env.PROKERALA_KUNDLI_API}?${params.toString()}`,
       { headers: { Authorization: `Bearer ${token}` } }
     )
 
