@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import  { useState, useEffect } from "react";
 import axios from "axios";
 import { Toaster, toast } from "react-hot-toast";
 import {
@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Country, State, City } from "country-state-city";
+import useAuthStore from "@/store/useAuthStore";
 
 export default function KundliForm() {
   // form state (unchanged)
@@ -27,7 +28,9 @@ export default function KundliForm() {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(false);
+  const {token} =useAuthStore.getState()
 
+  
   // same helpers and effects as before...
   useEffect(() => {
     if (!countryCode) return;
@@ -94,8 +97,11 @@ export default function KundliForm() {
 
     try {
       const res = await axios.get(
-        `${import.meta.env.VITE_ASTROLOGY_URL}/kundli/detailed?${qs}`
-      );
+        `${import.meta.env.VITE_ASTROLOGY_URL}/kundli/detailed?${qs}`,{
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  }});
       // simulate 3s wait
       setTimeout(() => {
         setKundliData(res.data);
