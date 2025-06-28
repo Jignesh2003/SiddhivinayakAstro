@@ -103,6 +103,8 @@ export default function KundliForm() {
           }
         }
       );
+console.log(qs);
+  console.log(kundliData);
 
       // simulate a 3s loading
       setTimeout(() => {
@@ -117,6 +119,7 @@ export default function KundliForm() {
       console.error(err);
     }
   };
+
 
   // date options
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -218,16 +221,16 @@ export default function KundliForm() {
               <CardTitle className="text-yellow-400">Kundli Details</CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
-              {kundliData.data.kundli.map((item, i) => (
+              {kundliData?.data?.kundli?.map((item, i) => (
                 <div key={i}>
                   <p className="font-semibold text-purple-300">{item.name}</p>
                   <p>{item.value}</p>
                 </div>
               ))}
-              {kundliData.data.dashaPeriods && (
+              {kundliData?.data?.dashaPeriods && (
                 <div className="mt-4">
                   <p className="text-yellow-300 font-semibold mb-1">Dasha Periods:</p>
-                  {kundliData.data.dashaPeriods.map((d, idx) => (
+                  {kundliData?.data?.dashaPeriods?.map((d, idx) => (
                     <p key={idx}>{d.planet} ({d.start_date} – {d.end_date})</p>
                   ))}
                 </div>

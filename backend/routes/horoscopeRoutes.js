@@ -1,7 +1,7 @@
-import express from 'express';
-import { allGeneralPredictions } from '../controllers/horoscopeController.js';
+// import express from 'express';
+// import { allGeneralPredictions } from '../controllers/horoscopeController.js';
 
-const router = express.Router();
+// const router = express.Router();
 
-router.get('/all', allGeneralPredictions);
-export default router;
+// router.get('/all', allGeneralPredictions);
+// export default router;
