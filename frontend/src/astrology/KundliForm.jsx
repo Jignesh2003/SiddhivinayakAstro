@@ -1,4 +1,4 @@
-import  { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { Toaster, toast } from "react-hot-toast";
 import {
@@ -13,11 +13,10 @@ import { Country, State, City } from "country-state-city";
 import useAuthStore from "@/store/useAuthStore";
 
 export default function KundliForm() {
-  // form state (unchanged)
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
   const [year, setYear] = useState("");
-  const [time, setTime] = useState("");
+  const [time, setTime] = useState(""); // format: HH:mm
   const [countryCode, setCountryCode] = useState("");
   const [stateCode, setStateCode] = useState("");
   const [cityName, setCityName] = useState("");
@@ -28,10 +27,24 @@ export default function KundliForm() {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(false);
-  const {token} =useAuthStore.getState()
+  const { token } = useAuthStore.getState();
 
-  
-  // same helpers and effects as before...
+  // helpers
+  const pad2 = (s) => s.toString().padStart(2, "0");
+
+  const buildDatetime = () => {
+    if (!day || !month || !year || !time) return "";
+    // Append seconds and Indian Standard Time offset
+    return `${year}-${pad2(month)}-${pad2(day)}T${time}:00+05:30`;
+  };
+
+  const buildLocation = () => {
+    const country = Country.getAllCountries().find((c) => c.isoCode === countryCode)?.name;
+    const state = states.find((s) => s.isoCode === stateCode)?.name;
+    return cityName && state && country ? `${cityName}, ${state}, ${country}` : "";
+  };
+
+  // handle country/state/city updates
   useEffect(() => {
     if (!countryCode) return;
     const st = State.getStatesOfCountry(countryCode);
@@ -52,32 +65,19 @@ export default function KundliForm() {
 
   useEffect(() => {
     if (!cityName) return;
-    const sel = cities.find(c => c.name === cityName);
+    const sel = cities.find((c) => c.name === cityName);
     if (sel) setCoordinates(`${sel.latitude},${sel.longitude}`);
   }, [cityName, cities]);
-
-  const pad2 = s => s.toString().padStart(2, "0");
-  const buildDatetime = () =>
-    day && month && year && time
-      ? `${year}-${pad2(month)}-${pad2(day)}T${time}`
-      : "";
-  const buildLocation = () => {
-    const country = Country.getAllCountries().find(c => c.isoCode === countryCode)?.name;
-    const state = states.find(s => s.isoCode === stateCode)?.name;
-    return cityName && state && country
-      ? `${cityName}, ${state}, ${country}`
-      : "";
-  };
 
   const handleFetch = async () => {
     const datetime = buildDatetime();
     const location = buildLocation();
+
     if (!datetime || !coordinates || !location) {
       toast.error("Please fill in all fields", { duration: 3000 });
       return;
     }
 
-    // Build raw query string exactly as required:
     let qs = [
       `ayanamsa=${ayanamsa}`,
       `datetime=${encodeURIComponent(datetime)}`,
@@ -86,23 +86,22 @@ export default function KundliForm() {
       `result_type=advanced`,
       `submit=1`,
       `coordinates=${encodeURIComponent(coordinates)}`,
-      `timezone=Asia%2FKolkata`
+      `timezone=Asia%2FKolkata`,
     ].join("&");
 
-    // replace %20 with + for spaces in the location
     qs = qs.replace(/%20/g, "+");
 
     setLoading(true);
     toast("Please wait while we generate your kundli", { duration: 3000 });
 
     try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_ASTROLOGY_URL}/kundli/detailed?${qs}`,{
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }});
-      // simulate 3s wait
+      const res = await axios.get(`${import.meta.env.VITE_ASTROLOGY_URL}/kundli/detailed?${qs}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
       setTimeout(() => {
         setKundliData(res.data);
         setLoading(false);
@@ -115,17 +114,15 @@ export default function KundliForm() {
     }
   };
 
-  // date/month/year arrays (unchanged)
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 120 }, (_, i) => currentYear - i);
-  
+
   return (
     <div className="min-h-screen bg-black text-white py-10 px-4">
       <Toaster position="top-center" />
       <div className="max-w-3xl mx-auto space-y-6">
-        {/* Title */}
         <h1 className="text-3xl font-bold text-yellow-400 text-center">
           Detailed Kundli Generator
         </h1>
@@ -142,124 +139,62 @@ export default function KundliForm() {
           </ul>
         </div>
 
-        {/* Form Inputs */}
+        {/* Inputs */}
         <div className="space-y-4">
-          {/* Date & Time */}
-          <p className="text-sm text-gray-400">
-            Enter birth date as Day/Month/Year and time as HH:mm
-          </p>
+          {/* Date and Time */}
           <div className="grid grid-cols-3 gap-4">
-            <select
-              value={day}
-              onChange={e => setDay(e.target.value)}
-              className="bg-gray-800 text-white p-2 rounded border border-gray-600"
-            >
+            <select value={day} onChange={(e) => setDay(e.target.value)} className="bg-gray-800 text-white p-2 rounded border border-gray-600">
               <option value="">Day</option>
-              {days.map(d => (
-                <option key={d} value={pad2(d)}>{pad2(d)}</option>
-              ))}
+              {days.map((d) => <option key={d} value={pad2(d)}>{pad2(d)}</option>)}
             </select>
-            <select
-              value={month}
-              onChange={e => setMonth(e.target.value)}
-              className="bg-gray-800 text-white p-2 rounded border border-gray-600"
-            >
+            <select value={month} onChange={(e) => setMonth(e.target.value)} className="bg-gray-800 text-white p-2 rounded border border-gray-600">
               <option value="">Month</option>
-              {months.map(m => (
-                <option key={m} value={pad2(m)}>{pad2(m)}</option>
-              ))}
+              {months.map((m) => <option key={m} value={pad2(m)}>{pad2(m)}</option>)}
             </select>
-            <select
-              value={year}
-              onChange={e => setYear(e.target.value)}
-              className="bg-gray-800 text-white p-2 rounded border border-gray-600"
-            >
+            <select value={year} onChange={(e) => setYear(e.target.value)} className="bg-gray-800 text-white p-2 rounded border border-gray-600">
               <option value="">Year</option>
-              {years.map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
+              {years.map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="timeInput" className="block text-sm mb-1">
-                Time <span className="text-xs text-gray-400">(HH:mm)</span>
-              </label>
-              <input
-                id="timeInput"
-                type="time"
-                value={time}
-                onChange={e => setTime(e.target.value)}
-                className="w-full bg-gray-800 text-white p-2 rounded border border-gray-600"
-              />
-            </div>
-          </div>
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className="w-full bg-gray-800 text-white p-2 rounded border border-gray-600"
+          />
 
           {/* Country / State / City */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <select
-              value={countryCode}
-              onChange={e => setCountryCode(e.target.value)}
-              className="w-full bg-gray-800 text-white p-2 rounded border border-gray-600"
-            >
-              <option value="">Select Country</option>
-              {Country.getAllCountries().map(c => (
+            <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="bg-gray-800 text-white p-2 rounded border border-gray-600">
+              <option value="">Country</option>
+              {Country.getAllCountries().map((c) => (
                 <option key={c.isoCode} value={c.isoCode}>{c.name}</option>
               ))}
             </select>
-
-            <select
-              value={stateCode}
-              onChange={e => setStateCode(e.target.value)}
-              disabled={!states.length}
-              className="w-full bg-gray-800 text-white p-2 rounded border border-gray-600"
-            >
-              <option value="">Select State</option>
-              {states.map(s => (
+            <select value={stateCode} onChange={(e) => setStateCode(e.target.value)} disabled={!states.length} className="bg-gray-800 text-white p-2 rounded border border-gray-600">
+              <option value="">State</option>
+              {states.map((s) => (
                 <option key={s.isoCode} value={s.isoCode}>{s.name}</option>
               ))}
             </select>
-
-            <select
-              value={cityName}
-              onChange={e => setCityName(e.target.value)}
-              disabled={!cities.length}
-              className="w-full bg-gray-800 text-white p-2 rounded border border-gray-600"
-            >
-              <option value="">Select City</option>
-              {cities.map(c => (
+            <select value={cityName} onChange={(e) => setCityName(e.target.value)} disabled={!cities.length} className="bg-gray-800 text-white p-2 rounded border border-gray-600">
+              <option value="">City</option>
+              {cities.map((c) => (
                 <option key={c.name} value={c.name}>{c.name}</option>
               ))}
             </select>
           </div>
 
-          {/* Coordinates */}
-          <input
-            type="text"
-            value={coordinates}
-            readOnly
-            placeholder="Latitude,Longitude"
-            className="w-full bg-gray-800 text-white p-2 rounded border border-gray-600"
-          />
+          <input type="text" value={coordinates} readOnly placeholder="Latitude,Longitude" className="w-full bg-gray-800 text-white p-2 rounded border border-gray-600" />
 
-          {/* Ayanamsa */}
-          <select
-            value={ayanamsa}
-            onChange={e => setAyanamsa(e.target.value)}
-            className="w-full bg-gray-800 text-white p-2 rounded border border-gray-600"
-          >
+          <select value={ayanamsa} onChange={(e) => setAyanamsa(e.target.value)} className="w-full bg-gray-800 text-white p-2 rounded border border-gray-600">
             <option value="1">Lahiri</option>
             <option value="3">Raman</option>
             <option value="5">KP</option>
           </select>
 
-          {/* Language */}
-          <select
-            value={language}
-            onChange={e => setLanguage(e.target.value)}
-            className="w-full bg-gray-800 text-white p-2 rounded border border-gray-600"
-          >
+          <select value={language} onChange={(e) => setLanguage(e.target.value)} className="w-full bg-gray-800 text-white p-2 rounded border border-gray-600">
             <option value="en">English</option>
             <option value="hi">Hindi</option>
             <option value="ta">Tamil</option>
@@ -267,18 +202,12 @@ export default function KundliForm() {
             <option value="ml">Malayalam</option>
           </select>
 
-          {/* Submit */}
-          <Button
-            onClick={handleFetch}
-            className="bg-yellow-500 hover:bg-yellow-600 text-black w-full font-bold"
-            disabled={loading}
-          >
+          <Button onClick={handleFetch} disabled={loading} className="bg-yellow-500 hover:bg-yellow-600 text-black w-full font-bold">
             {loading && <Loader2 className="animate-spin mr-2" />}
             Get Kundli
           </Button>
         </div>
 
-        {/* Results */}
         {kundliData && (
           <Card className="bg-gray-900 border border-gray-700">
             <CardHeader>
@@ -293,13 +222,9 @@ export default function KundliForm() {
               ))}
               {kundliData.data.dashaPeriods && (
                 <div className="mt-4">
-                  <p className="text-yellow-300 font-semibold mb-1">
-                    Dasha Periods:
-                  </p>
+                  <p className="text-yellow-300 font-semibold mb-1">Dasha Periods:</p>
                   {kundliData.data.dashaPeriods.map((d, idx) => (
-                    <p key={idx}>
-                      {d.planet} ({d.start_date} – {d.end_date})
-                    </p>
+                    <p key={idx}>{d.planet} ({d.start_date} – {d.end_date})</p>
                   ))}
                 </div>
               )}
