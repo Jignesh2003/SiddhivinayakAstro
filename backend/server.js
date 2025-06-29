@@ -11,7 +11,7 @@ import chatRoutes from "./routes/chatRoute.js";
 import authRoutes from "./routes/authRoutes.js";
 import astroRoutes from "./routes/astroRoutes.js";
 import { setupSocketHandlers } from "./sockets/chatHandler.js";
-import horoscopeRoutes from "./routes/horoscopeRoutes.js"
+// import horoscopeRoutes from "./routes/horoscopeRoutes.js"
 import cron from 'node-cron';
 import { fetchHoroscopes } from './jobs/fetchHoroscope.js';
 import astrologyRoutes from './routes/astrologyRoutes.js'
@@ -38,7 +38,7 @@ app.use(morgan("dev"));
 app.use("/api/auth", authRoutes);
 app.use("/api/astrologers", astroRoutes);
 app.use("/api/chat", chatRoutes);
-app.use('/api/horoscope', horoscopeRoutes);
+// app.use('/api/horoscope', horoscopeRoutes);
 app.use('/api/astrology',astrologyRoutes)
 app.use((req, res, next) => {
   res.status(404).json({ message: "Route not found" });
