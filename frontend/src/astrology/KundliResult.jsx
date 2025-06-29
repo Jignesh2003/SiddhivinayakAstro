@@ -165,7 +165,7 @@ if (Array.isArray(data.yoga_details)) {
     kundli,
   } = data;
 
-console.log(dasha_balance);
+console.log(nakshatra_details);
 
   return (
     <div ref={containerRef} className="bg-black text-white min-h-screen px-6 py-8 max-w-5xl mx-auto space-y-8">
@@ -221,9 +221,19 @@ console.log(dasha_balance);
               <small className="text-gray-400">({nakshatra_details.soorya_rasi.lord.vedic_name})</small>
             </div>
             <div><b>Zodiac:</b> {nakshatra_details.zodiac.name}</div>
-            {Object.entries(nakshatra_details.additional_info).map(([k, v]) => (
-              <div key={k}><b>{k.replace(/_/g, ' ')}:</b> {v}</div>
-            ))}
+ {Object.entries(nakshatra_details.additional_info)
+  .filter(([k]) => k !== 'gender')
+  .map(([k, v]) => {
+    const label = k
+      .replace(/_/g, ' ')                // Replace underscores with spaces
+      .replace(/^\w/, c => c.toUpperCase()); // Capitalize first letter
+    return (
+      <div key={k}>
+        <b>{label}:</b> {v}
+      </div>
+    );
+  })}
+
           </div>
         </section>
       )}
