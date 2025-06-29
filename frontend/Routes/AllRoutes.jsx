@@ -45,6 +45,7 @@ import AstrologerProfile from "../src/astrologer/AstrologerProfile";
 import AdminVerifyAstrologers from "../src/admin/pages/AdminVerifyAstrologers";
 import ChatRequestTimer from "../src/pages/ChatRequestTimer";
 import KundliForm from "../src/astrology/KundliForm"
+import KundliResult from "@/astrology/KundliResult";
 
 const AppRoutes = () => {
   return (
@@ -64,7 +65,7 @@ const AppRoutes = () => {
         <Route path="/daily-prediction" element={<DailyPrediction />} />
 
 
-          {/* ✅ Blog Pages */}
+        {/* ✅ Blog Pages */}
         <Route path="/blogs-astrology-and-you" element={<AstrologyAndYou />} />
         <Route path="/blogs-daily" element={<DailyBlog />} />
         <Route path="/blogs-power-of-meditation" element={<PowerOfMeditation />} />
@@ -97,6 +98,7 @@ const AppRoutes = () => {
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/product/:productId/reviews" element={<ReviewPage />} />
           <Route path="/kundli-details" element={<KundliForm />} />
+          <Route path="/kundli-result" element={<KundliResult />} />
         </Route>
 
         {/* ✅ Admin Panel */}

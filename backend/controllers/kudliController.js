@@ -4,7 +4,7 @@ import redis from '../utils/redisClient.js'
 
 export const detailedKundli = async (req, res) => {
   try {
-    let { ayanamsa = '1', coordinates, datetime, la = 'en', year_length = '1' } = req.query
+    let { ayanamsa , coordinates, datetime, la , year_length = '1' } = req.query
 
     if (!coordinates || !datetime) {
       return res.status(400).json({
