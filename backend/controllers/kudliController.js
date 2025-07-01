@@ -43,3 +43,77 @@ export const detailedKundli = async (req, res) => {
     })
   }
 }
+
+export const detailedKundliMatching = async (req,res)=>{
+   try {
+    const {
+      ayanamsa,
+      girl_coordinates,
+      girl_dob,
+      boy_coordinates,
+      boy_dob,
+      la = 'en',
+    } = req.query;
+
+    // Validate required
+    if (
+      !ayanamsa ||
+      !girl_coordinates ||
+      !girl_dob ||
+      !boy_coordinates ||
+      !boy_dob
+    ) {
+      return res.status(400).json({
+        error:
+          'Missing required query params: ayanamsa, girl_coordinates, girl_dob, boy_coordinates, boy_dob',
+      });
+    }
+
+    // Build a cache key scoped to all inputs
+    const cacheKey = [
+      'match',
+      ayanamsa,
+      girl_coordinates,
+      girl_dob,
+      boy_coordinates,
+      boy_dob,
+      la,
+    ].join(':');
+
+    // Try Redis first
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      console.log('🔁 Returning cached compatibility data');
+      return res.json(JSON.parse(cached));
+    }
+
+    // Not in cache → fetch from ProKerala
+    const token = await getProkeralaToken();
+    const params = new URLSearchParams({
+      ayanamsa,
+      girl_coordinates,
+      girl_dob,
+      boy_coordinates,
+      boy_dob,
+      la,
+    });
+
+    const prokRes = await axios.get(
+      `${process.env.PROKERALA_MATCH_API}?${params.toString()}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    // Cache the full response body for 6h
+    await redis.set(cacheKey, JSON.stringify(prokRes.data), 'EX', 6 * 3600);
+
+    return res.json(prokRes.data);
+  } catch (err) {
+    console.error(
+      'Compatibility Error:',
+      err.response?.data || err.message
+    );
+    return res
+      .status(err.response?.status || 500)
+      .json({ error: 'Failed to fetch compatibility data' });
+  }
+}

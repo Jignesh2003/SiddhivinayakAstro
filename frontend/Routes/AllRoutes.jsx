@@ -46,6 +46,8 @@ import AdminVerifyAstrologers from "../src/admin/pages/AdminVerifyAstrologers";
 import ChatRequestTimer from "../src/pages/ChatRequestTimer";
 import KundliForm from "../src/astrology/KundliForm"
 import KundliResult from "@/astrology/KundliResult";
+import MatchingForm from "@/pages/MatchingForm";
+import MatchingCompatiblityResult from "@/pages/MatchingCompatiblityResult";
 
 const AppRoutes = () => {
   return (
@@ -99,6 +101,9 @@ const AppRoutes = () => {
           <Route path="/product/:productId/reviews" element={<ReviewPage />} />
           <Route path="/kundli-details" element={<KundliForm />} />
           <Route path="/kundli-result" element={<KundliResult />} />
+                    <Route path="/matching-form" element={<MatchingForm />} />
+          <Route path="/matching-compatility-result" element={<MatchingCompatiblityResult />} />
+
         </Route>
 
         {/* ✅ Admin Panel */}
