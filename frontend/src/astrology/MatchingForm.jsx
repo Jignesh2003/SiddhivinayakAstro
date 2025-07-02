@@ -119,7 +119,7 @@ export default function MatchingForm() {
       la,
     }).toString();
 
-    // navigate(`/astrology/kundli-matching/advanced?${qs}`);
+    navigate(`/matching-kundli-result?${qs}`);
     console.log(qs);
     
   };

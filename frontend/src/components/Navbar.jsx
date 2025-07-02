@@ -68,7 +68,7 @@ const Navbar = () => {
       };
       playAudio();
     }
-    return () => document.removeEventListener("click", () => {});
+    return () => document.removeEventListener("click", () => { });
   }, []);
 
   const handleLogout = () => {
@@ -79,7 +79,7 @@ const Navbar = () => {
   const toggleMusic = () => {
     if (!audioRef.current) return;
     if (isPlaying) audioRef.current.pause();
-    else audioRef.current.play().catch(() => {});
+    else audioRef.current.play().catch(() => { });
     setIsPlaying(!isPlaying);
   };
 
@@ -123,6 +123,8 @@ const Navbar = () => {
             <Link to="/products" className="text-white hover:text-purple-400 text-lg">Products</Link>
             <Link to="/daily-prediction" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Daily Prediction</Link>
             <Link to="/kundli-details" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Kundli</Link>
+            <Link to="/matching-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Kundli Matching</Link>
+
 
             {isAuthenticated && role !== "astrologer" && (
               <>
@@ -187,6 +189,7 @@ const Navbar = () => {
             <Link to="/products" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Products</Link>
             <Link to="/daily-prediction" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Daily Prediction</Link>
             <Link to="/kundli-details" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Kundli</Link>
+            <Link to="/matching-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Kundli Matching</Link>
 
             {isAuthenticated && role !== "astrologer" && (
               <>
