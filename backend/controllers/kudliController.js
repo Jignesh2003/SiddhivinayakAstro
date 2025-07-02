@@ -82,7 +82,7 @@ export const detailedKundliMatching = async (req,res)=>{
 
     // Try Redis first
     const cached = await redis.get(cacheKey);
-    if (cached) {
+    if (cached) { 
       console.log('🔁 Returning cached compatibility data');
       return res.json(JSON.parse(cached));
     }
