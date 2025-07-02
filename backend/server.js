@@ -13,7 +13,7 @@ import astroRoutes from "./routes/astroRoutes.js";
 import { setupSocketHandlers } from "./sockets/chatHandler.js";
 // import horoscopeRoutes from "./routes/horoscopeRoutes.js"
 import cron from 'node-cron';
-import { fetchHoroscopes } from './jobs/fetchHoroscope.js';
+// import { fetchHoroscopes } from './jobs/fetchHoroscope.js';
 import astrologyRoutes from './routes/astrologyRoutes.js'
 dotenv.config();
 const app = express();
