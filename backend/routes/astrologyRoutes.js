@@ -1,10 +1,11 @@
 import express from 'express'
 import authMiddleware from '../middlewares/authMiddleware.js';
-import { detailedKundli, detailedKundliMatching } from '../controllers/kudliController.js';
+import { detailedKundli, detailedKundliMatching, detailedPanchang } from '../controllers/kudliController.js';
 
 const router = express.Router()
 
 router.get('/kundli/detailed', authMiddleware , detailedKundli)
 router.get("/kundali-matching/detailed", authMiddleware, detailedKundliMatching)
+router.get("/panchang-detailed", authMiddleware, detailedPanchang)
 
 export default router;

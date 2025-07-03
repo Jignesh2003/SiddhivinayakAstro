@@ -117,3 +117,44 @@ export const detailedKundliMatching = async (req,res)=>{
       .json({ error: 'Failed to fetch compatibility data' });
   }
 }
+
+export const detailedPanchang =async (req,res) =>{
+   try {
+    let { ayanamsa , coordinates, datetime, la } = req.query
+
+    if (!coordinates || !datetime) {
+      return res.status(400).json({
+        error: 'Missing required query params: coordinates, datetime'
+      })
+    }
+
+    // Create a unique cache key
+    const cacheKey = `panchang:${coordinates}:${datetime}:${ayanamsa}:${la}`
+
+    // Check Redis cache
+    const cached = await redis.get(cacheKey)
+    if (cached) {
+      console.log('🔁 Returning cached panchang data')
+      return res.json(JSON.parse(cached))
+    }
+
+    // If not cached, call API
+    const params = new URLSearchParams({ ayanamsa, coordinates, datetime, la })
+    const token = await getProkeralaToken()
+
+    const { data } = await axios.get(
+      `${process.env.PROKERALA_PUNCHANG_API}?${params.toString()}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+
+    // Save to Redis with TTL (e.g. 6 hours = 21600 seconds)
+    await redis.set(cacheKey, JSON.stringify(data), 'EX', 21600)
+    return res.json(data)
+
+  } catch (err) {
+    console.error('Detailed Panchang Error:', err.response?.data || err.message)
+    return res.status(err.response?.status || 500).json({
+      error: 'Failed to fetch detailed kundli'
+    })
+  }
+}
