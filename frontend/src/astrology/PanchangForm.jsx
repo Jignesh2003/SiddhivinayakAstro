@@ -72,12 +72,12 @@ export default function PanchangForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-900 to-teal-900 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-teal-900 flex items-center justify-center p-6">
       <Toaster position="top-center" />
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white bg-opacity-10 backdrop-blur-md rounded-xl p-8 space-y-6 w-full max-w-md text-white"
+        className="bg-white bg-opacity-10 backdrop-blur-md rounded-xl p-8 space-y-6 w-full max-w-md "
       >
         <h1 className="text-3xl font-bold text-yellow-300 text-center">
           Detailed Panchang

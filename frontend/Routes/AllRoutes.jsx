@@ -49,6 +49,7 @@ import KundliResult from "../src/astrology/KundliResult";
 import MatchingForm from "../src/astrology/MatchingForm";
 import MatchingCompatiblityResult from "../src/astrology/MatchingCompatiblityResult";
 import PanchangForm from "@/astrology/PanchangForm";
+import PanchangResult from "@/astrology/PanchangResult";
 
 const AppRoutes = () => {
   return (
@@ -105,6 +106,8 @@ const AppRoutes = () => {
           <Route path="/matching-form" element={<MatchingForm />} />
           <Route path="/matching-kundli-result" element={<MatchingCompatiblityResult />} />
           <Route path="/panchang-form" element={<PanchangForm />} />
+          <Route path="/panchang-result" element={<PanchangResult />} />
+
 
 
         </Route>

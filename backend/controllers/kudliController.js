@@ -143,7 +143,7 @@ export const detailedPanchang =async (req,res) =>{
     const token = await getProkeralaToken()
 
     const { data } = await axios.get(
-      `${process.env.PROKERALA_PUNCHANG_API}?${params.toString()}`,
+      `${process.env.PROKERALA_PANCHANG_API}?${params.toString()}`,
       { headers: { Authorization: `Bearer ${token}` } }
     )
 
