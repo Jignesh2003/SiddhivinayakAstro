@@ -23,15 +23,15 @@ export default function PanchangResult() {
 
   useEffect(() => {
     const q = new URLSearchParams(search);
-    const ayanamsa = q.get('ayanamsa');
+    const ayanamsa   = q.get('ayanamsa');
     const coordinates = q.get('coordinates');
-    const datetime = q.get('datetime');
-    // la is optional
+    const datetime    = q.get('datetime');
     if (!ayanamsa || !coordinates || !datetime) {
       toast.error('Missing required parameters, redirecting…');
       navigate('/');
       return;
     }
+
     (async () => {
       setLoading(true);
       try {
@@ -42,12 +42,15 @@ export default function PanchangResult() {
         setPanchang(res.data.data);
       } catch (err) {
         console.error(err);
-        toast.error('Failed to load panchang');
+        toast.error('Failed to load Panchang');
       } finally {
         setLoading(false);
       }
     })();
   }, [search, navigate, token]);
+
+  const fmtTime = dt =>
+    new Date(dt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   if (loading) {
     return (
@@ -58,10 +61,8 @@ export default function PanchangResult() {
   }
   if (!panchang) return null;
 
-  const fmt = dt => new Date(dt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white p-6">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900  p-6">
       <Toaster position="top-center" />
 
       {/* Header */}
@@ -79,33 +80,63 @@ export default function PanchangResult() {
 
       {/* Overview */}
       <section className="bg-white bg-opacity-10 rounded-lg p-6 mb-6">
-        <h2 className="text-2xl font-semibold mb-4">Vaara (Weekday): <span className="font-bold">{panchang.vaara}</span></h2>
+        <h2 className="text-2xl font-semibold mb-4">
+          Vaara (Weekday):{' '}
+          <span className="font-bold">{panchang.vaara}</span>
+        </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div><Sun className="inline h-5 w-5 mr-1 text-yellow-300"/> Sunrise: {fmt(panchang.sunrise)}</div>
-          <div><Sun className="inline h-5 w-5 mr-1 text-yellow-300 rotate-180"/> Sunset: {fmt(panchang.sunset)}</div>
-          <div><Moon className="inline h-5 w-5 mr-1 text-gray-300"/> Moonrise: {fmt(panchang.moonrise)}</div>
-          <div><Moon className="inline h-5 w-5 mr-1 text-gray-300 rotate-180"/> Moonset: {fmt(panchang.moonset)}</div>
+          <div className="flex items-center gap-2">
+            <Sun className="h-5 w-5 text-yellow-300" /> Sunrise:{' '}
+            <span className="font-medium">{fmtTime(panchang.sunrise)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Sun className="h-5 w-5 text-yellow-300 rotate-180" /> Sunset:{' '}
+            <span className="font-medium">{fmtTime(panchang.sunset)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Moon className="h-5 w-5 text-gray-300" /> Moonrise:{' '}
+            <span className="font-medium">{fmtTime(panchang.moonrise)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Moon className="h-5 w-5 text-gray-300 rotate-180" /> Moonset:{' '}
+            <span className="font-medium">{fmtTime(panchang.moonset)}</span>
+          </div>
         </div>
       </section>
 
-      {/* Dynamic Elements */}
+      {/* Dynamic Sections */}
       <div className="space-y-6">
         {[
-          { key: 'nakshatra', icon: Star, title: 'Nakshatras' },
-          { key: 'tithi',     icon: Sun,  title: 'Tithis' },
+          { key: 'nakshatra', icon: Star,  title: 'Nakshatras' },
+          { key: 'tithi',     icon: Sun,   title: 'Tithis' },
           { key: 'karana',    icon: Clock, title: 'Karanas' },
           { key: 'yoga',      icon: Globe, title: 'Yogas' },
         ].map(({ key, icon: Icon, title }) => (
-          <section key={key} className="bg-white bg-opacity-10 rounded-lg p-6">
+          <section
+            key={key}
+            className="bg-white bg-opacity-10 rounded-lg p-6"
+          >
             <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Icon className="h-5 w-5 text-green-400"/> {title}
+              <Icon className="h-5 w-5 text-green-400" /> {title}
             </h3>
             <div className="space-y-3 text-sm">
-              {panchang[key].map((item, i) => (
-                <div key={i} className="p-3 bg-white bg-opacity-5 rounded">
-                  <p><b>{item.name}</b> <small className="italic">({item.paksha || ''})</small></p>
-                  <p>Starts: {new Date(item.start).toLocaleString()}</p>
-                  <p>Ends:   {new Date(item.end).toLocaleString()}</p>
+              {panchang[key].map((item, idx) => (
+                <div
+                  key={idx}
+                  className="p-3 bg-white bg-opacity-5 rounded"
+                >
+                  <p className="font-medium">{item.name}</p>
+                  {item.paksha && (
+                    <p className="italic text-xs">{item.paksha}</p>
+                  )}
+                  <p>
+                    <strong>Starts:</strong>{' '}
+                    {new Date(item.start).toLocaleString()}
+                  </p>
+                  <p>
+                    <strong>Ends:  </strong>{' '}
+                    {new Date(item.end).toLocaleString()}
+                  </p>
                 </div>
               ))}
             </div>
@@ -113,23 +144,42 @@ export default function PanchangResult() {
         ))}
       </div>
 
-      {/* Auspicious & Inauspicious */}
+      {/* Auspicious / Inauspicious Periods */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
         {[
-          { list: 'auspicious_period', title: 'Auspicious Periods', bg: 'bg-green-800' },
-          { list: 'inauspicious_period', title: 'Inauspicious Periods', bg: 'bg-red-800' },
+          {
+            list: 'auspicious_period',
+            title: 'Auspicious Periods',
+            bg: 'bg-yellow-600',
+          },
+          {
+            list: 'inauspicious_period',
+            title: 'Inauspicious Periods',
+            bg: 'bg-red-900' ,
+          },
         ].map(({ list, title, bg }) => (
-          <section key={list} className={`${bg} bg-opacity-30 rounded-lg p-6`}>
+          <section
+            key={list}
+            className={`${bg} bg-opacity-30 rounded-lg p-6`}
+          >
             <h3 className="text-xl font-semibold mb-4">{title}</h3>
             <div className="space-y-4 text-sm">
               {panchang[list].map((entry) => (
                 <div key={entry.id} className="space-y-1">
-                  <p><b>{entry.name}</b> ({entry.type})</p>
+                  <p className="font-medium">
+                    {entry.name} <span className="italic">({entry.type})</span>
+                  </p>
                   {entry.period.map((p, i) => (
-                    <p key={i}>
-                      {new Date(p.start).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
-                      {" – "}
-                      {new Date(p.end).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
+                    <p key={i} className="pl-2">
+                      {new Date(p.start).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}{' '}
+                      –{' '}
+                      {new Date(p.end).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </p>
                   ))}
                 </div>

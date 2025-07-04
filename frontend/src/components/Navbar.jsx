@@ -124,6 +124,8 @@ const Navbar = () => {
             <Link to="/daily-prediction" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Daily Prediction</Link>
             <Link to="/kundli-details" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Kundli</Link>
             <Link to="/matching-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Kundli Matching</Link>
+            <Link to="/panchang-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Panchang</Link>
+
 
 
             {isAuthenticated && role !== "astrologer" && (
@@ -190,6 +192,9 @@ const Navbar = () => {
             <Link to="/daily-prediction" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Daily Prediction</Link>
             <Link to="/kundli-details" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Kundli</Link>
             <Link to="/matching-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Kundli Matching</Link>
+            <Link to="/panchang-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Panchang</Link>
+
+
 
             {isAuthenticated && role !== "astrologer" && (
               <>

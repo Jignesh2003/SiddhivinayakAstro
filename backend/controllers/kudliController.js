@@ -118,43 +118,72 @@ export const detailedKundliMatching = async (req,res)=>{
   }
 }
 
-export const detailedPanchang =async (req,res) =>{
-   try {
-    let { ayanamsa , coordinates, datetime, la } = req.query
+export const detailedPanchang = async (req, res) => {
+  try {
+    let { ayanamsa, coordinates, datetime, la = "en" } = req.query;
 
-    if (!coordinates || !datetime) {
+    // Validation
+    if (!coordinates || !datetime || !ayanamsa) {
       return res.status(400).json({
-        error: 'Missing required query params: coordinates, datetime'
-      })
+        error: "Missing required query params: ayanamsa, coordinates, datetime",
+      });
     }
 
-    // Create a unique cache key
-    const cacheKey = `panchang:${coordinates}:${datetime}:${ayanamsa}:${la}`
+    // Ensure coordinates are in correct format: "lat,long"
+    const coordinateRegex = /^-?\d{1,3}\.\d{6},-?\d{1,3}\.\d{6}$/;
+    if (!coordinateRegex.test(coordinates)) {
+      return res.status(400).json({
+        error: "Coordinates must be in format 'lat,long' with 6 decimal places",
+      });
+    }
 
-    // Check Redis cache
-    const cached = await redis.get(cacheKey)
+    // Ensure datetime is a valid ISO 8601 string
+    const isoRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\+\d{2}:\d{2}|Z)$/;
+    if (!isoRegex.test(datetime)) {
+      return res.status(400).json({
+        error: "Datetime must be in ISO 8601 format (e.g., 2004-02-12T15:19:21+05:30)",
+      });
+    }
+
+    // Unique cache key
+    const cacheKey = `panchang:${coordinates}:${datetime}:${ayanamsa}:${la}`;
+
+    // Check cache
+    const cached = await redis.get(cacheKey);
     if (cached) {
-      console.log('🔁 Returning cached panchang data')
-      return res.json(JSON.parse(cached))
+      console.log("🔁 Returning cached panchang data");
+      return res.json(JSON.parse(cached));
     }
 
-    // If not cached, call API
-    const params = new URLSearchParams({ ayanamsa, coordinates, datetime, la })
-    const token = await getProkeralaToken()
+    // Encode datetime properly
+    const encodedDatetime = encodeURIComponent(datetime);
+
+    const params = new URLSearchParams({
+      ayanamsa,
+      coordinates,
+      datetime: encodedDatetime,
+      la,
+    });
+
+    const token = await getProkeralaToken();
 
     const { data } = await axios.get(
       `${process.env.PROKERALA_PANCHANG_API}?${params.toString()}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-    // Save to Redis with TTL (e.g. 6 hours = 21600 seconds)
-    await redis.set(cacheKey, JSON.stringify(data), 'EX', 21600)
-    return res.json(data)
+    // Cache for 6 hours
+    await redis.set(cacheKey, JSON.stringify(data), "EX", 21600); // 6 * 60 * 60
 
+    return res.json(data);
   } catch (err) {
-    console.error('Detailed Panchang Error:', err.response?.data || err.message)
+    console.error("Detailed Panchang Error:", err.response?.data || err.message);
     return res.status(err.response?.status || 500).json({
-      error: 'Failed to fetch detailed kundli'
-    })
+      error: "Failed to fetch Panchang data",
+    });
   }
-}
+};

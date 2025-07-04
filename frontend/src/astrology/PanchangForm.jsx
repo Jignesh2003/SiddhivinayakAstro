@@ -1,4 +1,3 @@
-// src/pages/PanchangForm.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Toaster, toast } from "react-hot-toast";
@@ -8,14 +7,10 @@ import { Country, State, City } from "country-state-city";
 export default function PanchangForm() {
   const navigate = useNavigate();
 
-  // Ayanamsa & Language
   const [ayanamsa, setAyanamsa] = useState("1");
   const [la, setLa] = useState("en");
+  const [dateTime, setDateTime] = useState(""); // format: YYYY-MM-DDTHH:mm
 
-  // Date & Time
-  const [dateTime, setDateTime] = useState(""); // "YYYY-MM-DDTHH:MM"
-
-  // Location fields
   const [countryCode, setCountryCode] = useState("");
   const [stateCode, setStateCode] = useState("");
   const [cityName, setCityName] = useState("");
@@ -23,7 +18,6 @@ export default function PanchangForm() {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
 
-  // Load states when country changes
   useEffect(() => {
     if (!countryCode) return;
     setStates(State.getStatesOfCountry(countryCode));
@@ -33,7 +27,6 @@ export default function PanchangForm() {
     setCoords("");
   }, [countryCode]);
 
-  // Load cities when state changes
   useEffect(() => {
     if (!stateCode) return;
     setCities(City.getCitiesOfState(countryCode, stateCode));
@@ -41,13 +34,12 @@ export default function PanchangForm() {
     setCoords("");
   }, [stateCode, countryCode]);
 
-  // Auto‑fill coords when city chosen
   useEffect(() => {
     if (!cityName) return;
-    const c = cities.find((c) => c.name === cityName);
-    if (c) {
-      const lat = parseFloat(c.latitude).toFixed(6);
-      const lon = parseFloat(c.longitude).toFixed(6);
+    const selected = cities.find((c) => c.name === cityName);
+    if (selected) {
+      const lat = parseFloat(selected.latitude).toFixed(6);
+      const lon = parseFloat(selected.longitude).toFixed(6);
       setCoords(`${lat},${lon}`);
     }
   }, [cityName, cities]);
@@ -58,13 +50,12 @@ export default function PanchangForm() {
       return toast.error("Please fill all fields and select a city");
     }
 
-    // Build full ISO datetime with seconds +05:30
-    const datetimeISO = `${dateTime}:00+05:30`;
+    const datetimeISO = `${dateTime}:00+05:30`; // Don't encode manually
 
     const qs = new URLSearchParams({
       ayanamsa,
       coordinates: coords,
-      datetime: encodeURIComponent(datetimeISO),
+      datetime: datetimeISO,
       la,
     }).toString();
 
@@ -74,10 +65,9 @@ export default function PanchangForm() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 to-teal-900 flex items-center justify-center p-6">
       <Toaster position="top-center" />
-
       <form
         onSubmit={handleSubmit}
-        className="bg-white bg-opacity-10 backdrop-blur-md rounded-xl p-8 space-y-6 w-full max-w-md "
+        className="bg-white bg-opacity-10 backdrop-blur-md rounded-xl p-8 space-y-6 w-full max-w-md"
       >
         <h1 className="text-3xl font-bold text-yellow-300 text-center">
           Detailed Panchang
@@ -106,6 +96,9 @@ export default function PanchangForm() {
             >
               <option value="en">English</option>
               <option value="hi">हिन्दी</option>
+              <option value="ta">தமிழ்</option>
+              <option value="te">తెలుగు</option>
+              <option value="ml">മലയാളം</option>
             </select>
           </div>
         </div>
@@ -124,7 +117,7 @@ export default function PanchangForm() {
           />
         </div>
 
-        {/* Location: Country / State / City */}
+        {/* Location Selectors */}
         <div className="grid grid-cols-3 gap-3">
           <select
             value={countryCode}
@@ -166,7 +159,7 @@ export default function PanchangForm() {
           </select>
         </div>
 
-        {/* Coordinates (read‑only) */}
+        {/* Coordinates */}
         <div className="relative">
           <label className="block mb-1 flex items-center gap-1">
             <Globe /> Coordinates
@@ -181,6 +174,7 @@ export default function PanchangForm() {
           <MapPin className="absolute right-2 top-[38px] text-yellow-300" />
         </div>
 
+        {/* Submit */}
         <button
           type="submit"
           className="w-full bg-yellow-400 hover:bg-yellow-500 transition rounded py-3 flex items-center justify-center gap-2 font-semibold text-black"
