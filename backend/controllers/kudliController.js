@@ -118,67 +118,52 @@ export const detailedKundliMatching = async (req,res)=>{
   }
 }
 
+// controllers/panchang.js
 export const detailedPanchang = async (req, res) => {
   try {
     let { ayanamsa, coordinates, datetime, la = "en" } = req.query;
 
-    // Validation
-    if (!coordinates || !datetime || !ayanamsa) {
+    // Required
+    if (!ayanamsa || !coordinates || !datetime) {
       return res.status(400).json({
         error: "Missing required query params: ayanamsa, coordinates, datetime",
       });
     }
 
-    // Ensure coordinates are in correct format: "lat,long"
-    const coordinateRegex = /^-?\d{1,3}\.\d{6},-?\d{1,3}\.\d{6}$/;
-    if (!coordinateRegex.test(coordinates)) {
+    // coords must be "lat,lon" with 6 decimals
+    const coordRe = /^-?\d{1,3}\.\d{6},-?\d{1,3}\.\d{6}$/;
+    if (!coordRe.test(coordinates)) {
       return res.status(400).json({
-        error: "Coordinates must be in format 'lat,long' with 6 decimal places",
+        error: "Coordinates must be 'lat,lon' with 6 decimal places",
       });
     }
 
-    // Ensure datetime is a valid ISO 8601 string
-    const isoRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\+\d{2}:\d{2}|Z)$/;
-    if (!isoRegex.test(datetime)) {
+    // datetime must be ISO‑8601 like 2004-02-12T15:19:21+05:30 or ending with Z
+    const isoRe = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\+\d{2}:\d{2}|Z)$/;
+    if (!isoRe.test(datetime)) {
       return res.status(400).json({
-        error: "Datetime must be in ISO 8601 format (e.g., 2004-02-12T15:19:21+05:30)",
+        error:
+          "Datetime must be ISO 8601 (e.g. 2004-02-12T15:19:21+05:30 or ...Z)",
       });
     }
 
-    // Unique cache key
     const cacheKey = `panchang:${coordinates}:${datetime}:${ayanamsa}:${la}`;
-
-    // Check cache
     const cached = await redis.get(cacheKey);
     if (cached) {
       console.log("🔁 Returning cached panchang data");
       return res.json(JSON.parse(cached));
     }
 
-    // Encode datetime properly
-    const encodedDatetime = encodeURIComponent(datetime);
-
-    const params = new URLSearchParams({
-      ayanamsa,
-      coordinates,
-      datetime: encodedDatetime,
-      la,
-    });
-
+    // Build query string (no extra encodeURIComponent here!)
+    const params = new URLSearchParams({ ayanamsa, coordinates, datetime, la });
     const token = await getProkeralaToken();
-
     const { data } = await axios.get(
       `${process.env.PROKERALA_PANCHANG_API}?${params.toString()}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
+      { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    // Cache for 6 hours
-    await redis.set(cacheKey, JSON.stringify(data), "EX", 21600); // 6 * 60 * 60
-
+    // cache and return
+    await redis.set(cacheKey, JSON.stringify(data), "EX", 6 * 3600);
     return res.json(data);
   } catch (err) {
     console.error("Detailed Panchang Error:", err.response?.data || err.message);
@@ -187,3 +172,4 @@ export const detailedPanchang = async (req, res) => {
     });
   }
 };
+

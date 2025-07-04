@@ -1,3 +1,4 @@
+// src/pages/PanchangForm.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Toaster, toast } from "react-hot-toast";
@@ -7,10 +8,14 @@ import { Country, State, City } from "country-state-city";
 export default function PanchangForm() {
   const navigate = useNavigate();
 
-  const [ayanamsa, setAyanamsa] = useState("1");
+  // Lahiri only
+  const ayanamsa = "1";
   const [la, setLa] = useState("en");
-  const [dateTime, setDateTime] = useState(""); // format: YYYY-MM-DDTHH:mm
 
+  // Date & Time
+  const [dateTime, setDateTime] = useState(""); // YYYY-MM-DDTHH:mm
+
+  // Location fields
   const [countryCode, setCountryCode] = useState("");
   const [stateCode, setStateCode] = useState("");
   const [cityName, setCityName] = useState("");
@@ -18,6 +23,7 @@ export default function PanchangForm() {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
 
+  // load states on country change
   useEffect(() => {
     if (!countryCode) return;
     setStates(State.getStatesOfCountry(countryCode));
@@ -27,6 +33,7 @@ export default function PanchangForm() {
     setCoords("");
   }, [countryCode]);
 
+  // load cities on state change
   useEffect(() => {
     if (!stateCode) return;
     setCities(City.getCitiesOfState(countryCode, stateCode));
@@ -34,9 +41,10 @@ export default function PanchangForm() {
     setCoords("");
   }, [stateCode, countryCode]);
 
+  // auto-fill coords on city select
   useEffect(() => {
     if (!cityName) return;
-    const selected = cities.find((c) => c.name === cityName);
+    const selected = cities.find(c => c.name === cityName);
     if (selected) {
       const lat = parseFloat(selected.latitude).toFixed(6);
       const lon = parseFloat(selected.longitude).toFixed(6);
@@ -46,12 +54,14 @@ export default function PanchangForm() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!ayanamsa || !dateTime || !coords) {
-      return toast.error("Please fill all fields and select a city");
+    if (!dateTime || !coords) {
+      return toast.error("Please fill date/time and select a city");
     }
 
-    const datetimeISO = `${dateTime}:00+05:30`; // Don't encode manually
+    // build full ISO string
+    const datetimeISO = `${dateTime}:00+05:30`;
 
+    // assemble query
     const qs = new URLSearchParams({
       ayanamsa,
       coordinates: coords,
@@ -73,39 +83,25 @@ export default function PanchangForm() {
           Detailed Panchang
         </h1>
 
-        {/* Ayanamsa & Language */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block mb-1">Ayanamsa</label>
-            <select
-              value={ayanamsa}
-              onChange={(e) => setAyanamsa(e.target.value)}
-              className="w-full p-2 bg-white bg-opacity-20 rounded"
-            >
-              <option value="1">Lahiri</option>
-              <option value="3">Raman</option>
-              <option value="5">KP</option>
-            </select>
-          </div>
-          <div>
-            <label className="block mb-1">Language</label>
-            <select
-              value={la}
-              onChange={(e) => setLa(e.target.value)}
-              className="w-full p-2 bg-white bg-opacity-20 rounded"
-            >
-              <option value="en">English</option>
-              <option value="hi">हिन्दी</option>
-              <option value="ta">தமிழ்</option>
-              <option value="te">తెలుగు</option>
-              <option value="ml">മലയാളം</option>
-            </select>
-          </div>
+        {/* Language */}
+        <div>
+          <label className="block mb-1">Language</label>
+          <select
+            value={la}
+            onChange={(e) => setLa(e.target.value)}
+            className="w-full p-2 bg-white bg-opacity-20 rounded"
+          >
+            <option value="en">English</option>
+            <option value="hi">हिन्दी</option>
+            <option value="ta">தமிழ்</option>
+            <option value="te">తెలుగు</option>
+            <option value="ml">മലയാളം</option>
+          </select>
         </div>
 
         {/* Date & Time */}
         <div>
-          <label className="block mb-1 flex items-center gap-1">
+          <label className=" mb-1 flex items-center gap-1">
             <Calendar /> Date & Time
           </label>
           <input
@@ -117,7 +113,7 @@ export default function PanchangForm() {
           />
         </div>
 
-        {/* Location Selectors */}
+        {/* Country/State/City */}
         <div className="grid grid-cols-3 gap-3">
           <select
             value={countryCode}
@@ -159,17 +155,17 @@ export default function PanchangForm() {
           </select>
         </div>
 
-        {/* Coordinates */}
+        {/* Coordinates (read-only) */}
         <div className="relative">
-          <label className="block mb-1 flex items-center gap-1">
+          <label className=" mb-1 flex items-center gap-1">
             <Globe /> Coordinates
           </label>
           <input
             type="text"
             value={coords}
             readOnly
-            className="w-full p-2 bg-white bg-opacity-20 rounded pr-10"
             placeholder="lat,lon"
+            className="w-full p-2 bg-white bg-opacity-20 rounded pr-10"
           />
           <MapPin className="absolute right-2 top-[38px] text-yellow-300" />
         </div>
