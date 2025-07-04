@@ -82,9 +82,9 @@ export default function PanchangForm() {
               onChange={(e) => setAyanamsa(e.target.value)}
               className="w-full p-2 bg-white bg-opacity-20 rounded"
             >
-              <option value="1">1 – Lahiri</option>
-              <option value="3">3 – Raman</option>
-              <option value="5">5 – KP</option>
+              <option value="1">Lahiri</option>
+              <option value="3">Raman</option>
+              <option value="5">KP</option>
             </select>
           </div>
           <div>
