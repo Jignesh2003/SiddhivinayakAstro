@@ -1,4 +1,4 @@
-import NumerologyProfileSchema from "../models/numerologyProfile";
+import NumerologyProfileSchema from "../models/numerologyProfile.js";
 
 // List all profiles
 export const listProfiles = async (req,res) => {

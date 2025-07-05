@@ -71,6 +71,6 @@ server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
 // Run at 00:00 UTC → 05:30 IST every day
-cron.schedule('30 0 * * *', fetchHoroscopes, {
-  timezone: 'Asia/Kolkata'
-});
+// cron.schedule('30 0 * * *', fetchHoroscopes, {
+//   timezone: 'Asia/Kolkata'
+// });
