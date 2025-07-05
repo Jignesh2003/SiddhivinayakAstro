@@ -54,6 +54,13 @@ const Sidebar = () => {
             Orders
           </Link>
           <Link
+            to="/admin/numerology"
+            className="block p-2 hover:bg-gray-700 rounded"
+            onClick={handleLinkClick}
+          >
+            Update Numerology
+          </Link>
+          <Link
             to="/admin/verify-astrologers"
             className="block p-2 hover:bg-gray-700 rounded"
             onClick={handleLinkClick}
