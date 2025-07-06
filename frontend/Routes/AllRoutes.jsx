@@ -50,7 +50,7 @@ import MatchingForm from "../src/astrology/MatchingForm";
 import MatchingCompatiblityResult from "../src/astrology/MatchingCompatiblityResult";
 import PanchangForm from "@/astrology/PanchangForm";
 import PanchangResult from "@/astrology/PanchangResult";
-import { UpdateNumerology } from "@/admin/pages/UpdateNumerology";
+import LifePathNumber from '../src/astrology/LifePathNumber';
 
 const AppRoutes = () => {
   return (
@@ -68,6 +68,9 @@ const AppRoutes = () => {
         <Route path="/tmc" element={<Tmc />} />
         <Route path="/partners" element={<Partners />} />
         <Route path="/daily-prediction" element={<DailyPrediction />} />
+        <Route path="/life-path-number" element={<LifePathNumber />} />
+
+
 
 
         {/* ✅ Blog Pages */}
@@ -122,7 +125,6 @@ const AppRoutes = () => {
             <Route path="add-product" element={<AddProduct />} />
             <Route path="manage-products" element={<ManageProducts />} />
             <Route path="orders" element={<AdminOrders />} />
-            <Route path ="numerology" element={<UpdateNumerology/>} />
 
           </Route>
         </Route>

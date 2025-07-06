@@ -15,9 +15,6 @@ import { setupSocketHandlers } from "./sockets/chatHandler.js";
 import cron from 'node-cron';
 // import { fetchHoroscopes } from './jobs/fetchHoroscope.js';
 import astrologyRoutes from './routes/astrologyRoutes.js'
-import numerologyRoutes from './routes/numerologyRoutes.js'
-
-
 dotenv.config();
 const app = express();
 connectDB();
@@ -43,7 +40,6 @@ app.use("/api/astrologers", astroRoutes);
 app.use("/api/chat", chatRoutes);
 // app.use('/api/horoscope', horoscopeRoutes);
 app.use('/api/astrology',astrologyRoutes)
-app.use("/api/numerology",numerologyRoutes)
 app.use((req, res, next) => {
   res.status(404).json({ message: "Route not found" });
 });
