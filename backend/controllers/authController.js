@@ -5,15 +5,17 @@ import generateOTP from "../utils/generateOTP.js";
 import sendEmail from "../utils/sendEmail.js"; // Renamed for clarity
 import crypto from "crypto";
 import Product from "../models/Product.js";
-import { signupSchema ,loginSchema, verifyOtpSchema} from "../validation/userValidation.js";
+import { signupValidation ,loginSchema, verifyOtpSchema} from "../validation/userValidation.js";
 
 
 // ✅ Signup Controller
 export const signupUser = async (req, res) => {
   try {
-    const { error, value } = signupSchema.validate(req.body, { abortEarly: false });
-    if (error) {
-      return res.status(400).json({ message: error.details[0].message });
+    const { error, value } = signupValidation.validate(req.body, { abortEarly: false });
+   if (error) {
+      // Collect all error messages
+      const errors = error.details.map((err) => err.message);
+      return res.status(400).json({ message: 'Validation failed', errors });
     }
 
     const {

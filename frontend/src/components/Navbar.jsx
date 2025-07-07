@@ -195,7 +195,7 @@ const Navbar = () => {
             <Link to="/kundli-details" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Kundli</Link>
             <Link to="/matching-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Kundli Matching</Link>
             <Link to="/panchang-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Panchang</Link>
-            <Link to="/life-path-number" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Panchang</Link>
+            <Link to="/life-path-number" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Life Path Number</Link>
 
 
             {isAuthenticated && role !== "astrologer" && (
