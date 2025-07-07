@@ -92,11 +92,6 @@ export default function DailyPrediction() {
     }
   }, [selectedSign]);
 
-  // Find the full prediction object for the selected sign
-  const active = data.find(
-    (item) => item.sign.name.toLowerCase() === selectedSign
-  );
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-black to-indigo-900 text-white">
       <div className="max-w-6xl mx-auto px-4 py-12 space-y-8">
