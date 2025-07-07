@@ -1,5 +1,6 @@
 import Joi from "joi";
 
+// done
 export const signupValidation = Joi.object({
   email: Joi.string().email().max(100).lowercase().required(),
 
@@ -25,17 +26,15 @@ export const signupValidation = Joi.object({
   password: Joi.string().min(6).max(30).required().messages({ 'string.pattern.base': 'Password must be minimum 6 characters !' }),
 });
 
-
+//done
 export const loginSchema = Joi.object({
   email: Joi.string().lowercase().required().messages({
     "string.empty": "Email or phone is required",
   }).min(1).max(99),
-  password: Joi.string().required().messages({
+  password: Joi.string().min(6).max(30).required().messages({
     "string.empty": "Password is required",
   }),
 });
-
-
 
 export const sendOtpSchema = Joi.object({
   userId: Joi.string().required(),

@@ -63,7 +63,7 @@ const Signup = () => {
         toast.error("User already exists! Redirecting to login...");
         setTimeout(() => navigate("/login"), 2000);
       } else {
-        toast.error(error.response?.data?.message || "Signup failed!");
+        toast.error(error.response?.data?.errors|| "Signup failed!");
       }
     } finally {
       setIsLoading(false);
