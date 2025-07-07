@@ -23,9 +23,8 @@ import { Navigation, Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 
-// Zodiac images
+// Zodiac images & basic info
 import assets from "../assets/assets";
-
 const SIGN_IMAGES = {
   aries: assets.Aries,
   taurus: assets.Taurus,
@@ -40,7 +39,6 @@ const SIGN_IMAGES = {
   aquarius: assets.Aquarius,
   pisces: assets.Pisces,
 };
-
 const ZODIAC_INFO = {
   aries: "Aries are bold, ambitious, and confident leaders.",
   taurus: "Taurus are reliable, patient, and enjoy the finer things.",
@@ -63,7 +61,7 @@ export default function DailyPrediction() {
   const [knowledgeSign, setKnowledgeSign] = useState("");
   const cardRefs = useRef({});
 
-  // Fetch all 12 daily predictions once
+  // Fetch the full daily_predictions array
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -72,14 +70,10 @@ export default function DailyPrediction() {
           `${import.meta.env.VITE_HOROSCOPE_URL}/all`
         );
         const preds = res.data?.data?.daily_predictions || [];
-        setData(
-          preds.map((item) => ({
-            sign: item.sign.name.toLowerCase(),
-            displayName: item.sign.name,
-            prediction:
-              item.predictions[0]?.prediction || "No prediction available.",
-          }))
-        );
+        setData(preds);
+        if (preds.length) {
+          setSelectedSign(preds[0].sign.name.toLowerCase());
+        }
       } catch (err) {
         console.error("Error fetching horoscopes:", err);
       } finally {
@@ -88,14 +82,7 @@ export default function DailyPrediction() {
     })();
   }, []);
 
-  // Default to first sign once data is loaded
-  useEffect(() => {
-    if (!selectedSign && data.length) {
-      setSelectedSign(data[0].sign);
-    }
-  }, [data]);
-
-  // Scroll into view when selectedSign changes
+  // When a sign is chosen, scroll its card into view
   useEffect(() => {
     if (selectedSign && cardRefs.current[selectedSign]) {
       cardRefs.current[selectedSign].scrollIntoView({
@@ -104,6 +91,11 @@ export default function DailyPrediction() {
       });
     }
   }, [selectedSign]);
+
+  // Find the full prediction object for the selected sign
+  const active = data.find(
+    (item) => item.sign.name.toLowerCase() === selectedSign
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-black to-indigo-900 text-white">
@@ -133,24 +125,27 @@ export default function DailyPrediction() {
             }}
             className="py-4"
           >
-            {data.map(({ sign, displayName }) => (
-              <SwiperSlide key={sign}>
-                <button
-                  onClick={() => setSelectedSign(sign)}
-                  className={`w-full h-24 sm:h-28 flex items-center justify-center rounded-xl overflow-hidden transition ${
-                    sign === selectedSign
-                      ? "ring-4 ring-yellow-400"
-                      : "hover:ring-2 hover:ring-gray-600"
-                  }`}
-                >
-                  <img
-                    src={SIGN_IMAGES[sign]}
-                    alt={displayName}
-                    className="object-contain w-full h-full"
-                  />
-                </button>
-              </SwiperSlide>
-            ))}
+            {data.map(({ sign }) => {
+              const key = sign.name.toLowerCase();
+              return (
+                <SwiperSlide key={key}>
+                  <button
+                    onClick={() => setSelectedSign(key)}
+                    className={`w-full h-24 sm:h-28 flex items-center justify-center rounded-xl overflow-hidden transition ${
+                      key === selectedSign
+                        ? "ring-4 ring-yellow-400"
+                        : "hover:ring-2 hover:ring-gray-600"
+                    }`}
+                  >
+                    <img
+                      src={SIGN_IMAGES[key]}
+                      alt={sign.name}
+                      className="object-contain w-full h-full"
+                    />
+                  </button>
+                </SwiperSlide>
+              );
+            })}
           </Swiper>
         )}
 
@@ -159,21 +154,20 @@ export default function DailyPrediction() {
           <div className="flex justify-center">
             <Select
               value={selectedSign}
-              onValueChange={(val) => setSelectedSign(val)}
+              onValueChange={setSelectedSign}
             >
               <SelectTrigger className="w-64 bg-gray-800/80 border border-gray-700 text-white">
                 <SelectValue placeholder="Choose your zodiac sign" />
               </SelectTrigger>
               <SelectContent className="bg-gray-800/90 text-white">
-                {data.map(({ sign, displayName }) => (
-                  <SelectItem
-                    key={sign}
-                    value={sign}
-                    className="capitalize hover:bg-gray-700"
-                  >
-                    {displayName}
-                  </SelectItem>
-                ))}
+                {data.map(({ sign }) => {
+                  const key = sign.name.toLowerCase();
+                  return (
+                    <SelectItem key={key} value={key} className="capitalize">
+                      {sign.name}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -189,28 +183,39 @@ export default function DailyPrediction() {
         {/* Prediction Cards */}
         {!loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data.map(({ sign, displayName, prediction }) => (
-              <div
-                key={sign}
-                ref={(el) => (cardRefs.current[sign] = el)}
-                className={`transition-all rounded-2xl ${
-                  sign === selectedSign
-                    ? "ring-4 ring-yellow-400"
-                    : "hover:ring-2 hover:ring-gray-600"
-                }`}
-              >
-                <Card className="bg-gray-800/80 border border-gray-700 p-6 rounded-2xl shadow-lg">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-2xl font-bold text-yellow-300 capitalize">
-                      {displayName}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-gray-200 leading-relaxed whitespace-pre-line min-h-[150px]">
-                    {prediction}
-                  </CardContent>
-                </Card>
-              </div>
-            ))}
+            {data.map((item) => {
+              const key = item.sign.name.toLowerCase();
+              const pred = item.predictions[0] || {};
+              return (
+                <div
+                  key={key}
+                  ref={(el) => (cardRefs.current[key] = el)}
+                  className={`transition-all rounded-2xl ${
+                    key === selectedSign
+                      ? "ring-4 ring-yellow-400"
+                      : "hover:ring-2 hover:ring-gray-600"
+                  }`}
+                >
+                  <Card className="bg-gray-800/80 border border-gray-700 p-6 rounded-2xl shadow-lg">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-2xl font-bold text-yellow-300 capitalize">
+                        {item.sign.name}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-gray-200 leading-relaxed whitespace-pre-line min-h-[200px]">
+                      {/* General */}
+                      <p className="mb-4">{pred.prediction}</p>
+                      {/* Seek / Challenge / Insight */}
+                      <ul className="list-disc list-inside space-y-1 text-gray-300">
+                        {pred.seek && <li><strong>Seek:</strong> {pred.seek}</li>}
+                        {pred.challenge && <li><strong>Challenge:</strong> {pred.challenge}</li>}
+                        {pred.insight && <li><strong>Insight:</strong> {pred.insight}</li>}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -223,18 +228,14 @@ export default function DailyPrediction() {
           <div className="max-w-md">
             <Select
               value={knowledgeSign}
-              onValueChange={(val) => setKnowledgeSign(val)}
+              onValueChange={setKnowledgeSign}
             >
               <SelectTrigger className="bg-gray-800 border border-gray-700 text-white">
                 <SelectValue placeholder="Select a zodiac sign" />
               </SelectTrigger>
               <SelectContent className="bg-gray-900 text-white">
                 {Object.keys(ZODIAC_INFO).map((sign) => (
-                  <SelectItem
-                    key={sign}
-                    value={sign}
-                    className="capitalize hover:bg-gray-700"
-                  >
+                  <SelectItem key={sign} value={sign} className="capitalize">
                     {sign}
                   </SelectItem>
                 ))}
