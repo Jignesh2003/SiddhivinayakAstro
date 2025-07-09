@@ -51,6 +51,8 @@ import MatchingCompatiblityResult from "../src/astrology/MatchingCompatiblityRes
 import PanchangForm from "@/astrology/PanchangForm";
 import PanchangResult from "@/astrology/PanchangResult";
 import LifePathNumber from '../src/astrology/LifePathNumber';
+import CancellationRefundPolicy from "@/pages/CancellationRefundPolicy";
+import ShippingDeliveryPolicy from "@/pages/ShippingDeliveryPolicy";
 
 const AppRoutes = () => {
   return (
@@ -69,6 +71,9 @@ const AppRoutes = () => {
         <Route path="/partners" element={<Partners />} />
         <Route path="/daily-prediction" element={<DailyPrediction />} />
         <Route path="/life-path-number" element={<LifePathNumber />} />
+        <Route path="/cancellation-policy" element={<CancellationRefundPolicy />} />
+<Route path="/shipping-policy" element={<ShippingDeliveryPolicy />} />
+
 
 
 

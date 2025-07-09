@@ -14,7 +14,7 @@ const Footer = () => {
     >
       {/* Footer Container */}
       <div className="max-w-7xl mx-auto px-6 sm:px-8 flex flex-col items-center space-y-4">
-        
+
         {/* Logo & Brand Name */}
         <Link to="/" className="flex items-center space-x-3">
           <img
@@ -36,6 +36,9 @@ const Footer = () => {
           <Link to="/partners" className="text-white hover:text-yellow-400 transition">Partners</Link>
           <Link to="/blogs-astrology-and-you" className="text-white hover:text-yellow-400 transition">Blogs</Link>
           <Link to="/astro-list" className="text-white hover:text-yellow-400 transition">Chat With Astrologer</Link>
+          <Link to="/cancellation-policy" className="text-white hover:text-yellow-400 transition">Cancellation and Refund</Link>
+          <Link to="/shipping-policy" className="text-white hover:text-yellow-400 transition">Shipping and Delivery</Link>
+
 
         </nav>
 
