@@ -1,7 +1,7 @@
 import express from "express"
-import { verifyPayment } from "../controllers/orderController"
-import authMiddleware from "../middlewares/authMiddleware"
-import { createCashfreeOrder } from "../controllers/cashFreeController"
+import { verifyPayment } from "../controllers/orderController.js"
+import authMiddleware from "../middlewares/authMiddleware.js"
+import { createCashfreeOrder } from "../controllers/cashFreeController.js"
 
 const router = express.Router()
 

@@ -1,5 +1,5 @@
 import axios from "axios";
-import Order from "../models/orderModel.js";
+import Order from "../models/Order.js";
 
 export const createCashfreeOrder = async (req, res) => {
   try {
