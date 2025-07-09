@@ -129,3 +129,49 @@ export const getUserOrders = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const verifyPayment = async (req, res) => {
+  const {
+    mongoOrderId,
+    orderId, // custom order ID you generated
+    cfOrderId,
+    cfPaymentId,
+    status,
+    amount,
+    currency,
+    method,
+    email,
+    phone,
+    signature,
+  } = req.body;
+
+  try {
+    // 1. Log to PostgreSQL
+    await logTransactionToPostgres({
+      orderId,
+      cfOrderId,
+      cfPaymentId,
+      status,
+      amount,
+      currency,
+      method,
+      signature,
+      email,
+      phone,
+    });
+
+    // 2. Update MongoDB Order
+    if (mongoOrderId && status === "SUCCESS") {
+      await Order.findByIdAndUpdate(mongoOrderId, {
+        paymentStatus: "Paid",
+        paymentMethod: "cashfree",
+      });
+    }
+
+    res.status(200).json({ message: "Payment verified and logged" });
+  } catch (err) {
+    console.error("Payment Verify Error:", err);
+    res.status(500).json({ message: "Failed to verify payment" });
+  }
+}
+

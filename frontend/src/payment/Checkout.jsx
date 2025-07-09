@@ -8,7 +8,7 @@ import useCartStore from "../store/useCartStore";
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { userId, token,logout } = useAuthStore.getState();
+  const { userId, token, logout } = useAuthStore.getState();
   const { cart, clearCart } = useCartStore.getState();
 
   const [selectedMethod, setSelectedMethod] = useState("cod");
@@ -34,51 +34,42 @@ export default function Checkout() {
     if (loading) return;
     setLoading(true);
 
-    // 1. Basic user/cart validation
     if (!userId) {
-      toast.error("User not logged in! Please log in.");
-      logout()
-      setLoading(false);
-      return;
-    }
-    if (cart.length === 0) {
-      toast.error("Your cart is empty! Add items before placing an order.");
+      toast.error("User not logged in!");
+      logout();
       setLoading(false);
       return;
     }
 
-    // 2. Shipping fields validation
+    if (cart.length === 0) {
+      toast.error("Your cart is empty!");
+      setLoading(false);
+      return;
+    }
+
     for (const field of Object.keys(shippingAddress)) {
       if (!shippingAddress[field]) {
-        toast.error(`Please fill in ${field}!`);
+        toast.error(`Please fill in ${field}`);
         setLoading(false);
         return;
       }
     }
+
     if (shippingAddress.phone.length !== 10) {
-      toast.error("Invalid phone number. Must be 10 digits.");
+      toast.error("Invalid phone number.");
       setLoading(false);
       return;
     }
 
-    // 3. **NEW**: Verify against real stock before calling API
     for (const item of cart) {
-      // If you later support multiple sizes, find the matching stock entry:
-      // const entry = item.product.stock.find(s => s.size === item.size);
-      // const available = entry?.quantity ?? 0;
       const available = item.product?.stock?.[0]?.quantity ?? 0;
-
       if (item.quantity > available) {
-        toast.error(
-          `Cannot place order: only ${available} left of "${item.product.name}".`,
-          { position: "top-right" }
-        );
+        toast.error(`Only ${available} left of "${item.product.name}"`);
         setLoading(false);
         return;
       }
     }
 
-    // 4. Build order payload
     const orderData = {
       user: userId,
       items: cart.map((item) => ({
@@ -95,9 +86,8 @@ export default function Checkout() {
       shippingAddress,
     };
 
-    // 5. Send to back-end
     try {
-      await axios.post(
+      const res = await axios.post(
         `${import.meta.env.VITE_BASE_URL}/place-order`,
         orderData,
         {
@@ -109,15 +99,39 @@ export default function Checkout() {
         }
       );
 
-      toast.success("Order placed successfully! 🎉");
-      clearCart();
-      navigate("/order-confirmation");
-    } catch (error) {
-      console.error("Order submission failed:", error);
-      const msg =
-        error.response?.data?.message ||
-        "Something went wrong. Please try again.";
-      toast.error(msg, { position: "top-right" });
+      const order = res.data.order;
+
+      if (selectedMethod === "cod") {
+        toast.success("Order placed!");
+        clearCart();
+        navigate("/order-confirmation");
+      } else {
+        // Create payment session from backend
+        const cfRes = await axios.post(
+          `${import.meta.env.VITE_BASE_URL}/api/payment/cashfree/create-order`,
+          {
+            orderId: order._id,
+            amount: order.totalAmount,
+          },
+          {
+            headers: {
+              Authorization: token ? `Bearer ${token}` : "",
+            },
+          }
+        );
+
+        const { payment_session_id } = cfRes.data;
+
+        // ✅ Use global Cashfree SDK loaded from <script>
+        const checkout = new window.Cashfree({
+          paymentSessionId: payment_session_id,
+        });
+
+        checkout.redirect(); // Redirects to hosted checkout page
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || "Order failed");
     } finally {
       setLoading(false);
     }
@@ -134,9 +148,7 @@ export default function Checkout() {
             key={field}
             type="text"
             name={field}
-            placeholder={
-              field.charAt(0).toUpperCase() + field.slice(1)
-            }
+            placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
             value={shippingAddress[field]}
             onChange={handleChange}
             className="w-full border p-2 rounded-md"
@@ -155,9 +167,19 @@ export default function Checkout() {
             checked={selectedMethod === "cod"}
             onChange={() => setSelectedMethod("cod")}
           />
-          <label htmlFor="cod">Cash on Delivery (COD)</label>
+          <label htmlFor="cod">Cash on Delivery</label>
         </div>
-        {/* add other methods here when needed */}
+        <div className="flex items-center gap-2">
+          <input
+            type="radio"
+            id="online"
+            name="paymentMethod"
+            value="online"
+            checked={selectedMethod === "online"}
+            onChange={() => setSelectedMethod("online")}
+          />
+          <label htmlFor="online">UPI / Card (via Cashfree)</label>
+        </div>
       </div>
 
       <button
@@ -169,7 +191,7 @@ export default function Checkout() {
             : "bg-yellow-500 hover:bg-yellow-600 text-white"
         }`}
       >
-        {loading ? "Placing Order..." : "Place Order"}
+        {loading ? "Processing..." : "Place Order"}
       </button>
     </div>
   );

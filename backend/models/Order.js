@@ -20,7 +20,7 @@ const orderSchema = new mongoose.Schema(
     totalAmount: { type: Number, required: true },
     paymentMethod: {
       type: String,
-      enum: ["cod", "razorpay", "stripe"],
+      enum: ["cod", "razorpay", "stripe","cashfree"],
       default: "cod", // ✅ Default value added
     },
     paymentStatus: {
