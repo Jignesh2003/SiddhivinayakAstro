@@ -20,17 +20,17 @@ const orderSchema = new mongoose.Schema(
     totalAmount: { type: Number, required: true },
     paymentMethod: {
       type: String,
-      enum: ["cod", "razorpay", "stripe","cashfree"],
+      enum: ["cod","online"],
       default: "cod", // ✅ Default value added
     },
     paymentStatus: {
       type: String,
-      enum: ["Pending", "Paid"],
+      enum: ["Pending", "Paid","Initiated"],
       default: "Pending",
     },
     orderStatus: {
       type: String,
-      enum: ["Pending", "Shipped", "Out-for-delivery", "Delivered", "Cancelled","On-way","Initiated"], // ✅ Fixed "on-way" to "out-for-delivery"
+      enum: ["Pending", "Shipped", "Out-for-delivery", "Delivered", "Cancelled","On-way"], // ✅ Fixed "on-way" to "out-for-delivery"
       default: "Pending",
     },
 
