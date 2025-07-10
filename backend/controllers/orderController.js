@@ -164,7 +164,7 @@ export const verifyPayment = async (req, res) => {
     if (mongoOrderId && status === "SUCCESS") {
       await Order.findByIdAndUpdate(mongoOrderId, {
         paymentStatus: "Paid",
-        paymentMethod: "cashfree",
+        paymentMethod: "online",
       });
     }
 

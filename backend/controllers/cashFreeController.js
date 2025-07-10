@@ -31,8 +31,8 @@ export const createCashfreeOrder = async (req, res) => {
         headers: {
           "x-api-version": "2022-09-01",
           "Content-Type": "application/json",
-          "x-client-id": process.env.CASHFREE_CLIENT_ID,
-          "x-client-secret": process.env.CASHFREE_CLIENT_SECRET,
+          "x-client-id": process.env.CASHFREE_APP_ID,
+          "x-client-secret": process.env.CASHFREE_SECRET_KEY,
         },
       }
     );

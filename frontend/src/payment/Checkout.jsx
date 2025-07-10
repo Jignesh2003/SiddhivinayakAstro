@@ -108,7 +108,7 @@ export default function Checkout() {
       } else {
         // Create payment session from backend
         const cfRes = await axios.post(
-          `${import.meta.env.VITE_BASE_URL}/api/payment/cashfree/create-order`,
+          `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
           {
             orderId: order._id,
             amount: order.totalAmount,
