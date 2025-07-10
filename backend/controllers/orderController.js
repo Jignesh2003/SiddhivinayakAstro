@@ -96,7 +96,7 @@ export const placeOrder = async (req, res) => {
       items: orderItems,
       totalAmount,
       paymentMethod: paymentMethod || "cod",
-      paymentStatus: paymentMethod === "cod" ? "Pending" : "Paid",
+      paymentStatus: paymentMethod === "cod" ? "Pending" : "Initiated",
       orderStatus: "Pending",
       shippingAddress
     });

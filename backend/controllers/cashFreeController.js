@@ -24,7 +24,7 @@ export const createCashfreeOrder = async (req, res) => {
           customer_phone: order.shippingAddress.phone,
         },
         order_meta: {
-          return_url: "https://yourdomain.com/order-confirmation?order_id={order_id}",
+          return_url: "https://www.siddhivinayakastroworld.comm/order-confirmation?order_id={order_id}",
         },
       },
       {
