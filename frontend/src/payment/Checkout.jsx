@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import useAuthStore from "../store/useAuthStore";
 import useCartStore from "../store/useCartStore";
 
@@ -70,6 +69,7 @@ export default function Checkout() {
       }
     }
 
+    // Step 1: Place the order first
     const orderData = {
       user: userId,
       items: cart.map((item) => ({
@@ -81,7 +81,7 @@ export default function Checkout() {
         0
       ),
       paymentMethod: selectedMethod,
-      paymentStatus: selectedMethod === "cod" ? "Pending" : "Paid",
+      paymentStatus: selectedMethod === "cod" ? "Pending" : "Initiated",
       orderStatus: "Pending",
       shippingAddress,
     };
@@ -93,45 +93,42 @@ export default function Checkout() {
         {
           headers: {
             Authorization: token ? `Bearer ${token}` : "",
-            "Content-Type": "application/json",
           },
-          withCredentials: true,
         }
       );
 
       const order = res.data.order;
 
       if (selectedMethod === "cod") {
-        toast.success("Order placed!");
+        toast.success("Order placed with COD!");
         clearCart();
         navigate("/order-confirmation");
-      } else {
-        // Create payment session from backend
-        const cfRes = await axios.post(
-          `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
-          {
-            orderId: order._id,
-            amount: order.totalAmount,
-          },
-          {
-            headers: {
-              Authorization: token ? `Bearer ${token}` : "",
-            },
-          }
-        );
-
-        const { payment_session_id } = cfRes.data;
-
-        // ✅ Use global Cashfree SDK loaded from <script>
-        const checkout = new window.Cashfree({
-          paymentSessionId: payment_session_id,
-        });
-
-        checkout.redirect(); // Redirects to hosted checkout page
+        return;
       }
+
+      // Step 2: Create Cashfree payment session
+      const cfRes = await axios.post(
+        `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
+        {
+          orderId: order._id,
+          amount: order.totalAmount,
+        },
+        {
+          headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        }
+      );
+
+      const { payment_session_id } = cfRes.data;
+      if (!payment_session_id) throw new Error("No session ID");
+
+      // Step 3: Redirect using global Cashfree SDK
+      const checkout = new window.Cashfree({ paymentSessionId: payment_session_id });
+      checkout.redirect();
     } catch (err) {
-      console.error(err);
-      toast.error(err?.response?.data?.message || "Order failed");
+      console.error("Order/payment error:", err);
+      toast.error(err?.response?.data?.message || "Payment failed");
     } finally {
       setLoading(false);
     }

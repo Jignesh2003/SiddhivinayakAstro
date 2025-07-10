@@ -20,12 +20,12 @@ const orderSchema = new mongoose.Schema(
     totalAmount: { type: Number, required: true },
     paymentMethod: {
       type: String,
-      enum: ["cod","online"],
+      enum: ["cod", "online"],
       default: "cod", // ✅ Default value added
     },
     paymentStatus: {
       type: String,
-      enum: ["Pending", "Paid","Initiated"],
+      enum: ["Pending", "Paid", "Initiated"],
       default: "Pending",
     },
     orderStatus: {
