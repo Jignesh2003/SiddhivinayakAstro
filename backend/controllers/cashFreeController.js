@@ -32,8 +32,8 @@ export const createCashfreeOrder = async (req, res) => {
         customer_phone: shippingAddress.phone || "9999999999",
       },
       order_meta: {
-        return_url: `${process.env.CLIENT_URL}/order-confirmation`,
-        notify_url: process.env.CASHFREE_WEBHOOK_URL || "", // Webhook will handle DB insert
+return_url: `${process.env.CLIENT_URL}/order-confirmation?order_id=${customOrderId}&status={order_status}`,
+         notify_url: process.env.CASHFREE_WEBHOOK_URL || "", // Webhook will handle DB insert
       },
       order_tags: {
         user,
