@@ -3,9 +3,11 @@ import pkg from 'pg';
 
 const { Pool } = pkg;
 
-export const pgPool = new Pool({
-  connectionString: process.env.PG_CONNECTION_STRING,
+const pgPool = new Pool({
+  connectionString: process.env.POSTGRES_URI,
   ssl: {
     rejectUnauthorized: false, // Required for Neon
   },
 });
+
+export default pgPool
