@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -12,6 +12,7 @@ export default function Checkout() {
 
   const [selectedMethod, setSelectedMethod] = useState("cod");
   const [loading, setLoading] = useState(false);
+  const [cashfreeInstance, setCashfreeInstance] = useState(null);
   const [shippingAddress, setShippingAddress] = useState({
     name: "",
     phone: "",
@@ -22,10 +23,44 @@ export default function Checkout() {
     landmark: "",
   });
 
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+    script.async = true;
+    script.onload = () => {
+      if (window.Cashfree) {
+        const instance = window.Cashfree({ mode: "sandbox" });
+        setCashfreeInstance(instance);
+      } else {
+        toast.error("❌ Failed to initialize Cashfree");
+      }
+    };
+    script.onerror = () => toast.error("❌ Failed to load Cashfree SDK");
+    document.body.appendChild(script);
+  }, []);
+
   const handleChange = (e) => {
-    setShippingAddress({
-      ...shippingAddress,
-      [e.target.name]: e.target.value,
+    const { name, value } = e.target;
+    setShippingAddress((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const validateInputs = () => {
+    if (!userId) throw new Error("User not logged in");
+    if (!cart.length) throw new Error("Cart is empty");
+
+    for (const [key, value] of Object.entries(shippingAddress)) {
+      if (!value) throw new Error(`Please fill in ${key}`);
+    }
+
+    if (shippingAddress.phone.length !== 10) {
+      throw new Error("Phone number must be 10 digits");
+    }
+
+    cart.forEach((item) => {
+      const available = item.product?.stock?.[0]?.quantity ?? 0;
+      if (item.quantity > available) {
+        throw new Error(`Only ${available} left of "${item.product.name}"`);
+      }
     });
   };
 
@@ -33,89 +68,53 @@ export default function Checkout() {
     if (loading) return;
     setLoading(true);
 
-    console.log("🧾 Starting order submission...");
-
-    if (!userId) {
-      toast.error("User not logged in!");
-      logout();
-      setLoading(false);
-      return;
-    }
-
-    if (cart.length === 0) {
-      toast.error("Your cart is empty!");
-      setLoading(false);
-      return;
-    }
-
-    for (const field of Object.keys(shippingAddress)) {
-      if (!shippingAddress[field]) {
-        toast.error(`Please fill in ${field}`);
-        setLoading(false);
-        return;
-      }
-    }
-
-    if (shippingAddress.phone.length !== 10) {
-      toast.error("Invalid phone number.");
-      setLoading(false);
-      return;
-    }
-
-    for (const item of cart) {
-      const available = item.product?.stock?.[0]?.quantity ?? 0;
-      if (item.quantity > available) {
-        toast.error(`Only ${available} left of "${item.product.name}"`);
-        setLoading(false);
-        return;
-      }
-    }
-
-    const orderData = {
-      user: userId,
-      items: cart.map((item) => ({
-        product: item.product?._id,
-        quantity: item.quantity,
-      })),
-      totalAmount: cart.reduce(
-        (sum, item) => sum + (item.product?.price || 0) * item.quantity,
-        0
-      ),
-      paymentMethod: selectedMethod,
-      paymentStatus: selectedMethod === "cod" ? "Pending" : "Initiated",
-      orderStatus: "Pending",
-      shippingAddress,
-    };
-
     try {
-      // Step 1: Place order
-      console.log("📦 Placing order:", orderData);
-      const res = await axios.post(
-        `${import.meta.env.VITE_BASE_URL}/place-order`,
-        orderData,
-        {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : "",
-          },
-        }
+      validateInputs();
+
+      const totalAmount = cart.reduce(
+        (sum, item) => sum + item.product.price * item.quantity,
+        0
       );
 
-      const order = res.data.order;
-      console.log("✅ Order placed:", order);
-
       if (selectedMethod === "cod") {
-        toast.success("Order placed with COD!");
+        const orderData = {
+          user: userId,
+          items: cart.map((item) => ({
+            product: item.product._id,
+            quantity: item.quantity,
+          })),
+          totalAmount,
+          paymentMethod: "cod",
+          paymentStatus: "Pending",
+          orderStatus: "Pending",
+          shippingAddress,
+        };
+
+        const { data } = await axios.post(
+          `${import.meta.env.VITE_BASE_URL}/place-order`,
+          orderData,
+          {
+            headers: {
+              Authorization: token ? `Bearer ${token}` : "",
+            },
+          }
+        );
+
+        toast.success("✅ Order placed with Cash on Delivery!");
         clearCart();
-        navigate("/order-confirmation");
+        navigate(`/order-confirmation?order_id=${data.order._id}`);
         return;
       }
 
-      // Step 2: Create Cashfree session
+      // ONLINE PAYMENT
+      if (!cashfreeInstance) throw new Error("Cashfree SDK not ready");
+
       const cfRes = await axios.post(
         `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
         {
-          orderId: order._id,
-          amount: order.totalAmount,
+          cart,
+          totalAmount,
+          shippingAddress,
         },
         {
           headers: {
@@ -125,23 +124,17 @@ export default function Checkout() {
       );
 
       const { payment_session_id } = cfRes.data;
-      console.log("💳 Cashfree payment_session_id:", payment_session_id);
+      if (!payment_session_id) throw new Error("No payment session ID received");
 
-      if (!payment_session_id || !payment_session_id.startsWith("session_")) {
-        console.error("❌ Invalid session ID received:", payment_session_id);
-        throw new Error("Invalid session ID from Cashfree");
-      }
-
-      // Step 3: Use Cashfree JS SDK (v2.0)
-      const cashfree = new window.Cashfree();
-      console.log("🛒 Redirecting to Cashfree...");
-      cashfree.checkout({
+      cashfreeInstance.checkout({
         paymentSessionId: payment_session_id,
+        redirectTarget: "_self", // Or "_blank"
       });
 
     } catch (err) {
-      console.error("❌ Order/payment error:", err?.response?.data || err.message);
-      toast.error(err?.response?.data?.message || "Payment failed");
+      console.error("❌ Checkout error:", err);
+      toast.error(err.message || "Something went wrong");
+      if (err.message.includes("not logged in")) logout();
     } finally {
       setLoading(false);
     }
@@ -152,11 +145,10 @@ export default function Checkout() {
       <h2 className="text-2xl font-bold text-center mb-5">Checkout</h2>
 
       <div className="space-y-3">
-        <h3 className="font-semibold text-lg">Enter Shipping Details</h3>
+        <h3 className="font-semibold">Shipping Details</h3>
         {Object.keys(shippingAddress).map((field) => (
           <input
             key={field}
-            type="text"
             name={field}
             placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
             value={shippingAddress[field]}
@@ -166,41 +158,36 @@ export default function Checkout() {
         ))}
       </div>
 
-      <div className="space-y-2 mt-4">
-        <h3 className="font-semibold text-lg">Choose Payment Method</h3>
-        <div className="flex items-center gap-2">
+      <div className="mt-4 space-y-2">
+        <h3 className="font-semibold">Payment Method</h3>
+        <label className="flex items-center gap-2">
           <input
             type="radio"
-            id="cod"
-            name="paymentMethod"
-            value="cod"
             checked={selectedMethod === "cod"}
             onChange={() => setSelectedMethod("cod")}
           />
-          <label htmlFor="cod">Cash on Delivery</label>
-        </div>
-        <div className="flex items-center gap-2">
+          Cash on Delivery
+        </label>
+        <label className="flex items-center gap-2">
           <input
             type="radio"
-            id="online"
-            name="paymentMethod"
-            value="online"
             checked={selectedMethod === "online"}
             onChange={() => setSelectedMethod("online")}
           />
-          <label htmlFor="online">UPI / Card (via Cashfree)</label>
-        </div>
+          UPI / Card (via Cashfree)
+        </label>
       </div>
 
       <button
         onClick={handleOrderSubmit}
         disabled={loading}
-        className={`mt-4 py-2 px-6 w-full rounded ${loading
+        className={`mt-4 w-full py-2 rounded ${
+          loading
             ? "bg-gray-400 cursor-not-allowed"
             : "bg-yellow-500 hover:bg-yellow-600 text-white"
-          }`}
+        }`}
       >
-        {loading ? "Processing..." : "Place Order"}
+        {loading ? "Processing…" : "Place Order"}
       </button>
     </div>
   );
