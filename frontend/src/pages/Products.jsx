@@ -47,6 +47,7 @@ const Products = () => {
     if (!userId) {
       logout();
       toast.error("Please log in first!");
+      navigate("/login")
       return;
     }
     navigate(`/single-product/${product._id}`);

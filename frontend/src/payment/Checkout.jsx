@@ -112,7 +112,7 @@ export default function Checkout() {
       }
 
       // 🟢 Step 2: Call Cashfree session API
-      const cfEndpoint = `${import.meta.env.VITE_BASE_URL}/cashfree/create-order`;
+      const cfEndpoint = `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`;
       console.log("💰 Creating Cashfree session at:", cfEndpoint);
 
       const cfRes = await axios.post(
