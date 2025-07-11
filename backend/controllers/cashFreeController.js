@@ -1,11 +1,10 @@
 import axios from "axios";
 import Order from "../models/Order.js";
-import { v4 as uuidv4 } from "uuid";  // install uuid: npm install uuid
+import { v4 as uuidv4 } from "uuid";
 
 export const createCashfreeOrder = async (req, res) => {
   try {
     const { orderId, amount } = req.body;
-
     if (!orderId || !amount) {
       return res.status(400).json({ message: "Missing orderId or amount" });
     }
@@ -13,7 +12,11 @@ export const createCashfreeOrder = async (req, res) => {
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-     const cfRes = await axios.post(
+    // Use env FRONTEND_URL or default to localhost
+    const frontendBase = process.env.CLIENT_URL || "http://localhost:5173";
+    const returnUrl = `${frontendBase}/order-confirmation?order_id=${orderId}`;
+
+    const cfRes = await axios.post(
       "https://sandbox.cashfree.com/pg/orders",
       {
         order_id: `ORDER_${orderId}`,
@@ -25,15 +28,15 @@ export const createCashfreeOrder = async (req, res) => {
           customer_phone: order.shippingAddress.phone,
         },
         order_meta: {
-          return_url: `${process.env.FRONTEND_URL}/order-confirmation?order_id=${orderId}`,
+          return_url: returnUrl,
         },
       },
       {
         headers: {
-          "x-api-version": "2023-08-01",                   // use the latest version
+          "x-api-version": "2023-08-01",
           "x-client-id": process.env.CASHFREE_CLIENT_ID,
           "x-client-secret": process.env.CASHFREE_CLIENT_SECRET,
-          "x-request-id": uuidv4(),                        // **NEW** unique per request
+          "x-request-id": uuidv4(),
           "Content-Type": "application/json",
         },
       }
@@ -42,8 +45,10 @@ export const createCashfreeOrder = async (req, res) => {
     console.log("Cashfree response:", cfRes.data);
     const payment_session_id = cfRes.data.payment_session_id;
     if (!payment_session_id) {
+      console.error("No session ID returned:", cfRes.data);
       throw new Error("Missing session ID in response");
     }
+
     return res.status(200).json({ payment_session_id });
   } catch (error) {
     console.error("Cashfree order creation failed:", error.response?.data || error);

@@ -119,6 +119,8 @@ export default function Checkout() {
           },
         }
       );
+      console.log(cfRes);
+      
 
       const { payment_session_id } = cfRes.data;
       if (!payment_session_id) throw new Error("No session ID");
