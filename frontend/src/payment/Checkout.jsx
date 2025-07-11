@@ -33,6 +33,8 @@ export default function Checkout() {
     if (loading) return;
     setLoading(true);
 
+    console.log("🧾 Starting order submission...");
+
     if (!userId) {
       toast.error("User not logged in!");
       logout();
@@ -69,7 +71,6 @@ export default function Checkout() {
       }
     }
 
-    // Step 1: Place the order first
     const orderData = {
       user: userId,
       items: cart.map((item) => ({
@@ -87,6 +88,9 @@ export default function Checkout() {
     };
 
     try {
+      // 🟡 Step 1: Place order
+      console.log("📦 Placing order with data:", orderData);
+
       const res = await axios.post(
         `${import.meta.env.VITE_BASE_URL}/place-order`,
         orderData,
@@ -98,6 +102,7 @@ export default function Checkout() {
       );
 
       const order = res.data.order;
+      console.log("✅ Order placed successfully:", order);
 
       if (selectedMethod === "cod") {
         toast.success("Order placed with COD!");
@@ -106,9 +111,12 @@ export default function Checkout() {
         return;
       }
 
-      // Step 2: Create Cashfree payment session
+      // 🟢 Step 2: Call Cashfree session API
+      const cfEndpoint = `${import.meta.env.VITE_BASE_URL}/api/payment/cashfree/create-order`;
+      console.log("💰 Creating Cashfree session at:", cfEndpoint);
+
       const cfRes = await axios.post(
-        `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
+        cfEndpoint,
         {
           orderId: order._id,
           amount: order.totalAmount,
@@ -119,17 +127,22 @@ export default function Checkout() {
           },
         }
       );
-      console.log(cfRes);
-      
+
+      console.log("🧾 Cashfree response:", cfRes.data);
 
       const { payment_session_id } = cfRes.data;
-      if (!payment_session_id) throw new Error("No session ID");
+      if (!payment_session_id) {
+        console.error("❌ Missing payment_session_id from Cashfree response");
+        throw new Error("No session ID");
+      }
 
-      // Step 3: Redirect using global Cashfree SDK
+      // 🔵 Step 3: Load Cashfree checkout
+      console.log("🛒 Redirecting to Cashfree with session:", payment_session_id);
+
       const checkout = new window.Cashfree({ paymentSessionId: payment_session_id });
       checkout.redirect();
     } catch (err) {
-      console.error("Order/payment error:", err);
+      console.error("❌ Order/payment error:", err?.response?.data || err.message);
       toast.error(err?.response?.data?.message || "Payment failed");
     } finally {
       setLoading(false);
@@ -184,11 +197,10 @@ export default function Checkout() {
       <button
         onClick={handleOrderSubmit}
         disabled={loading}
-        className={`mt-4 py-2 px-6 w-full rounded ${
-          loading
+        className={`mt-4 py-2 px-6 w-full rounded ${loading
             ? "bg-gray-400 cursor-not-allowed"
             : "bg-yellow-500 hover:bg-yellow-600 text-white"
-        }`}
+          }`}
       >
         {loading ? "Processing..." : "Place Order"}
       </button>
