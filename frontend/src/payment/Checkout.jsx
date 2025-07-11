@@ -88,9 +88,8 @@ export default function Checkout() {
     };
 
     try {
-      // 🟡 Step 1: Place order
-      console.log("📦 Placing order with data:", orderData);
-
+      // Step 1: Place order
+      console.log("📦 Placing order:", orderData);
       const res = await axios.post(
         `${import.meta.env.VITE_BASE_URL}/place-order`,
         orderData,
@@ -102,7 +101,7 @@ export default function Checkout() {
       );
 
       const order = res.data.order;
-      console.log("✅ Order placed successfully:", order);
+      console.log("✅ Order placed:", order);
 
       if (selectedMethod === "cod") {
         toast.success("Order placed with COD!");
@@ -111,12 +110,9 @@ export default function Checkout() {
         return;
       }
 
-      // 🟢 Step 2: Call Cashfree session API
-      const cfEndpoint = `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`;
-      console.log("💰 Creating Cashfree session at:", cfEndpoint);
-
+      // Step 2: Create Cashfree session
       const cfRes = await axios.post(
-        cfEndpoint,
+        `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
         {
           orderId: order._id,
           amount: order.totalAmount,
@@ -128,19 +124,21 @@ export default function Checkout() {
         }
       );
 
-      console.log("🧾 Cashfree response:", cfRes.data);
-
       const { payment_session_id } = cfRes.data;
-      if (!payment_session_id) {
-        console.error("❌ Missing payment_session_id from Cashfree response");
-        throw new Error("No session ID");
+      console.log("💳 Cashfree payment_session_id:", payment_session_id);
+
+      if (!payment_session_id || !payment_session_id.startsWith("session_")) {
+        console.error("❌ Invalid session ID received:", payment_session_id);
+        throw new Error("Invalid session ID from Cashfree");
       }
 
-      // 🔵 Step 3: Load Cashfree checkout
-      console.log("🛒 Redirecting to Cashfree with session:", payment_session_id);
+      // Step 3: Use Cashfree JS SDK (v2.0)
+      const cashfree = new window.Cashfree();
+      console.log("🛒 Redirecting to Cashfree...");
+      cashfree.checkout({
+        paymentSessionId: payment_session_id,
+      });
 
-      const checkout = new window.Cashfree({ paymentSessionId: payment_session_id });
-      checkout.redirect();
     } catch (err) {
       console.error("❌ Order/payment error:", err?.response?.data || err.message);
       toast.error(err?.response?.data?.message || "Payment failed");
