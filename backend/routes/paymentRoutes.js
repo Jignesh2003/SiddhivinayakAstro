@@ -4,7 +4,7 @@ import { checkPaymentStatus, createCashfreeOrder ,verifyPayment} from "../contro
 
 const router = express.Router()
 
-router.post("/verify-payment", authMiddleware, verifyPayment)
+router.post("/verify-payment", verifyPayment)
 router.post("/cashfree/create-order", authMiddleware, createCashfreeOrder);
 router.get("/cashfree/check-status",authMiddleware, checkPaymentStatus)
 
