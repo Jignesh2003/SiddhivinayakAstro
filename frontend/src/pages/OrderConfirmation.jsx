@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import confetti from "canvas-confetti";
 
-export const OrderConfirmation = () => {
+ const OrderConfirmation = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
 
@@ -67,3 +67,5 @@ export const OrderConfirmation = () => {
     </div>
   );
 };
+
+export default OrderConfirmation
