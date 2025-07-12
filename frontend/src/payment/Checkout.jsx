@@ -111,11 +111,15 @@ export default function Checkout() {
 
       const cfRes = await axios.post(
         `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
-        {
-          cart,
-          totalAmount,
-          shippingAddress,
-        },
+  {
+    user: userId,
+    amount: totalAmount,
+    shippingAddress,
+    items: cart.map((item) => ({
+      product: item.product._id,
+      quantity: item.quantity,
+    })),
+  },
         {
           headers: {
             Authorization: token ? `Bearer ${token}` : "",
