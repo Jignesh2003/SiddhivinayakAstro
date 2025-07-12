@@ -110,9 +110,8 @@ export default function Checkout() {
       if (!cashfreeInstance) throw new Error("Cashfree SDK not ready");
 
       const cfRes = await axios.post(
-        `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
+  `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
   {
-    user: userId,
     amount: totalAmount,
     shippingAddress,
     items: cart.map((item) => ({
@@ -120,12 +119,13 @@ export default function Checkout() {
       quantity: item.quantity,
     })),
   },
-        {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : "",
-          },
-        }
-      );
+  {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+  }
+);
+
 
       const { payment_session_id } = cfRes.data;
       if (!payment_session_id) throw new Error("No payment session ID received");

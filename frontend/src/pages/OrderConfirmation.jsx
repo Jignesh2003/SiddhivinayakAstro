@@ -1,25 +1,60 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, Link } from "react-router-dom";
 import confetti from "canvas-confetti";
+import axios from "axios";
+import useAuthStore from "../store/useAuthStore";
 
- const OrderConfirmation = () => {
+const OrderConfirmation = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-
   const orderId = searchParams.get("order_id");
-  const status = searchParams.get("status"); // Get payment status
+
+  const { token } = useAuthStore();
+  const [hydrated, setHydrated] = useState(false); // wait for zustand to load
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // ✅ Mark hydration as complete
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
-    if (status === "SUCCESS") {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-      });
-    }
-  }, [status]);
+    const fetchStatus = async () => {
+      if (!orderId || !hydrated || !token) return;
 
-  const isSuccess = status === "SUCCESS";
+      try {
+        const { data } = await axios.get(
+          `${import.meta.env.VITE_PAYMENT_URL}/cashfree/check-status?order_id=${orderId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        setStatus(data.status);
+
+        if (data.status === "PAID") {
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 },
+          });
+        }
+      } catch (err) {
+        console.error("❌ Failed to fetch payment status:", err);
+        setStatus("FAILED");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStatus();
+  }, [orderId, token, hydrated]);
+console.log(status);
+
+  const isSuccess = status === "PAID";
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-gray-100 p-6">
@@ -29,43 +64,51 @@ import confetti from "canvas-confetti";
             isSuccess ? "text-green-600" : "text-red-600"
           }`}
         >
-          {isSuccess ? "🎉 Payment Successful!" : "❌ Payment Failed"}
+          {loading
+            ? "Checking Payment Status..."
+            : isSuccess
+            ? "🎉 Payment Successful!"
+            : "❌ Payment Failed"}
         </h2>
 
-        <p className="mt-3 text-gray-700 text-lg">
-          {isSuccess
-            ? "Thank you for your purchase. Your order is being processed."
-            : "Something went wrong. Your payment was not successful."}
-        </p>
+        {!loading && (
+          <>
+            <p className="mt-3 text-gray-700 text-lg">
+              {isSuccess
+                ? "Thank you for your purchase. Your order is being processed."
+                : "Something went wrong. Your payment was not successful."}
+            </p>
 
-        {orderId ? (
-          <p className="mt-2 text-gray-600 text-md">
-            <span className="font-medium">Order ID:</span> {orderId}
-          </p>
-        ) : (
-          <p className="mt-2 text-red-500 text-md">⚠️ Order ID not found</p>
+            {orderId ? (
+              <p className="mt-2 text-gray-600 text-md">
+                <span className="font-medium">Order ID:</span> {orderId}
+              </p>
+            ) : (
+              <p className="mt-2 text-red-500 text-md">⚠️ Order ID not found</p>
+            )}
+
+            <div className="mt-6 flex gap-4 justify-center">
+              {isSuccess ? (
+                <Link
+                  to="/my-orders"
+                  className="bg-yellow-500 text-white py-2 px-6 rounded-lg text-lg font-medium shadow-md transition duration-300 hover:bg-yellow-600"
+                >
+                  View My Orders
+                </Link>
+              ) : (
+                <Link
+                  to="/"
+                  className="bg-gray-200 text-gray-800 py-2 px-6 rounded-lg text-lg font-medium shadow-md transition duration-300 hover:bg-gray-300"
+                >
+                  Try Again
+                </Link>
+              )}
+            </div>
+          </>
         )}
-
-        <div className="mt-6 flex gap-4 justify-center">
-          {isSuccess ? (
-            <Link
-              to="/my-orders"
-              className="bg-yellow-500 text-white py-2 px-6 rounded-lg text-lg font-medium shadow-md transition duration-300 hover:bg-yellow-600"
-            >
-              View My Orders
-            </Link>
-          ) : (
-            <Link
-              to="/"
-              className="bg-gray-200 text-gray-800 py-2 px-6 rounded-lg text-lg font-medium shadow-md transition duration-300 hover:bg-gray-300"
-            >
-              Try Again
-            </Link>
-          )}
-        </div>
       </div>
     </div>
   );
 };
 
-export default OrderConfirmation
+export default OrderConfirmation;

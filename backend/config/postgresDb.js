@@ -1,4 +1,4 @@
-// config/db.js
+// config/postgresDb.js
 import pkg from 'pg';
 
 const { Pool } = pkg;
