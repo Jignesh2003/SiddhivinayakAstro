@@ -37,7 +37,6 @@ app.use(cors({
 }));
 app.use(helmet());
 app.use(morgan("dev"));
-console.log("🔑 Cashfree Secret Length:", process.env.CASHFREE_WEBHOOK_SECRET?.length);
 
 // Routes
 app.use("/api/auth", authRoutes);
