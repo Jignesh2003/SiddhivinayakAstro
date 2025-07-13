@@ -96,37 +96,40 @@ export const createCashfreeOrder = async (req, res) => {
 };
 
 export const verifyPayment = async (req, res) => {
-  // 1. Grab the raw bytes & convert to string
+  // 1) Grab raw body as string
   const raw = req.body.toString("utf8");
 
-  // 2. Parse JSON yourself
-  let payload;
-  try {
-    payload = JSON.parse(raw);
-  } catch (e) {
-    console.error("❌ Webhook payload parse error:", e);
-    return res.status(400).send("Invalid JSON");
+  // 2) Pull out timestamp & signature headers
+  const timestamp = req.headers["x-webhook-timestamp"];
+  const incomingSig = req.headers["x-webhook-signature"];
+  if (!timestamp || !incomingSig) {
+    console.warn("⚠️ Missing webhook headers");
+    return res.status(400).send("Missing headers");
   }
 
-  // 3. Grab the signature header
-  const signature = req.headers["x-webhook-signature"];
-  if (!signature) {
-    console.warn("⚠️ No signature header");
-    return res.status(400).send("Missing signature");
-  }
-
-  // 4. Compute HMAC over *the exact raw string*
-  const computed = crypto
+  // 3) Build the signed payload + compute HMAC & Base64
+  const signedPayload = `${timestamp}.${raw}`;
+  const computedSig = crypto
     .createHmac("sha256", process.env.CASHFREE_WEBHOOK_SECRET)
-    .update(raw)
-    .digest("hex");
+    .update(signedPayload)
+    .digest("base64");
 
-  if (computed !== signature) {
-    console.warn("⚠️ Signature mismatch", { computed, signature });
+  // 4) Compare
+  if (computedSig !== incomingSig) {
+    console.warn("⚠️ Signature mismatch", { computedSig, incomingSig });
     return res.status(400).send("Invalid signature");
   }
 
-  // 5. Drill into payload.data
+  // 5) Parse JSON now that signature is good
+  let payload;
+  try {
+    payload = JSON.parse(raw);
+  } catch (err) {
+    console.error("❌ Invalid JSON:", err);
+    return res.status(400).send("Bad JSON");
+  }
+
+  // 6) Drill into payload.data
   const { data } = payload;
   const {
     order: { order_id: orderId } = {},
@@ -140,7 +143,7 @@ export const verifyPayment = async (req, res) => {
     customer_details: { customer_id: mongoOrderId, customer_email: email, customer_phone: phone } = {},
   } = data || {};
 
-  // 6. Persist & update
+  // 7) Log & update your databases
   try {
     await logTransactionToPostgres({
       orderId,
@@ -150,7 +153,7 @@ export const verifyPayment = async (req, res) => {
       amount,
       currency,
       method: JSON.stringify(method),
-      signature,
+      signature: incomingSig,
       email,
       phone,
     });
@@ -165,10 +168,11 @@ export const verifyPayment = async (req, res) => {
 
     return res.status(200).send("OK");
   } catch (err) {
-    console.error("❌ Payment Verify Error:", err);
-    return res.status(500).send("Server error");
+    console.error("❌ DB error:", err);
+    return res.status(500).send("Server Error");
   }
 };
+
 
 export const checkPaymentStatus = async (req, res) => {
   try {
