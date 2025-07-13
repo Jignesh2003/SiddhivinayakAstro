@@ -16,11 +16,16 @@ import cron from 'node-cron';
 import { fetchHoroscopes } from './jobs/fetchHoroscope.js';
 import astrologyRoutes from './routes/astrologyRoutes.js'
 import paymentRoutes from "./routes/paymentRoutes.js"
+import { verifyPayment } from "./controllers/cashFreeController.js";
 
 dotenv.config();
 const app = express();
 connectDB();
-
+app.post(
+  "/api/webhook/verify-payment",
+  express.raw({ type: "application/json" }),
+  verifyPayment
+);
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
