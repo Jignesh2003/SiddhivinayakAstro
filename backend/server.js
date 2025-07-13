@@ -16,16 +16,13 @@ import cron from 'node-cron';
 import { fetchHoroscopes } from './jobs/fetchHoroscope.js';
 import astrologyRoutes from './routes/astrologyRoutes.js'
 import paymentRoutes from "./routes/paymentRoutes.js"
-import { verifyPayment } from "./controllers/cashFreeController.js";
-
+import webhookRoutes from "./routes/webhookRoutes.js"
 dotenv.config();
 const app = express();
 connectDB();
-app.post(
-  "/api/webhook/verify-payment",
-  express.raw({ type: "application/json" }),
-  verifyPayment
-);
+
+app.use("/api/webhook", webhookRoutes);
+
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
@@ -40,6 +37,7 @@ app.use(cors({
 }));
 app.use(helmet());
 app.use(morgan("dev"));
+console.log("🔑 Cashfree Secret Length:", process.env.CASHFREE_WEBHOOK_SECRET?.length);
 
 // Routes
 app.use("/api/auth", authRoutes);
