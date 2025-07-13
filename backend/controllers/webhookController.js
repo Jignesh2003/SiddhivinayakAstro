@@ -17,7 +17,7 @@ export const verifyPayment = async (req, res) => {
     }
 
     // 3) Compute expected signature using HMAC-SHA256 and base64 encoding
-    const signedPayload = `${timestamp}.${raw}`;
+    const signedPayload = `${timestamp}${raw}`;
     const computedSig = crypto
       .createHmac("sha256", process.env.CASHFREE_CLIENT_SECRET)
       .update(signedPayload, "utf8")
@@ -121,3 +121,6 @@ export const verifyPayment = async (req, res) => {
     return res.status(500).send("Server error");
   }
 };
+
+
+
