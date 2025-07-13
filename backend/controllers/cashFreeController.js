@@ -100,25 +100,7 @@ export const verifyPayment = async (req, res) => {
     // 1) Get raw body
     const raw = req.body.toString("utf8");
 
-    // 2) Try parsing JSON to check if it's a test webhook
-    let payload;
-    try {
-      payload = JSON.parse(raw);
-    } catch (e) {
-      console.error("❌ Invalid JSON:", e);
-      return res.status(400).send("Bad JSON");
-    }
-
-    // 3) TEMPORARY BYPASS for webhook test from Cashfree dashboard
-    if (
-      payload?.data?.test_object?.test_key === "test_value" &&
-      payload?.type === "WEBHOOK"
-    ) {
-      console.log("🧪 Received test webhook from Cashfree. Bypassing signature check.");
-      return res.status(200).send("Test webhook received");
-    }
-
-    // 4) Proceed with actual webhook signature verification
+    // 2) Get required headers
     const timestamp = req.headers["x-webhook-timestamp"];
     const incomingSig = req.headers["x-webhook-signature"];
 
@@ -127,6 +109,7 @@ export const verifyPayment = async (req, res) => {
       return res.status(400).send("Missing signature headers");
     }
 
+    // 3) Compute signature
     const signedPayload = `${timestamp}.${raw}`;
     const computedSig = crypto
       .createHmac("sha256", process.env.CASHFREE_CLIENT_SECRET)
@@ -143,12 +126,21 @@ export const verifyPayment = async (req, res) => {
       return res.status(400).send("Invalid signature");
     }
 
-    // 5) Parse body already done — use existing payload
+    // 4) Parse verified payload
+    let payload;
+    try {
+      payload = JSON.parse(raw);
+    } catch (e) {
+      console.error("❌ Invalid JSON:", e);
+      return res.status(400).send("Bad JSON");
+    }
+
     const { data } = payload;
     if (!data) {
       return res.status(400).send("Invalid payload structure");
     }
 
+    // 5) Extract payment and customer details
     const {
       order: { order_id: orderId } = {},
       payment: {
@@ -166,7 +158,7 @@ export const verifyPayment = async (req, res) => {
       } = {},
     } = data;
 
-    // 6) Store transaction & update order
+    // 6) Log transaction to Postgres
     await logTransactionToPostgres({
       orderId,
       cfOrderId,
@@ -180,6 +172,7 @@ export const verifyPayment = async (req, res) => {
       phone,
     });
 
+    // 7) Update Mongo order if payment is successful
     if (mongoOrderId && status === "SUCCESS") {
       await Order.findByIdAndUpdate(mongoOrderId, {
         paymentStatus: "Paid",
@@ -194,6 +187,7 @@ export const verifyPayment = async (req, res) => {
     return res.status(500).send("Server error");
   }
 };
+
 
 
 export const checkPaymentStatus = async (req, res) => {
