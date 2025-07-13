@@ -94,8 +94,6 @@ export const createCashfreeOrder = async (req, res) => {
     });
   }
 };
-import Order from "../models/Order.js";
-import { logTransactionToPostgres } from "../utils/logTransaction.js";
 
 export const verifyPayment = async (req, res) => {
   // 1. Grab the raw bytes & convert to string
