@@ -116,6 +116,11 @@ export const verifyPayment = async (req, res) => {
       .update(signedPayload)
       .digest("base64");
 
+    console.log("🔒 Raw body:", raw);
+    console.log("📅 Timestamp:", timestamp);
+    console.log("📩 Incoming signature:", incomingSig);
+    console.log("📤 Computed signature:", computedSig);
+
     if (computedSig !== incomingSig) {
       console.warn("⚠️ Signature mismatch", { computedSig, incomingSig });
       return res.status(400).send("Invalid signature");
