@@ -44,3 +44,4 @@ export const logTransactionToPostgres = async ({
 
   await pgPool.query(query, values);
 };
+//
