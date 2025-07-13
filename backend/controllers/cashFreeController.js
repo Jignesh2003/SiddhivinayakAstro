@@ -96,58 +96,60 @@ export const createCashfreeOrder = async (req, res) => {
 };
 
 export const verifyPayment = async (req, res) => {
-  // 1) Grab raw body as string
-  const raw = req.body.toString("utf8");
-
-  // 2) Pull out timestamp & signature headers
-  const timestamp = req.headers["x-webhook-timestamp"];
-  const incomingSig = req.headers["x-webhook-signature"];
-  if (!timestamp || !incomingSig) {
-    console.warn("⚠️ Missing webhook headers");
-    return res.status(400).send("Missing headers");
-  }
-
-  // 3) Build the signed payload + compute HMAC & Base64
-  const signedPayload = `${timestamp}.${raw}`;
-  const computedSig = crypto
-    .createHmac("sha256", process.env.CASHFREE_WEBHOOK_SECRET)
-    .update(signedPayload)
-    .digest("base64");
-
-  // 4) Compare
-  if (computedSig !== incomingSig) {
-    console.warn("⚠️ Signature mismatch", { computedSig, incomingSig });
-    return res.status(400).send("Invalid signature");
-  }
-
-  // 5) Parse JSON now that signature is good
-  let payload;
   try {
-    payload = JSON.parse(raw);
-  } catch (err) {
-    console.error("❌ Invalid JSON:", err);
-    return res.status(400).send("Bad JSON");
-  }
+    // 1) Get raw body
+    const raw = req.body.toString("utf8");
 
-  // 6) Drill into payload.data
-  const { data } = payload;
-  const {
-    order: { order_id: orderId } = {},
-    payment: {
-      cf_payment_id: cfPaymentId,
-      payment_status: status,
-      payment_amount: amount,
-      payment_currency: currency,
-      payment_method: method,
-    } = {},
-    customer_details: { customer_id: mongoOrderId, customer_email: email, customer_phone: phone } = {},
-  } = data || {};
+    // 2) Headers
+    const timestamp = req.headers["x-webhook-timestamp"];
+    const incomingSig = req.headers["x-webhook-signature"];
 
-  // 7) Log & update your databases
-  try {
+    if (!timestamp || !incomingSig) {
+      console.warn("⚠️ Missing signature headers");
+      return res.status(400).send("Missing signature headers");
+    }
+
+    // 3) Generate base64 signature: timestamp.payload
+    const signedPayload = `${timestamp}.${raw}`;
+    const computedSig = crypto
+      .createHmac("sha256", process.env.CASHFREE_WEBHOOK_SECRET)
+      .update(signedPayload)
+      .digest("base64");
+
+    if (computedSig !== incomingSig) {
+      console.warn("⚠️ Signature mismatch", { computedSig, incomingSig });
+      return res.status(400).send("Invalid signature");
+    }
+
+    // 4) Parse the body only after verifying
+    const payload = JSON.parse(raw);
+    const { data } = payload;
+
+    if (!data) {
+      return res.status(400).send("Invalid payload structure");
+    }
+
+    const {
+      order: { order_id: orderId } = {},
+      payment: {
+        cf_payment_id: cfPaymentId,
+        cf_order_id: cfOrderId,
+        payment_status: status,
+        payment_amount: amount,
+        payment_currency: currency,
+        payment_method: method,
+      } = {},
+      customer_details: {
+        customer_id: mongoOrderId,
+        customer_email: email,
+        customer_phone: phone,
+      } = {},
+    } = data;
+
+    // 5) Store transaction & update order
     await logTransactionToPostgres({
       orderId,
-      cfOrderId: data.payment.cf_order_id,
+      cfOrderId,
       cfPaymentId,
       status,
       amount,
@@ -166,10 +168,10 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
-    return res.status(200).send("OK");
+    return res.status(200).send("✅ Payment verified");
   } catch (err) {
-    console.error("❌ DB error:", err);
-    return res.status(500).send("Server Error");
+    console.error("❌ verifyPayment error:", err);
+    return res.status(500).send("Server error");
   }
 };
 
