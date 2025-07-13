@@ -16,16 +16,17 @@ import cron from 'node-cron';
 import { fetchHoroscopes } from './jobs/fetchHoroscope.js';
 import astrologyRoutes from './routes/astrologyRoutes.js'
 import paymentRoutes from "./routes/paymentRoutes.js"
+import { verifyPayment } from "./controllers/cashFreeController.js";
 
 dotenv.config();
 const app = express();
 connectDB();
 
 //because of webhook need raw body 
-app.post(
-  "/api/payment/verify-payment",
+router.post(
+  "/verify-payment",
   express.raw({ type: "application/json" }),
-  paymentRoutes.verifyPayment
+  verifyPayment
 );
 
 
