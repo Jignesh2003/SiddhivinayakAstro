@@ -129,7 +129,7 @@ export const verifyPayment = async (req, res) => {
 
     const signedPayload = `${timestamp}.${raw}`;
     const computedSig = crypto
-      .createHmac("sha256", process.env.CASHFREE_WEBHOOK_SECRET)
+      .createHmac("sha256", process.env.CASHFREE_CLIENT_SECRET)
       .update(signedPayload)
       .digest("base64");
 
