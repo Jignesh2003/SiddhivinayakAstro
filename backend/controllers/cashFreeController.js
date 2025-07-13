@@ -96,35 +96,40 @@ export const createCashfreeOrder = async (req, res) => {
 };
 
 export const verifyPayment = async (req, res) => {
-  console.log("🟢 [Webhook] verifyPayment called:", req.body);
-  const {
-    mongoOrderId,
-    orderId,
-    cfOrderId,
-    cfPaymentId,
-    status,
-    amount,
-    currency,
-    method,
-    email,
-    phone,
-    signature,
-  } = req.body;
-
+  // req.body is now a Buffer, so convert to string & JSON.parse:
+  const raw = req.body.toString("utf8");
+  let payload;
   try {
-    // 1. Optional: Verify signature (recommended for security)
-    const computedSignature = crypto
-      .createHmac("sha256", process.env.CASHFREE_WEBHOOK_SECRET)
-      .update(
-        `${orderId}${cfOrderId}${cfPaymentId}${amount}${currency}${status}`
-      )
-      .digest("hex");
+    payload = JSON.parse(raw);
+  } catch (e) {
+    console.error("Webhook payload parse error:", e);
+    return res.status(400).send("Invalid JSON");
+  }
 
-    if (signature && computedSignature !== signature) {
-      return res.status(400).json({ message: "Invalid signature" });
-    }
-    console.log("🟡 [Webhook] about to write to Postgres");
-    // 2. Log to PostgreSQL
+  console.log("🟢 [Webhook] verifyPayment payload:", payload);
+
+  // Extract fields from payload.data & headers.signature:
+  const signature = req.headers["x-webhook-signature"];
+  const {
+    order: { order_id: orderId } = {},
+    payment: { cf_payment_id: cfPaymentId, payment_status: status, payment_amount: amount, payment_currency: currency } = {},
+    customer_details: { customer_id: mongoOrderId, customer_email: email, customer_phone: phone } = {},
+    payment: { payment_method: method } = {},
+  } = payload.data || {};
+
+  // Compute HMAC on the raw string exactly as doc says:
+  const computedSignature = crypto
+    .createHmac("sha256", process.env.CASHFREE_WEBHOOK_SECRET)
+    .update(raw)
+    .digest("hex");
+
+  if (signature !== computedSignature) {
+    console.warn("⚠️ Invalid signature", { signature, computedSignature });
+    return res.status(400).json({ message: "Invalid signature" });
+  }
+
+  // Now log to Postgres and update Mongo…
+  try {
     await logTransactionToPostgres({
       orderId,
       cfOrderId,
@@ -132,27 +137,25 @@ export const verifyPayment = async (req, res) => {
       status,
       amount,
       currency,
-      method,
+      method: JSON.stringify(method),
       signature,
       email,
       phone,
     });
-    console.log("✅ [Webhook] wrote to Postgres");
-    // 3. Update MongoDB Order if payment succeeded
     if (mongoOrderId && status === "SUCCESS") {
       await Order.findByIdAndUpdate(mongoOrderId, {
         paymentStatus: "Paid",
         paymentMethod: "online",
-        orderStatus: "Pending", // optional
+        orderStatus: "Pending",
       });
     }
-
     return res.status(200).json({ message: "✅ Payment verified and order updated." });
   } catch (err) {
     console.error("❌ Payment Verify Error:", err);
     return res.status(500).json({ message: "Failed to verify payment" });
   }
 };
+
 
 
 export const checkPaymentStatus = async (req, res) => {

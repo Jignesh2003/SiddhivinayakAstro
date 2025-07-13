@@ -21,6 +21,14 @@ dotenv.config();
 const app = express();
 connectDB();
 
+//because of webhook need raw body 
+app.post(
+  "/api/payment/verify-payment",
+  express.raw({ type: "application/json" }),
+  paymentRoutes.verifyPayment
+);
+
+
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
