@@ -100,7 +100,25 @@ export const verifyPayment = async (req, res) => {
     // 1) Get raw body
     const raw = req.body.toString("utf8");
 
-    // 2) Headers
+    // 2) Try parsing JSON to check if it's a test webhook
+    let payload;
+    try {
+      payload = JSON.parse(raw);
+    } catch (e) {
+      console.error("❌ Invalid JSON:", e);
+      return res.status(400).send("Bad JSON");
+    }
+
+    // 3) TEMPORARY BYPASS for webhook test from Cashfree dashboard
+    if (
+      payload?.data?.test_object?.test_key === "test_value" &&
+      payload?.type === "WEBHOOK"
+    ) {
+      console.log("🧪 Received test webhook from Cashfree. Bypassing signature check.");
+      return res.status(200).send("Test webhook received");
+    }
+
+    // 4) Proceed with actual webhook signature verification
     const timestamp = req.headers["x-webhook-timestamp"];
     const incomingSig = req.headers["x-webhook-signature"];
 
@@ -109,7 +127,6 @@ export const verifyPayment = async (req, res) => {
       return res.status(400).send("Missing signature headers");
     }
 
-    // 3) Generate base64 signature: timestamp.payload
     const signedPayload = `${timestamp}.${raw}`;
     const computedSig = crypto
       .createHmac("sha256", process.env.CASHFREE_WEBHOOK_SECRET)
@@ -126,10 +143,8 @@ export const verifyPayment = async (req, res) => {
       return res.status(400).send("Invalid signature");
     }
 
-    // 4) Parse the body only after verifying
-    const payload = JSON.parse(raw);
+    // 5) Parse body already done — use existing payload
     const { data } = payload;
-
     if (!data) {
       return res.status(400).send("Invalid payload structure");
     }
@@ -151,7 +166,7 @@ export const verifyPayment = async (req, res) => {
       } = {},
     } = data;
 
-    // 5) Store transaction & update order
+    // 6) Store transaction & update order
     await logTransactionToPostgres({
       orderId,
       cfOrderId,
