@@ -68,18 +68,27 @@ export const verifyPayment = async (req, res) => {
     } = data;
 
     // 8) Log transaction regardless of event
-    await logTransactionToPostgres({
-      orderId,
-      cfOrderId,
-      cfPaymentId,
-      status,
-      amount,
-      currency,
-      method: JSON.stringify(method || {}),
-      signature: incomingSig,
-      email,
-      phone,
-    });
+   try {
+  console.log("📤 Attempting to log transaction to Postgres...");
+
+  await logTransactionToPostgres({
+    orderId,
+    cfOrderId,
+    cfPaymentId,
+    status,
+    amount,
+    currency,
+    method: JSON.stringify(method || {}),
+    signature: incomingSig,
+    email,
+    phone,
+  });
+
+  console.log("✅ Transaction logged to Postgres!");
+} catch (err) {
+  console.error("❌ Failed to log transaction to Postgres:", err);
+}
+
 
     // 9) Handle event-specific logic
     switch (event) {

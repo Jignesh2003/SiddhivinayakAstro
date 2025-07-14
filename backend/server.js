@@ -17,10 +17,26 @@ import { fetchHoroscopes } from './jobs/fetchHoroscope.js';
 import astrologyRoutes from './routes/astrologyRoutes.js'
 import paymentRoutes from "./routes/paymentRoutes.js"
 import webhookRoutes from "./routes/webhookRoutes.js"
+// import pg from 'pg';
+// const { Pool } = pg;
 
 dotenv.config();
 const app = express();
 connectDB();
+
+// console.log("🔧 Connecting to:", process.env.POSTGRES_URI);
+
+// const pool = new Pool({
+//   connectionString: process.env.POSTGRES_URI, // or use individual params
+//   ssl: { rejectUnauthorized: false }, // required for services like Neon
+// });
+
+// pool.connect()
+//   .then(() => console.log("✅ Connected to Neon Postgres"))
+//   .catch((err) => console.error("❌ Postgres connection failed:", err));
+
+
+//   export default pool;
 
 app.use("/api/webhook", webhookRoutes);
 

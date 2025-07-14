@@ -1,13 +1,18 @@
-// config/postgresDb.js
-import pkg from 'pg';
+// postgresDb.js
+import pg from 'pg';
+const { Pool } = pg;
+// import dotenv from "dotenv";
+// dotenv.config();
+console.log("🔧 Connecting to:", process.env.POSTGRES_URI);
 
-const { Pool } = pkg;
-
-const pgPool = new Pool({
-  connectionString: process.env.POSTGRES_URI,
-  ssl: {
-    rejectUnauthorized: false, // Required for Neon
-  },
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URI, // or use individual params
+  ssl: { rejectUnauthorized: false }, // required for services like Neon
 });
 
-export default pgPool
+pool.connect()
+  .then(() => console.log("✅ Connected to Neon Postgres"))
+  .catch((err) => console.error("❌ Postgres connection failed:", err));
+
+
+  export default pool;
