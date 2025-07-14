@@ -8,20 +8,26 @@ const OrderConfirmation = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const orderId = searchParams.get("order_id");
+  const queryStatus = searchParams.get("status")?.toUpperCase(); // from Cashfree redirect
 
   const { token } = useAuthStore();
-  const [hydrated, setHydrated] = useState(false); // wait for zustand to load
-  const [status, setStatus] = useState(null);
+  const [hydrated, setHydrated] = useState(false);
+  const [status, setStatus] = useState(queryStatus || null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Mark hydration as complete
   useEffect(() => {
     setHydrated(true);
   }, []);
 
   useEffect(() => {
     const fetchStatus = async () => {
-      if (!orderId || !hydrated || !token) return;
+      if (!orderId || !hydrated) return;
+
+      // If user is not logged in, fallback to queryStatus only
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
       try {
         const { data } = await axios.get(
@@ -33,14 +39,18 @@ const OrderConfirmation = () => {
           }
         );
 
-        setStatus(data.status);
+        if (data?.status) {
+          setStatus(data.status.toUpperCase());
 
-        if (data.status === "PAID") {
-          confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 },
-          });
+          if (data.status === "PAID") {
+            confetti({
+              particleCount: 100,
+              spread: 70,
+              origin: { y: 0.6 },
+            });
+          }
+        } else {
+          setStatus("UNKNOWN");
         }
       } catch (err) {
         console.error("❌ Failed to fetch payment status:", err);
@@ -52,7 +62,6 @@ const OrderConfirmation = () => {
 
     fetchStatus();
   }, [orderId, token, hydrated]);
-console.log(status);
 
   const isSuccess = status === "PAID";
 
@@ -68,7 +77,11 @@ console.log(status);
             ? "Checking Payment Status..."
             : isSuccess
             ? "🎉 Payment Successful!"
-            : "❌ Payment Failed"}
+            : status === "FAILED"
+            ? "❌ Payment Failed"
+            : status === "UNKNOWN"
+            ? "⚠️ Unable to determine payment status"
+            : `ℹ️ Payment Status: ${status}`}
         </h2>
 
         {!loading && (
@@ -76,7 +89,7 @@ console.log(status);
             <p className="mt-3 text-gray-700 text-lg">
               {isSuccess
                 ? "Thank you for your purchase. Your order is being processed."
-                : "Something went wrong. Your payment was not successful."}
+                : "If you believe this is an error, please contact support."}
             </p>
 
             {orderId ? (
