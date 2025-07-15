@@ -12,6 +12,7 @@ export const logTransactionToPostgres = async ({
   signature,
   email,
   phone,
+  paymentTime,
 }) => {
   const query = `
     INSERT INTO transactions (
@@ -41,6 +42,7 @@ export const logTransactionToPostgres = async ({
     email,
     phone,
     signature,
+    paymentTime,
   ];
 
   await pgPool.query(query, values);
