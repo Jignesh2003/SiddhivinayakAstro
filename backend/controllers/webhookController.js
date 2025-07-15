@@ -6,7 +6,7 @@ import { logTransactionToPostgres } from "../utils/logTransaction.js";
 import Order from "../models/Order.js";
 import User from "../models/User.js";
 
-// ─── Create a Cashfree Order ───────────────────────────────────────────────────
+// ─── Create Cashfree Order ────────────────────────────────────────────────────
 export const createCashfreeOrder = async (req, res) => {
   try {
     const { amount, shippingAddress, items } = req.body;
@@ -58,16 +58,18 @@ export const createCashfreeOrder = async (req, res) => {
       "x-request-id":    uuidv4(),
       "Content-Type":    "application/json",
     };
+
     if (process.env.NODE_ENV !== "production") {
       console.log("📦 Cashfree Payload:", JSON.stringify(payload, null, 2));
     }
 
-    const response = await axios.post(
+    const { data } = await axios.post(
       "https://sandbox.cashfree.com/pg/orders",
       payload,
       { headers }
     );
-    const { payment_session_id, payment_link, checkout_url } = response.data;
+
+    const { payment_session_id, payment_link, checkout_url } = data;
     if (!payment_session_id) {
       return res.status(500).json({ message: "Missing session ID in Cashfree response" });
     }
@@ -88,46 +90,41 @@ export const createCashfreeOrder = async (req, res) => {
   }
 };
 
-// ─── Webhook Handler ───────────────────────────────────────────────────────────
+// ─── Verify Webhook ───────────────────────────────────────────────────────────
 export const verifyPayment = async (req, res) => {
   try {
     console.log("📩 Webhook endpoint hit");
 
-    // 1) Ensure raw Buffer body (express.raw middleware)
+    // raw body must be a Buffer
     if (!Buffer.isBuffer(req.body)) {
       console.error("❌ req.body is not a raw Buffer");
       return res.status(400).send("Invalid body format");
     }
 
-    // 2) Raw payload string
     const raw = req.body.toString("utf8");
     console.log("🔒 Raw body:", raw.slice(0,200), "...");
 
-    // 3) Signature headers
     const timestamp   = req.headers["x-webhook-timestamp"];
     const incomingSig = req.headers["x-webhook-signature"];
     if (!timestamp || !incomingSig) {
       console.warn("⚠️ Missing signature headers");
       return res.status(400).send("Missing signature headers");
     }
+
     console.log("📅 Timestamp:", timestamp);
     console.log("📩 Incoming Signature:", incomingSig);
 
-    // 4) Compute HMAC-SHA256 over timestamp + payload, then Base64
-    const signedPayload = `${timestamp}${raw}`;
-    const computedSig   = crypto
+    const computedSig = crypto
       .createHmac("sha256", process.env.CASHFREE_CLIENT_SECRET)
-      .update(signedPayload, "utf8")
+      .update(`${timestamp}${raw}`, "utf8")
       .digest("base64");
-    console.log("🧮 Computed Signature:", computedSig);
 
-    // 5) Verify signatures match
+    console.log("🧮 Computed Signature:", computedSig);
     if (computedSig !== incomingSig) {
       console.warn("⚠️ Signature mismatch");
       return res.status(400).send("Invalid signature");
     }
 
-    // 6) Parse JSON now that it’s verified
     let payload;
     try {
       payload = JSON.parse(raw);
@@ -137,21 +134,24 @@ export const verifyPayment = async (req, res) => {
       return res.status(400).send("Invalid JSON");
     }
 
-    // 7) Extract event type & data block
-    const eventType = payload.type;       // e.g. "PAYMENT_SUCCESS_WEBHOOK"
+    const eventType = payload.type;            // e.g. "PAYMENT_SUCCESS_WEBHOOK"
     const data      = payload.data;
-    const eventTime = payload.event_time; // ISO timestamp from Cashfree
+    const eventTime = payload.event_time;      // ISO timestamp
     if (!eventType || !data || !eventTime) {
       console.warn("⚠️ Invalid payload structure");
       return res.status(400).send("Invalid payload structure");
     }
 
-    // 8) Pull out all the fields we need:
+    // pull out cfOrderId from either field
+    const cfOrderId =
+      data.payment?.cf_order_id ||
+      data.payment_gateway_details?.gateway_order_id ||
+      null;
+
     const {
       order: { order_id: orderId } = {},
       payment: {
         cf_payment_id:  cfPaymentId,
-        cf_order_id:    cfOrderId,    // <-- full Cashfree order ID
         payment_status: status,
         payment_amount: amount,
         payment_currency: currency,
@@ -163,6 +163,7 @@ export const verifyPayment = async (req, res) => {
         customer_phone: phone,
       } = {},
     } = data;
+
     console.log(
       "🧾 Order:", mongoOrderId,
       "Status:", status,
@@ -170,7 +171,7 @@ export const verifyPayment = async (req, res) => {
       "Event Time:", eventTime
     );
 
-    // 9) Log to Postgres using the webhook’s own timestamp
+    // --- log to Postgres with explicit eventTime ---
     try {
       await logTransactionToPostgres({
         orderId,
@@ -179,18 +180,18 @@ export const verifyPayment = async (req, res) => {
         status,
         amount,
         currency,
-        method:    JSON.stringify(method || {}),
-        signature: incomingSig,
+        method:      JSON.stringify(method || {}),
+        signature:   incomingSig,
         email,
         phone,
-        paymentTime: eventTime,  // <-- now stored exactly as Cashfree sent it
+        paymentTime: eventTime,
       });
       console.log("✅ Logged to Postgres");
     } catch (e) {
       console.error("❌ Postgres log failed:", e);
     }
 
-    // 10) Only on a PAYMENT_SUCCESS_WEBHOOK do we update the Mongo order
+    // --- only mark Paid on PAYMENT_SUCCESS_WEBHOOK & status SUCCESS ---
     if (eventType === "PAYMENT_SUCCESS_WEBHOOK"
         && mongoOrderId
         && status === "SUCCESS") {

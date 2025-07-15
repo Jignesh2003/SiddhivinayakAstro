@@ -12,7 +12,7 @@ export const logTransactionToPostgres = async ({
   signature,
   email,
   phone,
-  paymentTime,
+  paymentTime,    // ISO string from webhook
 }) => {
   const query = `
     INSERT INTO transactions (
@@ -27,10 +27,8 @@ export const logTransactionToPostgres = async ({
       phone,
       signature,
       payment_time
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW())
-    ON CONFLICT (cf_payment_id) DO NOTHING
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
   `;
-
   const values = [
     orderId,
     cfOrderId,
@@ -42,8 +40,7 @@ export const logTransactionToPostgres = async ({
     email,
     phone,
     signature,
-    paymentTime,
+    paymentTime,    // now bound correctly
   ];
-
   await pgPool.query(query, values);
 };
