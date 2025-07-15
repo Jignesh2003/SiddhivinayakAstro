@@ -26,7 +26,8 @@ export const logTransactionToPostgres = async ({
       phone,
       signature,
       payment_time
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW())
+    ON CONFLICT (cf_payment_id) DO NOTHING
   `;
 
   const values = [
@@ -44,4 +45,3 @@ export const logTransactionToPostgres = async ({
 
   await pgPool.query(query, values);
 };
-//

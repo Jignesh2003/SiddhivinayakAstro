@@ -6,7 +6,7 @@ import { logTransactionToPostgres } from "../utils/logTransaction.js";
 import Order from "../models/Order.js";
 import User from "../models/User.js";
 
-// ─── Create a Cashfree Order ───────────────────────────────────────────────────
+// ─── Create a new Cashfree order ────────────────────────────────
 export const createCashfreeOrder = async (req, res) => {
   try {
     const { amount, shippingAddress, items } = req.body;
@@ -14,10 +14,12 @@ export const createCashfreeOrder = async (req, res) => {
     if (!userId || !amount || !shippingAddress || !items?.length) {
       return res.status(400).json({ message: "Missing required fields" });
     }
+
     const user = await User.findById(userId);
     if (!user?.email) {
       return res.status(400).json({ message: "User not found or missing email" });
     }
+
     if (!/^\d{10}$/.test(shippingAddress.phone)) {
       return res.status(400).json({ message: "Invalid phone number" });
     }
@@ -28,11 +30,13 @@ export const createCashfreeOrder = async (req, res) => {
       return res.status(500).json({ message: "Cashfree credentials missing" });
     }
 
+    // Build a unique order ID
     const customOrderId = `PREORDER_${userId}_${Date.now()}`;
+
     const payload = {
-      order_id:      customOrderId,
-      order_amount:  Number(amount),
-      order_currency:"INR",
+      order_id:       customOrderId,
+      order_amount:   Number(amount),
+      order_currency: "INR",
       customer_details: {
         customer_id:    userId,
         customer_email: user.email,
@@ -47,26 +51,28 @@ export const createCashfreeOrder = async (req, res) => {
         item_count: String(items.length),
         city:       shippingAddress.city,
         pincode:    shippingAddress.pincode,
-      }
+      },
     };
 
     const headers = {
-      "x-client-id":      clientId,
-      "x-client-secret":  clientSecret,
-      "x-api-version":    "2023-08-01",
-      "x-request-id":     uuidv4(),
-      "Content-Type":     "application/json",
+      "x-client-id":     clientId,
+      "x-client-secret": clientSecret,
+      "x-api-version":   "2023-08-01",
+      "x-request-id":    uuidv4(),
+      "Content-Type":    "application/json",
     };
+
     if (process.env.NODE_ENV !== "production") {
       console.log("📦 Cashfree Payload:", JSON.stringify(payload, null, 2));
     }
 
-    const response = await axios.post(
+    const { data: resp } = await axios.post(
       "https://sandbox.cashfree.com/pg/orders",
       payload,
       { headers }
     );
-    const { payment_session_id, payment_link, checkout_url } = response.data;
+
+    const { payment_session_id, payment_link, checkout_url } = resp;
     if (!payment_session_id) {
       return res.status(500).json({ message: "Missing session ID in Cashfree response" });
     }
@@ -87,44 +93,45 @@ export const createCashfreeOrder = async (req, res) => {
   }
 };
 
-// ─── Webhook Handler ───────────────────────────────────────────────────────────
+// ─── Webhook Signature & Processing ─────────────────────────────
 export const verifyPayment = async (req, res) => {
   try {
     console.log("📩 Webhook endpoint hit");
+
+    // 1) Ensure raw body (Buffer)
     if (!Buffer.isBuffer(req.body)) {
       console.error("❌ req.body is not a raw Buffer");
       return res.status(400).send("Invalid body format");
     }
-
-    // 1) raw payload
     const raw = req.body.toString("utf8");
-    console.log("🔒 Raw body:", raw.slice(0,200), "...");
 
-    // 2) headers
+    // 2) Signature headers (case‑sensitive)
     const timestamp   = req.headers["x-webhook-timestamp"];
     const incomingSig = req.headers["x-webhook-signature"];
     if (!timestamp || !incomingSig) {
       console.warn("⚠️ Missing signature headers");
       return res.status(400).send("Missing signature headers");
     }
-    console.log("📅 Timestamp:", timestamp);
-    console.log("📩 Incoming Signature:", incomingSig);
 
-    // 3) compute HMAC-SHA256 & Base64
-    const signedPayload = `${timestamp}${raw}`;
+    // 3) Compute HMAC‑SHA256 & Base64
+    const signedPayload = `${timestamp}${raw}`;  // no dot
     const computedSig   = crypto
       .createHmac("sha256", process.env.CASHFREE_CLIENT_SECRET)
       .update(signedPayload, "utf8")
       .digest("base64");
+
+    console.log("🔒 Raw body (first 200 chars):", raw.slice(0,200));
+    console.log("📅 Timestamp:", timestamp);
+    console.log("📩 Incoming Signature:", incomingSig);
     console.log("🧮 Computed Signature:", computedSig);
 
-    // 4) verify
+    // 4) Verify
     if (computedSig !== incomingSig) {
       console.warn("⚠️ Signature mismatch");
       return res.status(400).send("Invalid signature");
     }
 
-    // 5) parse JSON
+    // 5) Parse as JSON
     let payload;
     try {
       payload = JSON.parse(raw);
@@ -134,17 +141,19 @@ export const verifyPayment = async (req, res) => {
       return res.status(400).send("Invalid JSON");
     }
 
-    // 6) extract type & data
-    const eventType = payload.type;       // e.g. "PAYMENT_SUCCESS_WEBHOOK"
+    // 6) Extract event type & data object
+    const eventType = payload.type;
     const data      = payload.data;
     if (!eventType || !data) {
       console.warn("⚠️ Invalid payload structure");
       return res.status(400).send("Invalid payload structure");
     }
 
-    // 7) pull out fields
+    // 7) Drill down fields
     const {
-      order: { order_id: orderId } = {},
+      order: {
+        order_id: orderId,
+      } = {},
       payment: {
         cf_payment_id: cfPaymentId,
         cf_order_id:   cfOrderId,
@@ -154,14 +163,15 @@ export const verifyPayment = async (req, res) => {
         payment_method:  method,
       } = {},
       customer_details: {
-        customer_id: mongoOrderId,
+        customer_id:    mongoOrderId,
         customer_email: email,
         customer_phone: phone,
       } = {},
     } = data;
-    console.log("🧾 Order ID:", mongoOrderId, "Status:", status);
 
-    // 8) log to Postgres
+    console.log("🧾 Extracted Order:", mongoOrderId, "Status:", status);
+
+    // 8) Idempotent Postgres insert (cf_payment_id unique)
     try {
       await logTransactionToPostgres({
         orderId,
@@ -176,17 +186,20 @@ export const verifyPayment = async (req, res) => {
         phone,
       });
       console.log("✅ Logged to Postgres");
-    } catch (e) {
-      console.error("❌ Postgres log failed:", e);
+    } catch (pgErr) {
+      console.error("❌ Postgres log failed:", pgErr);
     }
 
-    // 9) update Mongo Order (only on success)
-    if ((eventType === "PAYMENT_SUCCESS_WEBHOOK" || eventType === "success payment")
-        && mongoOrderId && status === "SUCCESS") {
+    // 9) Update Mongo only on success
+    if (
+      (eventType === "PAYMENT_SUCCESS_WEBHOOK" || eventType === "success payment") &&
+      mongoOrderId &&
+      status === "SUCCESS"
+    ) {
       await Order.findByIdAndUpdate(mongoOrderId, {
         paymentStatus: "Paid",
         paymentMethod: "online",
-        orderStatus: "Pending",
+        orderStatus:   "Pending",
       });
       console.log(`✅ MongoDB order ${mongoOrderId} marked Paid`);
     }
@@ -198,6 +211,7 @@ export const verifyPayment = async (req, res) => {
     return res.status(500).send("Server error");
   }
 };
+
 
 // ─── Check Payment Status ──────────────────────────────────────────────────────
 // export const checkPaymentStatus = async (req, res) => {

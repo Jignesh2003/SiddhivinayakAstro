@@ -8,6 +8,10 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }, // required for services like Neon
 });
 
+pool.on("error", err => {
+  console.error("Postgres idle client error", err);
+});
+
 pool.connect()
   .then(() => console.log("✅ Connected to Neon Postgres"))
   .catch((err) => console.error("❌ Postgres connection failed:", err));
