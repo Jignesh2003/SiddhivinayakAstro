@@ -1,4 +1,3 @@
-// controllers/cashFreeController.js
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
@@ -11,6 +10,7 @@ export const createCashfreeOrder = async (req, res) => {
   try {
     const { amount, shippingAddress, items } = req.body;
     const userId = req.user?.id;
+
     if (!userId || !amount || !shippingAddress || !items?.length) {
       return res.status(400).json({ message: "Missing required fields" });
     }
@@ -19,6 +19,7 @@ export const createCashfreeOrder = async (req, res) => {
     if (!user?.email) {
       return res.status(400).json({ message: "User not found or missing email" });
     }
+
     if (!/^\d{10}$/.test(shippingAddress.phone)) {
       return res.status(400).json({ message: "Invalid phone number" });
     }
@@ -30,6 +31,19 @@ export const createCashfreeOrder = async (req, res) => {
     }
 
     const customOrderId = `PREORDER_${userId}_${Date.now()}`;
+
+    // 🟡 Create initial order in MongoDB before payment
+    await Order.create({
+      _id: customOrderId, // custom order ID used in Cashfree and webhook
+      user: userId,
+      items,
+      shippingAddress,
+      paymentMethod: "online",
+      paymentStatus: "Pending",
+      orderStatus: "Initiated",
+      amount,
+    });
+
     const payload = {
       order_id:       customOrderId,
       order_amount:   Number(amount),
@@ -95,7 +109,6 @@ export const verifyPayment = async (req, res) => {
   try {
     console.log("📩 Webhook endpoint hit");
 
-    // raw body must be a Buffer
     if (!Buffer.isBuffer(req.body)) {
       console.error("❌ req.body is not a raw Buffer");
       return res.status(400).send("Invalid body format");
@@ -111,15 +124,11 @@ export const verifyPayment = async (req, res) => {
       return res.status(400).send("Missing signature headers");
     }
 
-    console.log("📅 Timestamp:", timestamp);
-    console.log("📩 Incoming Signature:", incomingSig);
-
     const computedSig = crypto
       .createHmac("sha256", process.env.CASHFREE_CLIENT_SECRET)
       .update(`${timestamp}${raw}`, "utf8")
       .digest("base64");
 
-    console.log("🧮 Computed Signature:", computedSig);
     if (computedSig !== incomingSig) {
       console.warn("⚠️ Signature mismatch");
       return res.status(400).send("Invalid signature");
@@ -128,21 +137,19 @@ export const verifyPayment = async (req, res) => {
     let payload;
     try {
       payload = JSON.parse(raw);
-      console.log("📤 Payload parsed successfully");
     } catch (e) {
       console.error("❌ JSON parse failed:", e);
       return res.status(400).send("Invalid JSON");
     }
 
-    const eventType = payload.type;            // e.g. "PAYMENT_SUCCESS_WEBHOOK"
+    const eventType = payload.type;
     const data      = payload.data;
-    const eventTime = payload.event_time;      // ISO timestamp
+    const eventTime = payload.event_time;
+
     if (!eventType || !data || !eventTime) {
-      console.warn("⚠️ Invalid payload structure");
       return res.status(400).send("Invalid payload structure");
     }
 
-    // pull out cfOrderId from either field
     const cfOrderId =
       data.payment?.cf_order_id ||
       data.payment_gateway_details?.gateway_order_id ||
@@ -171,7 +178,7 @@ export const verifyPayment = async (req, res) => {
       "Event Time:", eventTime
     );
 
-    // --- log to Postgres with explicit eventTime ---
+    // ✅ Log to Postgres (idempotent)
     try {
       await logTransactionToPostgres({
         orderId,
@@ -180,8 +187,8 @@ export const verifyPayment = async (req, res) => {
         status,
         amount,
         currency,
-        method:      JSON.stringify(method || {}),
-        signature:   incomingSig,
+        method: JSON.stringify(method || {}),
+        signature: incomingSig,
         email,
         phone,
         paymentTime: eventTime,
@@ -191,7 +198,7 @@ export const verifyPayment = async (req, res) => {
       console.error("❌ Postgres log failed:", e);
     }
 
-    // --- only mark Paid on PAYMENT_SUCCESS_WEBHOOK & status SUCCESS ---
+    // ✅ Mark MongoDB order Paid
     if (eventType === "PAYMENT_SUCCESS_WEBHOOK"
         && mongoOrderId
         && status === "SUCCESS") {
