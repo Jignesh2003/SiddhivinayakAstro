@@ -107,138 +107,129 @@ export const createCashfreeOrder = async (req, res) => {
 // ─── Verify Webhook ───────────────────────────────────────────────────────────
 export const verifyPayment = async (req, res) => {
   try {
-    console.log("📩 Webhook endpoint hit");
+    console.log("📩 Cashfree Webhook received");
 
     if (!Buffer.isBuffer(req.body)) {
-      console.error("❌ req.body is not a raw Buffer");
-      return res.status(400).send("Invalid body format");
+      console.error("❌ Invalid webhook format: body is not raw Buffer");
+      return res.status(400).send("Invalid webhook format");
     }
 
-    const raw = req.body.toString("utf8");
-    console.log("🔒 Raw body:", raw.slice(0,200), "...");
+    const rawBody = req.body.toString("utf8");
+    console.log("🔒 Webhook raw body (truncated):", rawBody.slice(0, 200), "...");
 
-    const timestamp   = req.headers["x-webhook-timestamp"];
-    const incomingSig = req.headers["x-webhook-signature"];
-    if (!timestamp || !incomingSig) {
+    const timestamp = req.headers["x-webhook-timestamp"];
+    const incomingSignature = req.headers["x-webhook-signature"];
+
+    if (!timestamp || !incomingSignature) {
       console.warn("⚠️ Missing signature headers");
       return res.status(400).send("Missing signature headers");
     }
 
-    const computedSig = crypto
+    const computedSignature = crypto
       .createHmac("sha256", process.env.CASHFREE_CLIENT_SECRET)
-      .update(`${timestamp}${raw}`, "utf8")
+      .update(`${timestamp}${rawBody}`, "utf8")
       .digest("base64");
 
-    if (computedSig !== incomingSig) {
+    if (computedSignature !== incomingSignature) {
       console.warn("⚠️ Signature mismatch");
       return res.status(400).send("Invalid signature");
     }
 
     let payload;
     try {
-      payload = JSON.parse(raw);
+      payload = JSON.parse(rawBody);
     } catch (e) {
-      console.error("❌ JSON parse failed:", e);
+      console.error("❌ Failed to parse JSON payload:", e);
       return res.status(400).send("Invalid JSON");
     }
 
-    const eventType = payload.type;
-    const data      = payload.data;
-    const eventTime = payload.event_time;
+    const eventType = payload?.type;
+    const data = payload?.data;
+    const eventTime = payload?.event_time;
 
     if (!eventType || !data || !eventTime) {
-      return res.status(400).send("Invalid payload structure");
+      console.error("❌ Malformed webhook payload");
+      return res.status(400).send("Malformed webhook");
     }
 
     const cfOrderId =
-      data.payment?.cf_order_id ||
-      data.payment_gateway_details?.gateway_order_id ||
+      data?.payment?.cf_order_id ||
+      data?.payment_gateway_details?.gateway_order_id ||
       null;
 
     const {
       order: { order_id: orderId } = {},
       payment: {
-        cf_payment_id:  cfPaymentId,
-        payment_status: status,
-        payment_amount: amount,
-        payment_currency: currency,
-        payment_method: method,
+        cf_payment_id: cfPaymentId,
+        payment_status: paymentStatus,
+        payment_amount: paymentAmount,
+        payment_currency: paymentCurrency,
+        payment_method: paymentMethod,
       } = {},
       customer_details: {
-        customer_id:    mongoOrderId,
-        customer_email: email,
-        customer_phone: phone,
+        customer_id: customerId,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
       } = {},
     } = data;
 
-    console.log(
-      "🧾 Order:", mongoOrderId,
-      "Status:", status,
-      "CF Order ID:", cfOrderId,
-      "Event Time:", eventTime
-    );
+    console.log("📦 Webhook Data Summary:");
+    console.log("↪️ Order ID:", orderId);
+    console.log("↪️ CF Payment ID:", cfPaymentId);
+    console.log("↪️ CF Order ID:", cfOrderId);
+    console.log("↪️ Payment Status:", paymentStatus);
+    console.log("↪️ Customer ID (MongoDB Order ID):", customerId);
+    console.log("↪️ Timestamp:", eventTime);
 
-    // ✅ Log to Postgres (idempotent)
+    if (!cfPaymentId) {
+      console.warn("⚠️ Skipping: Missing cf_payment_id");
+      return res.status(200).send("Skipped: Missing payment ID");
+    }
+
+    // ✅ Log transaction to Postgres
     try {
       await logTransactionToPostgres({
-        orderId,
-        cfOrderId,
-        cfPaymentId,
-        status,
-        amount,
-        currency,
-        method: JSON.stringify(method || {}),
-        signature: incomingSig,
-        email,
-        phone,
-        paymentTime: eventTime,
+        order_id: orderId,
+        cf_order_id: cfOrderId,
+        cf_payment_id: cfPaymentId,
+        status: paymentStatus,
+        amount: paymentAmount,
+        currency: paymentCurrency,
+        payment_method: JSON.stringify(paymentMethod || {}),
+        payment_time: eventTime,
+        email: customerEmail,
+        phone: customerPhone,
+        signature: incomingSignature,
       });
-      console.log("✅ Logged to Postgres");
-    } catch (e) {
-      console.error("❌ Postgres log failed:", e);
+    } catch (err) {
+      console.error("❌ Failed to log transaction to Postgres:", err);
     }
 
-    // ✅ Mark MongoDB order Paid
-    if (eventType === "PAYMENT_SUCCESS_WEBHOOK"
-        && mongoOrderId
-        && status === "SUCCESS") {
-      await Order.findByIdAndUpdate(mongoOrderId, {
-        paymentStatus: "Paid",
-        paymentMethod: "online",
-        orderStatus:   "Pending",
-      });
-      console.log(`✅ MongoDB order ${mongoOrderId} marked Paid`);
+    // ✅ Update MongoDB Order if payment is successful
+    if (
+      eventType === "PAYMENT_SUCCESS_WEBHOOK" &&
+      customerId &&
+      paymentStatus === "SUCCESS"
+    ) {
+      try {
+        await Order.findByIdAndUpdate(customerId, {
+          paymentStatus: "Paid",
+          paymentMethod: "online",
+          orderStatus: "Pending",
+        });
+        console.log(`✅ MongoDB Order ${customerId} marked as Paid`);
+      } catch (err) {
+        console.error(`❌ Failed to update MongoDB order ${customerId}:`, err);
+      }
+    } else {
+      console.log("ℹ️ Payment not marked as SUCCESS or order not found");
     }
 
-    return res.status(200).send("✅ Webhook processed");
+    return res.status(200).send("✅ Webhook processed successfully");
+
   } catch (err) {
-    console.error("❌ verifyPayment error:", err);
-    return res.status(500).send("Server error");
+    console.error("❌ verifyPayment controller error:", err);
+    return res.status(500).send("Internal Server Error");
   }
 };
 
-
-// ─── Check Payment Status ──────────────────────────────────────────────────────
-// export const checkPaymentStatus = async (req, res) => {
-//   try {
-//     const { order_id } = req.query;
-//     if (!order_id) {
-//       return res.status(400).json({ message: "Missing order_id" });
-//     }
-//     const response = await axios.get(
-//       `https://sandbox.cashfree.com/pg/orders/${order_id}`,
-//       {
-//         headers: {
-//           "x-client-id":     process.env.CASHFREE_CLIENT_ID,
-//           "x-client-secret": process.env.CASHFREE_CLIENT_SECRET,
-//           "x-api-version":   "2023-08-01",
-//         },
-//       }
-//     );
-//     // Cashfree returns order_status like "PAID", "ACTIVE", etc.
-//     return res.json({ status: response.data.order_status });
-//   } catch (err) {
-//     console.error("Error checking payment status:", err.response?.data || err);
-//     return res.status(500).json({ message: "Failed to fetch payment status" });
-//   }
-// };

@@ -1,29 +1,24 @@
-import pgPool from "../config/postgresDb.js";
+// utils/logTransaction.js
 
-export const logTransactionToPostgres = async ({
-  orderId,
-  cfOrderId,
-  cfPaymentId,
-  status,
-  amount,
-  currency,
-  method,
-  signature,
-  email,
-  phone,
-  paymentTime,
-}) => {
+import pool from '../config/postgres.js';
+
+export async function logTransactionToPostgres(transactionData) {
+  const {
+    order_id,
+    cf_order_id,
+    cf_payment_id,
+    status,
+    amount,
+    currency,
+    payment_method,
+    payment_time,
+    email,
+    phone,
+    signature,
+  } = transactionData;
+
   try {
-    // 🔁 Check if payment already exists
-    const checkQuery = `SELECT 1 FROM transactions WHERE cf_payment_id = $1 LIMIT 1`;
-    const checkResult = await pgPool.query(checkQuery, [cfPaymentId]);
-
-    if (checkResult.rowCount > 0) {
-      console.log("ℹ️ Transaction already logged in Postgres:", cfPaymentId);
-      return;
-    }
-
-    const insertQuery = `
+    const query = `
       INSERT INTO transactions (
         order_id,
         cf_order_id,
@@ -32,32 +27,39 @@ export const logTransactionToPostgres = async ({
         amount,
         currency,
         payment_method,
+        payment_time,
         email,
         phone,
-        signature,
-        payment_time
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        signature
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ON CONFLICT (cf_payment_id)
+      DO NOTHING
     `;
 
     const values = [
-      orderId,
-      cfOrderId,
-      cfPaymentId,
+      order_id,
+      cf_order_id || null,
+      cf_payment_id,
       status,
       amount,
       currency,
-      method,
+      payment_method,
+      payment_time,
       email,
       phone,
       signature,
-      paymentTime || new Date().toISOString(),
     ];
 
-    await pgPool.query(insertQuery, values);
-    console.log("✅ Transaction logged to Postgres:", cfPaymentId);
+    const res = await pool.query(query, values);
 
-  } catch (err) {
-    console.error("❌ Error logging transaction to Postgres:", err);
-    throw err; // Let caller handle the failure
+    if (res.rowCount === 0) {
+      console.log(`ℹ️ Transaction already logged in Postgres: ${cf_payment_id}`);
+    } else {
+      console.log(`✅ Transaction logged to Postgres: ${cf_payment_id}`);
+    }
+  } catch (error) {
+    console.error('❌ Error logging transaction to Postgres:', error);
+    throw error;
   }
-};
+}
