@@ -1,5 +1,4 @@
 // utils/logTransaction.js
-
 import pool from '../config/postgresDb.js';
 
 export async function logTransactionToPostgres(transactionData) {
