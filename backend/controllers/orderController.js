@@ -130,3 +130,23 @@ export const getUserOrders = async (req, res) => {
   }
 };
 
+export const checkCodOrderStatus = async (req, res) => {
+  try {
+    const { order_id } = req.query;
+
+    if (!order_id) {
+      return res.status(400).json({ message: "Order ID is required" });
+    }
+
+    const order = await Order.findById(order_id);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    return res.status(200).json({ status: order.orderStatus });
+  } catch (err) {
+    console.error("COD Status Check Error:", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};

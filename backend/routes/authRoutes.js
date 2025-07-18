@@ -15,7 +15,7 @@ import {
   // bulkUpdateAstrology,
   // getDailyAstrology,
 } from "../controllers/authController.js";
-import {placeOrder,getUserOrders,  getAllOrders,  getSingleOrder,  updateOrderStatus,
+import {placeOrder,getUserOrders,  getAllOrders,  getSingleOrder,  updateOrderStatus, checkCodOrderStatus,
 } from "../controllers/orderController.js";
 import {getProducts,  getSingleProductDetail,  editAdminProduct,  deleteAdminProduct,  markAsPaid,
 } from "../controllers/productController.js";
@@ -57,6 +57,8 @@ router.put("/update", authMiddleware, updateCart);
 router.delete("/clear-cart/:userId",authMiddleware,clearCart)
 
 router.post("/place-order", authMiddleware, placeOrder)
+
+router.get("/check-status", checkCodOrderStatus); // /api/orders/check-status
 
 router.get("/user-orders", authMiddleware, getUserOrders);
 

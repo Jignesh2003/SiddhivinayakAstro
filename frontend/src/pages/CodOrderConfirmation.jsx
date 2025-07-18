@@ -1,69 +1,38 @@
+// src/pages/CodOrderConfirmation.jsx
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "react-router-dom";
-import confetti from "canvas-confetti";
 import axios from "axios";
-import useAuthStore from "../store/useAuthStore";
 
-const OrderConfirmation = () => {
+const CodOrderConfirmation = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const orderId = searchParams.get("order_id");
-  const queryStatus = searchParams.get("status")?.toUpperCase(); // from Cashfree redirect
 
-  const { token } = useAuthStore();
-  const [hydrated, setHydrated] = useState(false);
-  const [status, setStatus] = useState(queryStatus || null);
+  const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    const fetchStatus = async () => {
-      if (!orderId || !hydrated) return;
-
-      // If user is not logged in, fallback to queryStatus only
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+    const checkStatus = async () => {
+      if (!orderId) return;
 
       try {
         const { data } = await axios.get(
-          `${import.meta.env.VITE_BASE_URL}/check-status?order_id=${orderId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+          `${import.meta.env.VITE_SERVER_URL}/api/orders/check-status?order_id=${orderId}`
         );
 
-        if (data?.status) {
-          setStatus(data.status.toUpperCase());
-
-          if (data.status === "PAID") {
-            confetti({
-              particleCount: 100,
-              spread: 70,
-              origin: { y: 0.6 },
-            });
-          }
-        } else {
-          setStatus("UNKNOWN");
-        }
+        setStatus(data.status || "UNKNOWN");
       } catch (err) {
-        console.error("❌ Failed to fetch payment status:", err);
+        console.error("❌ COD status check failed:", err);
         setStatus("FAILED");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStatus();
-  }, [orderId, token, hydrated]);
+    checkStatus();
+  }, [orderId]);
 
-  const isSuccess = status === "PAID";
+  const isSuccess = status === "Pending";
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-gray-100 p-6">
@@ -74,22 +43,20 @@ const OrderConfirmation = () => {
           }`}
         >
           {loading
-            ? "Checking Payment Status..."
+            ? "Checking Order Status..."
             : isSuccess
-            ? "🎉 Payment Successful!"
+            ? "🎉 Order Placed Successfully!"
             : status === "FAILED"
-            ? "❌ Payment Failed"
-            : status === "UNKNOWN"
-            ? "⚠️ Unable to determine payment status"
-            : `ℹ️ Payment Status: ${status}`}
+            ? "❌ Order Failed"
+            : "⚠️ Unable to confirm order status"}
         </h2>
 
         {!loading && (
           <>
             <p className="mt-3 text-gray-700 text-lg">
               {isSuccess
-                ? "Thank you for your purchase. Your order is being processed."
-                : "If you believe this is an error, please contact support."}
+                ? "Thank you for your order. Your order is being processed."
+                : "If this seems wrong, please contact support."}
             </p>
 
             {orderId ? (
@@ -124,4 +91,4 @@ const OrderConfirmation = () => {
   );
 };
 
-export default OrderConfirmation;
+export default CodOrderConfirmation;
