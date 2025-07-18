@@ -1,11 +1,14 @@
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import User from "../models/User.js"; // assuming you have a User model
+import Order from "../models/orderModel.js"; // Make sure this is imported
+import { v4 as uuidv4 } from "uuid";
+import axios from "axios";
 
 export const createCashfreeOrder = async (req, res) => {
   try {
     const { amount, shippingAddress, items } = req.body;
-    const userId = req.user?.id; // assumes auth middleware sets this
+    const userId = req.user?.id;
 
     if (!userId || !amount || !shippingAddress || !items?.length) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -29,6 +32,18 @@ export const createCashfreeOrder = async (req, res) => {
 
     const customOrderId = `PREORDER_${userId}_${Date.now()}`;
 
+    // ✅ Step 1: Save order to MongoDB
+    const newOrder = await Order.create({
+      user: userId,
+      items,
+      totalAmount: amount,
+      paymentMethod: "online",
+      paymentStatus: "Initiated",
+      shippingAddress,
+      customOrderId, // ✅ Required for webhook mapping
+    });
+
+    // ✅ Step 2: Create Cashfree order
     const payload = {
       order_id: customOrderId,
       order_amount: Number(amount),
@@ -47,7 +62,7 @@ export const createCashfreeOrder = async (req, res) => {
         item_count: items.length.toString(),
         city: shippingAddress.city,
         pincode: shippingAddress.pincode,
-      }
+      },
     };
 
     const headers = {
@@ -67,7 +82,6 @@ export const createCashfreeOrder = async (req, res) => {
       payload,
       { headers }
     );
-    console.log("PAYLOAD RESPONSE FROM CASHFREE CONTROLLER :", response);
 
     const { payment_session_id, payment_link, checkout_url } = response.data;
 
@@ -91,6 +105,7 @@ export const createCashfreeOrder = async (req, res) => {
     });
   }
 };
+
 
 
 export const checkPaymentStatus = async (req, res) => {
