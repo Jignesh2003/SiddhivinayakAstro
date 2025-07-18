@@ -63,7 +63,7 @@ const OrderConfirmation = () => {
     fetchStatus();
   }, [orderId, token, hydrated]);
 
-const isSuccess = ["PAID", "PENDING"].includes(status);
+const isSuccess = status === "PAID" || status === "PENDING";
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-gray-100 p-6">
       <div className="max-w-lg bg-white shadow-xl rounded-lg p-8 text-center">
