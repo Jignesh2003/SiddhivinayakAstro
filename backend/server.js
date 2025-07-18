@@ -32,11 +32,14 @@ app.use(cors({
   origin: [
     "https://siddhivinayak-astro.vercel.app",
     "https://www.siddhivinayakastroworld.com",
-     "https://www.siddhivinayakastroworld.in",
-     "http://localhost:5173",
+    "https://www.siddhivinayakastroworld.in",
+    "http://localhost:5173",
   ],
   credentials: true,
+  exposedHeaders: ["x-webhook-signature", "x-webhook-timestamp"],
+  allowedHeaders: ["x-webhook-signature", "x-webhook-timestamp", "Content-Type"]
 }));
+
 app.use(helmet());
 app.use(morgan("dev"));
 

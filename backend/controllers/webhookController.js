@@ -1,105 +1,6 @@
-import axios from "axios";
-import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
 import { logTransactionToPostgres } from "../utils/logTransaction.js";
 import Order from "../models/Order.js";
-import User from "../models/User.js";
-
-// ────────────────────────────────────────────────────────────
-// 🟡 Create Cashfree Order
-// ────────────────────────────────────────────────────────────
-export const createCashfreeOrder = async (req, res) => {
-  try {
-    const { amount, shippingAddress, items } = req.body;
-    const userId = req.user?.id;
-
-    if (!userId || !amount || !shippingAddress || !items?.length) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    const user = await User.findById(userId);
-    if (!user?.email) {
-      return res.status(400).json({ message: "User not found or missing email" });
-    }
-
-    if (!/^\d{10}$/.test(shippingAddress.phone)) {
-      return res.status(400).json({ message: "Invalid phone number" });
-    }
-
-    const clientId = process.env.CASHFREE_CLIENT_ID;
-    const clientSecret = process.env.CASHFREE_CLIENT_SECRET;
-    if (!clientId || !clientSecret) {
-      return res.status(500).json({ message: "Cashfree credentials missing" });
-    }
-
-    const customOrderId = `PREORDER_${userId}_${Date.now()}`;
-
-    await Order.create({
-      _id: customOrderId,
-      user: userId,
-      items,
-      shippingAddress,
-      paymentMethod: "online",
-      paymentStatus: "Pending",
-      orderStatus: "Initiated",
-      amount,
-    });
-
-    const payload = {
-      order_id: customOrderId,
-      order_amount: Number(amount),
-      order_currency: "INR",
-      customer_details: {
-        customer_id: userId,
-        customer_email: user.email,
-        customer_phone: shippingAddress.phone,
-      },
-      order_meta: {
-        return_url: `${process.env.CLIENT_URL}/order-confirmation?order_id=${customOrderId}&status={order_status}`,
-        notify_url: process.env.CASHFREE_WEBHOOK_URL,
-      },
-      order_tags: {
-        user: userId,
-        item_count: String(items.length),
-        city: shippingAddress.city,
-        pincode: shippingAddress.pincode,
-      }
-    };
-
-    const headers = {
-      "x-client-id": clientId,
-      "x-client-secret": clientSecret,
-      "x-api-version": "2023-08-01",
-      "x-request-id": uuidv4(),
-      "Content-Type": "application/json",
-    };
-
-    if (process.env.NODE_ENV !== "production") {
-      console.log("📦 Cashfree Payload:", JSON.stringify(payload, null, 2));
-    }
-
-    const { data } = await axios.post("https://sandbox.cashfree.com/pg/orders", payload, { headers });
-
-    const { payment_session_id, payment_link, checkout_url } = data;
-    if (!payment_session_id) {
-      return res.status(500).json({ message: "Missing session ID in Cashfree response" });
-    }
-
-    return res.status(200).json({
-      payment_session_id,
-      payment_link,
-      checkout_url,
-      customOrderId,
-    });
-
-  } catch (err) {
-    console.error("❌ Cashfree order creation failed:", err.response?.data || err);
-    return res.status(500).json({
-      message: "Failed to create Cashfree order",
-      details: err.response?.data || err.message,
-    });
-  }
-};
 
 // ────────────────────────────────────────────────────────────
 // ✅ Webhook: Verify + Process Payment
@@ -107,7 +8,7 @@ export const createCashfreeOrder = async (req, res) => {
 export const verifyPayment = async (req, res) => {
   try {
     console.log("📩 Cashfree Webhook received");
-
+console.log("📥 Incoming Headers:", req.headers);
     if (!Buffer.isBuffer(req.body)) {
       console.error("❌ Invalid webhook format: body is not raw Buffer");
       return res.status(400).send("Invalid webhook format");
