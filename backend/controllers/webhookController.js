@@ -2,15 +2,14 @@ import crypto from "crypto";
 import { logTransactionToPostgres } from "../utils/logTransaction.js";
 import Order from "../models/Order.js";
 
-// ────────────────────────────────────────────────────────────
-// ✅ Webhook: Verify + Process Payment
-// ────────────────────────────────────────────────────────────
 export const verifyPayment = async (req, res) => {
   try {
+    // 👀 Debug raw headers
     console.log("🔎 req.rawHeaders:", req.rawHeaders);
 
     console.log("📩 Cashfree Webhook received");
     console.log("📥 Incoming Headers:", req.headers);
+
     if (!Buffer.isBuffer(req.body)) {
       console.error("❌ Invalid webhook format: body is not raw Buffer");
       return res.status(400).send("Invalid webhook format");
@@ -27,6 +26,7 @@ export const verifyPayment = async (req, res) => {
       return res.status(400).send("Missing signature headers");
     }
 
+    // Verify HMAC
     const computedSignature = crypto
       .createHmac("sha256", process.env.CASHFREE_CLIENT_SECRET)
       .update(`${timestamp}${rawBody}`, "utf8")
@@ -37,6 +37,7 @@ export const verifyPayment = async (req, res) => {
       return res.status(400).send("Invalid signature");
     }
 
+    // Parse payload
     let payload;
     try {
       payload = JSON.parse(rawBody);
@@ -53,11 +54,6 @@ export const verifyPayment = async (req, res) => {
       console.error("❌ Malformed webhook payload");
       return res.status(400).send("Malformed webhook");
     }
-
-    const cfOrderId =
-      data?.payment?.cf_order_id ||
-      data?.payment_gateway_details?.gateway_order_id ||
-      null;
 
     const {
       order: { order_id: orderId } = {},
@@ -77,7 +73,6 @@ export const verifyPayment = async (req, res) => {
     console.log("📦 Webhook Summary:");
     console.log("↪️ Order ID:", orderId);
     console.log("↪️ CF Payment ID:", cfPaymentId);
-    console.log("↪️ CF Order ID:", cfOrderId);
     console.log("↪️ Payment Status:", paymentStatus);
     console.log("↪️ Timestamp:", eventTime);
 
@@ -86,51 +81,52 @@ export const verifyPayment = async (req, res) => {
       return res.status(200).send("Skipped: Incomplete payment data");
     }
 
-    // 🔁 Log to Postgres (idempotent logging)
+    // 🔁 Log to Postgres (idempotent)
     try {
       await logTransactionToPostgres({
-        order_id: orderId,
-        cf_order_id: cfOrderId,
+        order_id:    orderId,
+        cf_order_id: data?.payment?.cf_order_id || null,
         cf_payment_id: cfPaymentId,
-        status: paymentStatus,
-        amount: paymentAmount,
-        currency: paymentCurrency,
+        status:      paymentStatus,
+        amount:      paymentAmount,
+        currency:    paymentCurrency,
         payment_method: JSON.stringify(paymentMethod || {}),
         payment_time: eventTime,
-        email: customerEmail,
-        phone: customerPhone,
-        signature: incomingSignature,
+        email:       customerEmail,
+        phone:       customerPhone,
+        signature:   incomingSignature,
       });
       console.log("✅ Transaction logged to Postgres");
     } catch (err) {
       console.error("❌ Failed to log transaction to Postgres:", err?.message);
     }
 
-    // ✅ Update MongoDB only if payment is SUCCESS
-    if (
-      eventType === "PAYMENT_SUCCESS_WEBHOOK" &&
-      paymentStatus === "SUCCESS"
-    ) {
+    // ✅ Update MongoDB only on SUCCESS
+    if (eventType === "PAYMENT_SUCCESS_WEBHOOK" && paymentStatus === "SUCCESS") {
       try {
-        const updated = await Order.findByIdAndUpdate(
-  { customOrderId: orderId },
-  { paymentStatus: "Paid", paymentMethod: "online", orderStatus: "Pending" }
-);
+        const updated = await Order.findOneAndUpdate(
+          { customOrderId: orderId },       // ← match on customOrderId
+          {
+            paymentStatus: "Paid",
+            paymentMethod: "online",
+            orderStatus:   "Pending",
+          },
+          { new: true }
+        );
 
         if (updated) {
-          console.log(`✅ MongoDB order ${orderId} marked as Paid`);
+          console.log(`✅ MongoDB order ${updated._id} marked as Paid`);
         } else {
-          console.warn(`⚠️ MongoDB order ${orderId} not found`);
+          console.warn(`⚠️ No order found with customOrderId=${orderId}`);
         }
       } catch (err) {
         console.error(`❌ MongoDB update failed for ${orderId}:`, err.message);
       }
     } else {
-      console.log("ℹ️ Payment not marked as SUCCESS, MongoDB not updated");
+      console.log("ℹ️ Payment not SUCCESS, skipping Mongo update");
     }
 
     return res.status(200).send("✅ Webhook processed");
-
   } catch (err) {
     console.error("❌ verifyPayment controller error:", err);
     return res.status(500).send("Internal Server Error");
