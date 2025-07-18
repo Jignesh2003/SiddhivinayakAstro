@@ -104,23 +104,30 @@ export const createCashfreeOrder = async (req, res) => {
   }
 };
 
-export const checkPaymentStatus = async (req, res) => {
+// /controllers/orderController.js
+export const getOrderStatus = async (req, res) => {
   try {
     const { order_id } = req.query;
     if (!order_id) return res.status(400).json({ message: "Missing order_id" });
 
-    const response = await axios.get(`https://sandbox.cashfree.com/pg/orders/${order_id}`, {
-      headers: {
-        "x-client-id": process.env.CASHFREE_CLIENT_ID,
-        "x-client-secret": process.env.CASHFREE_CLIENT_SECRET,
-        "x-api-version": "2023-08-01",
-      },
-    });
+    const order = await Order.findOne({ customOrderId: order_id });
 
-    return res.json({ status: response.data.order_status });
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    return res.status(200).json({
+      paymentStatus: order.paymentStatus,
+      orderStatus: order.orderStatus,
+      paymentMethod: order.paymentMethod,
+      items: order.items,
+      totalAmount: order.totalAmount,
+      createdAt: order.createdAt,
+    });
   } catch (err) {
-    console.error("Error checking payment status:", err.response?.data || err.message);
-    return res.status(500).json({ message: "Failed to fetch payment status" });
+    console.error("Error fetching order:", err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-}
+};
+
 
