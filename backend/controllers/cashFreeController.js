@@ -1,9 +1,7 @@
 import axios from "axios";
-import { v4 as uuidv4 } from "uuid";
 import User from "../models/User.js"; // assuming you have a User model
-import Order from "../models/orderModel.js"; // Make sure this is imported
+import Order from "../models/Order.js"; // Make sure this is imported
 import { v4 as uuidv4 } from "uuid";
-import axios from "axios";
 
 export const createCashfreeOrder = async (req, res) => {
   try {
@@ -105,8 +103,6 @@ export const createCashfreeOrder = async (req, res) => {
     });
   }
 };
-
-
 
 export const checkPaymentStatus = async (req, res) => {
   try {
