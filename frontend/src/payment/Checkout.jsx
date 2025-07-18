@@ -102,7 +102,7 @@ export default function Checkout() {
 
         toast.success("✅ Order placed with Cash on Delivery!");
         clearCart();
-        navigate(`/order-confirmation?order_id=${data.order._id}&paymentStatus=${data.paymentStatus}`);
+        navigate(`/cod-confirmation?order_id=${data.order._id}&paymentStatus=${data.paymentStatus}`);
         return;
       }
 

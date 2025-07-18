@@ -31,7 +31,7 @@ const OrderConfirmation = () => {
 
       try {
         const { data } = await axios.get(
-          `${import.meta.env.VITE_BASE_URL}/check-status?order_id=${orderId}`,
+          `${import.meta.env.VITE_PAYMENT_URL}/cashfree/check-status?order_id=${orderId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

@@ -53,6 +53,7 @@ import PanchangResult from "@/astrology/PanchangResult";
 import LifePathNumber from '../src/astrology/LifePathNumber';
 import CancellationRefundPolicy from "@/pages/CancellationRefundPolicy";
 import ShippingDeliveryPolicy from "@/pages/ShippingDeliveryPolicy";
+import CodOrderConfirmation from "@/pages/CodOrderConfirmation";
 
 const AppRoutes = () => {
   return (
@@ -72,7 +73,7 @@ const AppRoutes = () => {
         <Route path="/daily-prediction" element={<DailyPrediction />} />
         <Route path="/life-path-number" element={<LifePathNumber />} />
         <Route path="/cancellation-policy" element={<CancellationRefundPolicy />} />
-<Route path="/shipping-policy" element={<ShippingDeliveryPolicy />} />
+        <Route path="/shipping-policy" element={<ShippingDeliveryPolicy />} />
 
 
 
@@ -116,6 +117,8 @@ const AppRoutes = () => {
           <Route path="/matching-kundli-result" element={<MatchingCompatiblityResult />} />
           <Route path="/panchang-form" element={<PanchangForm />} />
           <Route path="/panchang-result" element={<PanchangResult />} />
+          <Route path="/cod-confirmation" element={<CodOrderConfirmation />} />
+
         </Route>
 
         {/* ✅ Admin Panel */}
