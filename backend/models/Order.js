@@ -2,26 +2,37 @@ import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema(
   {
+    // Default MongoDB ObjectId _id
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
+
     items: [
       {
         product: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "Product", // ✅ Added reference
+          ref: "Product",
           required: true,
         },
         quantity: { type: Number, required: true },
       },
     ],
+
     totalAmount: { type: Number, required: true },
+
+    // ── New field to store your Cashfree string ID ──
+    customOrderId: {
+      type: String,
+      index: true,       // index for fast lookups in webhook
+      default: null,
+    },
+
     paymentMethod: {
       type: String,
       enum: ["cod", "online"],
-      default: "cod", // ✅ Default value added
+      default: "cod",
     },
     paymentStatus: {
       type: String,
@@ -30,18 +41,17 @@ const orderSchema = new mongoose.Schema(
     },
     orderStatus: {
       type: String,
-      enum: ["Pending", "Shipped", "Out-for-delivery", "Delivered", "Cancelled", "On-way"], // ✅ Fixed "on-way" to "out-for-delivery"
+      enum: ["Pending", "Shipped", "Out-for-delivery", "Delivered", "Cancelled", "On-way"],
       default: "Pending",
     },
 
-    // ✅ Shipping Address
     shippingAddress: {
-      name: { type: String, required: true },
-      phone: { type: String, required: true },
-      address: { type: String, required: true },
-      city: { type: String, required: true },
-      state: { type: String, required: true },
-      pincode: { type: String, required: true },
+      name:     { type: String, required: true },
+      phone:    { type: String, required: true },
+      address:  { type: String, required: true },
+      city:     { type: String, required: true },
+      state:    { type: String, required: true },
+      pincode:  { type: String, required: true },
       landmark: { type: String },
     },
   },

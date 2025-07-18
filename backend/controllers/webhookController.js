@@ -112,11 +112,10 @@ export const verifyPayment = async (req, res) => {
       paymentStatus === "SUCCESS"
     ) {
       try {
-        const updated = await Order.findByIdAndUpdate(orderId, {
-          paymentStatus: "Paid",
-          paymentMethod: "online",
-          orderStatus: "Pending",
-        });
+        const updated = await Order.findByIdAndUpdate(
+  { customOrderId: orderId },
+  { paymentStatus: "Paid", paymentMethod: "online", orderStatus: "Pending" }
+);
 
         if (updated) {
           console.log(`✅ MongoDB order ${orderId} marked as Paid`);
@@ -137,4 +136,3 @@ export const verifyPayment = async (req, res) => {
     return res.status(500).send("Internal Server Error");
   }
 };
-//
