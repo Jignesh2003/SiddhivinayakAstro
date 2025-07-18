@@ -36,8 +36,15 @@ app.use(cors({
     "http://localhost:5173",
   ],
   credentials: true,
-  exposedHeaders: ["x-webhook-signature", "x-webhook-timestamp"],
-  allowedHeaders: ["x-webhook-signature", "x-webhook-timestamp", "Content-Type"]
+  allowedHeaders: [
+    "Content-Type",
+    "x-webhook-signature",
+    "x-webhook-timestamp",
+  ],
+  exposedHeaders: [
+    "x-webhook-signature",
+    "x-webhook-timestamp",
+  ],
 }));
 
 app.use(helmet());
