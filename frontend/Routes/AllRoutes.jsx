@@ -117,7 +117,7 @@ const AppRoutes = () => {
           <Route path="/matching-kundli-result" element={<MatchingCompatiblityResult />} />
           <Route path="/panchang-form" element={<PanchangForm />} />
           <Route path="/panchang-result" element={<PanchangResult />} />
-          <Route path="/cod-confirmation" element={<CodOrderConfirmation />} />
+          <Route path="/cod-confirmation/:orderId/:paymentStatus" element={<CodOrderConfirmation />} />
 
         </Route>
 
