@@ -106,7 +106,7 @@ export const placeOrder = async (req, res) => {
     // Clear the cart
     await Cart.findOneAndDelete({ user: userId });
 
-    return res.status(201).json({ message: "Order placed", order,paymentStatus });
+return res.status(201).json({ message: "Order placed", order, paymentStatus: order.paymentStatus });
   } catch (err) {
     console.error("Place Order Error:", err);
     return res.status(500).json({ message: "Internal server error" });
