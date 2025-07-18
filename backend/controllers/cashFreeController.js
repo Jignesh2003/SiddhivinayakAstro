@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from "uuid";
 import User from "../models/User.js"; // assuming you have a User model
 
 export const createCashfreeOrder = async (req, res) => {
-  console.log("🔎 req.rawHeaders:", req.rawHeaders);
   try {
     const { amount, shippingAddress, items } = req.body;
     const userId = req.user?.id; // assumes auth middleware sets this

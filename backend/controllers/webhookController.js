@@ -7,8 +7,10 @@ import Order from "../models/Order.js";
 // ────────────────────────────────────────────────────────────
 export const verifyPayment = async (req, res) => {
   try {
+    console.log("🔎 req.rawHeaders:", req.rawHeaders);
+
     console.log("📩 Cashfree Webhook received");
-console.log("📥 Incoming Headers:", req.headers);
+    console.log("📥 Incoming Headers:", req.headers);
     if (!Buffer.isBuffer(req.body)) {
       console.error("❌ Invalid webhook format: body is not raw Buffer");
       return res.status(400).send("Invalid webhook format");
