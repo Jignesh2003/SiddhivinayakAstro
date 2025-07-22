@@ -69,7 +69,7 @@ export default function Checkout() {
       }
       const quantity = Number(item.quantity ?? 1);
       // DEBUG (optional, remove in prod): 
-      // console.log(`Validating: ${item.product.name}, want ${quantity}, available ${available}`);
+      console.log(`Validating: ${item.product.name}, want ${quantity}, available ${available}`);
 
       if (!Number.isFinite(quantity) || quantity < 1)
         throw new Error(
