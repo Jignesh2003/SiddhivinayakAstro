@@ -16,6 +16,7 @@ const Cart = () => {
 
   useEffect(() => {
     fetchCart();
+    console.log("Calling fetchCart from useEffect");
     // eslint-disable-next-line
   }, []);
 
