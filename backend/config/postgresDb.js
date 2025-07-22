@@ -13,7 +13,7 @@ pool.on("error", err => {
 });
 
 pool.connect()
-  .then(() => console.log("✅ Connected to Neon Postgres"))
+  .then(() => console.log("✅ Connected to Supabase Postgres"))
   .catch((err) => console.error("❌ Postgres connection failed:", err));
 
 
