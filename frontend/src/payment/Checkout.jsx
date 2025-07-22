@@ -47,19 +47,21 @@ export default function Checkout() {
   const validateInputs = () => {
     if (!userId) throw new Error("User not logged in");
     if (!cart.length) throw new Error("Cart is empty");
-
     for (const [key, value] of Object.entries(shippingAddress)) {
       if (!value) throw new Error(`Please fill in ${key}`);
     }
-
     if (shippingAddress.phone.length !== 10) {
       throw new Error("Phone number must be 10 digits");
     }
-
     cart.forEach((item) => {
-      const available = item.product?.stock?.[0]?.quantity ?? 0;
-      if (item.quantity > available) {
-        throw new Error(`Only ${available} left of "${item.product.name}"`);
+      const quantity = Number(item.quantity ?? 1);
+      const available = Number(item.product?.stock?.[0]?.quantity ?? 0);
+      if (!Number.isFinite(quantity) || quantity < 1)
+        throw new Error(
+          `Cart item "${item.product?.name}" has invalid quantity (${item.quantity})`
+        );
+      if (quantity > available) {
+        throw new Error(`Only ${available} left of "${item.product?.name}"`);
       }
     });
   };
@@ -72,17 +74,21 @@ export default function Checkout() {
       validateInputs();
 
       const totalAmount = cart.reduce(
-        (sum, item) => sum + item.product.price * item.quantity,
+        (sum, item) => sum + item.product.price * Number(item.quantity ?? 1),
         0
       );
+
+      // Prepare sanitized order items with numbers only
+      const orderItems = cart.map((item) => ({
+        product: item.product._id,
+        quantity: Number(item.quantity ?? 1),
+        ...(item.size && { size: item.size }),
+      }));
 
       if (selectedMethod === "cod") {
         const orderData = {
           user: userId,
-          items: cart.map((item) => ({
-            product: item.product._id,
-            quantity: Number(item.quantity),
-          })),
+          items: orderItems,
           totalAmount,
           paymentMethod: "cod",
           paymentStatus: "Pending",
@@ -102,7 +108,9 @@ export default function Checkout() {
 
         toast.success("✅ Order placed with Cash on Delivery!");
         clearCart();
-        navigate(`/cod-confirmation?order_id=${data.order._id}&paymentStatus=${data.paymentStatus}`);
+        navigate(
+          `/cod-confirmation?order_id=${data.order._id}&paymentStatus=${data.paymentStatus}`
+        );
         return;
       }
 
@@ -110,25 +118,22 @@ export default function Checkout() {
       if (!cashfreeInstance) throw new Error("Cashfree SDK not ready");
 
       const cfRes = await axios.post(
-  `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
-  {
-    amount: totalAmount,
-    shippingAddress,
-    items: cart.map((item) => ({
-      product: item.product._id,
-      quantity: item.quantity,
-    })),
-  },
-  {
-    headers: {
-      Authorization: token ? `Bearer ${token}` : "",
-    },
-  }
-);
-
+        `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
+        {
+          amount: totalAmount,
+          shippingAddress,
+          items: orderItems, // always numbers!
+        },
+        {
+          headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        }
+      );
 
       const { payment_session_id } = cfRes.data;
-      if (!payment_session_id) throw new Error("No payment session ID received");
+      if (!payment_session_id)
+        throw new Error("No payment session ID received");
 
       cashfreeInstance.checkout({
         paymentSessionId: payment_session_id,
@@ -137,8 +142,12 @@ export default function Checkout() {
 
     } catch (err) {
       console.error("❌ Checkout error:", err);
-      toast.error(err.message || "Something went wrong");
-      if (err.message.includes("not logged in")) logout();
+      toast.error(
+        err?.response?.data?.message ||
+          err.message ||
+          "Something went wrong"
+      );
+      if (err.message && err.message.includes("not logged in")) logout();
     } finally {
       setLoading(false);
     }
@@ -157,14 +166,15 @@ export default function Checkout() {
             placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
             value={shippingAddress[field]}
             onChange={handleChange}
-            className="w-full border p-2 rounded-md"
+            className="w-full border p-2 rounded-md mb-2"
+            autoComplete="off"
           />
         ))}
       </div>
 
       <div className="mt-4 space-y-2">
         <h3 className="font-semibold">Payment Method</h3>
-        <label className="flex items-center gap-2">
+        <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="radio"
             checked={selectedMethod === "cod"}
@@ -172,7 +182,7 @@ export default function Checkout() {
           />
           Cash on Delivery
         </label>
-        <label className="flex items-center gap-2">
+        <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="radio"
             checked={selectedMethod === "online"}
@@ -189,7 +199,7 @@ export default function Checkout() {
           loading
             ? "bg-gray-400 cursor-not-allowed"
             : "bg-yellow-500 hover:bg-yellow-600 text-white"
-        }`}
+        } font-bold transition`}
       >
         {loading ? "Processing…" : "Place Order"}
       </button>

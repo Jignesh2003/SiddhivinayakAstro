@@ -11,14 +11,14 @@ const Cart = () => {
     updateCart,
     removeFromCart,
     loading,
+    addToCart
   } = useCartStore();
 
-  // Fetch cart on mount
   useEffect(() => {
     fetchCart();
+    // eslint-disable-next-line
   }, []);
 
-  // Auto remove out-of-stock items
   useEffect(() => {
     cart.forEach((item) => {
       if (item.availableStock === 0) {
@@ -31,7 +31,6 @@ const Cart = () => {
     // eslint-disable-next-line
   }, [cart]);
 
-  // Always send valid number to store!
   const handleUpdateCart = async (
     productId,
     newQuantity,
@@ -45,12 +44,10 @@ const Cart = () => {
       return;
     }
     try {
-      await updateCart(productId, safeQty, size);
+      await updateCart(productId, safeQty, size, availableStock);
       toast.success("Cart updated successfully!", { position: "top-right" });
       await fetchCart();
-    } catch (error) {
-      console.log(error);
-      
+    } catch {
       toast.error("Failed to update cart.", { position: "top-right" });
     }
   };
@@ -60,18 +57,44 @@ const Cart = () => {
       await removeFromCart(productId, size);
       toast.success("Item removed from cart!", { position: "top-right" });
       await fetchCart();
-    } catch (error) {
-      console.log(error);
-      
+    } catch {
       toast.error("Failed to remove item.", { position: "top-right" });
+    }
+  };
+
+  const handleIncrement = (item) => {
+    if (
+      Number(item.cartQuantity ?? item.quantity ?? 1) <
+      Number(item.availableStock ?? 1)
+    ) {
+      handleUpdateCart(
+        item.product._id,
+        Number(item.cartQuantity ?? item.quantity ?? 1) + 1,
+        Number(item.availableStock ?? 1),
+        item.size
+      );
+    } else {
+      toast.warn("Cannot add more than available stock!", {
+        position: "top-right"
+      });
+    }
+  };
+
+  const handleDecrement = (item) => {
+    if (Number(item.cartQuantity ?? item.quantity ?? 1) > 1) {
+      handleUpdateCart(
+        item.product._id,
+        Number(item.cartQuantity ?? item.quantity ?? 1) - 1,
+        Number(item.availableStock ?? 1),
+        item.size
+      );
     }
   };
 
   const totalPrice = cart.reduce((total, item) => {
     if (!item.product || !item.product.price) return total;
     return (
-      total +
-      item.product.price * Number(item.cartQuantity ?? item.quantity ?? 1)
+      total + item.product.price * Number(item.cartQuantity ?? item.quantity ?? 1)
     );
   }, 0);
 
@@ -89,14 +112,13 @@ const Cart = () => {
           {cart.map((item) => {
             if (!item.product) return null;
             const currQty = Number(item.cartQuantity ?? item.quantity ?? 1);
-            const availableStock = Number(item.availableStock ?? 0);
+            const availableStock = Number(item.availableStock ?? 1);
 
             return (
               <div
                 key={item.product._id + (item.size ?? "")}
                 className="flex items-center justify-between border-b py-3"
               >
-                {/* Product Image */}
                 <img
                   src={item.product?.image?.[0] || "/placeholder.png"}
                   alt={item.product.name || "Product Image"}
@@ -123,19 +145,10 @@ const Cart = () => {
                         }`
                       : "SORRY! Out of Stock"}
                   </p>
-                  <p className="font-semibold">
-                    Quantity: {currQty}
-                  </p>
+                  <p className="font-semibold">Quantity: {currQty}</p>
                   <div className="flex gap-2 mt-2">
                     <button
-                      onClick={() =>
-                        handleUpdateCart(
-                          item.product._id,
-                          currQty + 1,
-                          availableStock,
-                          item.size
-                        )
-                      }
+                      onClick={() => handleIncrement(item)}
                       className={`px-2 py-1 rounded ${
                         currQty >= availableStock
                           ? "bg-gray-400 cursor-not-allowed"
@@ -146,14 +159,7 @@ const Cart = () => {
                       +
                     </button>
                     <button
-                      onClick={() =>
-                        handleUpdateCart(
-                          item.product._id,
-                          currQty - 1,
-                          availableStock,
-                          item.size
-                        )
-                      }
+                      onClick={() => handleDecrement(item)}
                       className="px-2 py-1 bg-yellow-500 text-white rounded"
                       disabled={currQty <= 1}
                     >

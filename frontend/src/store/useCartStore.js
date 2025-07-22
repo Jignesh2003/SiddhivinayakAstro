@@ -10,7 +10,7 @@ const useCartStore = create((set, get) => ({
   cartCount: 0,
   loading: false,
 
-  addToCart: async ({ product, size = "", quantity = 1 }) => {
+  addToCart: async ({ product, size = "", quantity = 1, availableStock = 1 }) => {
     set({ loading: true });
     try {
       const { token } = useAuthStore.getState();
@@ -18,21 +18,38 @@ const useCartStore = create((set, get) => ({
         toast.error("Please log in first!");
         return;
       }
-      // Ensure quantity is sent as a number!
+
+      // Find if product+size already in cart
+      const cartItem = get().cart.find(
+        (item) =>
+          item.product._id === product &&
+          (size ? item.size === size : true)
+      );
+      let newQuantity = Number(quantity);
+      if (cartItem) {
+        newQuantity = Number(cartItem.cartQuantity ?? cartItem.quantity ?? 1) + 1;
+      }
+      // Clamp to available stock
+      if (newQuantity > availableStock) {
+        toast.error("Cannot add more than available stock!");
+        set({ loading: false });
+        return;
+      }
+      if (newQuantity < 1) newQuantity = 1;
+
       const { data } = await axios.post(
         `${BASE}/add-cart`,
-        { product, size, quantity: Number(quantity) },
+        { product, size, quantity: newQuantity },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const items = data.items || [];
       set({
         cart: items,
-        cartCount: items.reduce((sum, i) => sum + Number(i.quantity), 0),
+        cartCount: items.reduce((sum, i) => sum + Number(i.cartQuantity ?? i.quantity), 0),
       });
-      toast.success("Added to cart!");
+      toast.success(cartItem ? "Quantity increased!" : "Added to cart!");
       return data;
     } catch (err) {
-      console.error("addToCart error:", err.response?.data || err);
       toast.error("Failed to add to cart.");
       throw err;
     } finally {
@@ -45,29 +62,21 @@ const useCartStore = create((set, get) => ({
       set({ loading: true });
       const { userId, token } = useAuthStore.getState();
 
-      if (!token || !userId) {
-        console.error("User not authenticated. Please log in.");
-        return;
-      }
+      if (!token || !userId) return;
 
       const response = await axios.get(
         `${BASE}/cart/${userId}`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Cache-Control": "no-cache",
-            Pragma: "no-cache",
-          },
+          headers: { Authorization: `Bearer ${token}` },
           params: { timestamp: new Date().getTime() },
         }
       );
 
       if (Array.isArray(response.data.items)) {
-        // Ensure numbers
         const updatedCart = response.data.items.map((item) => ({
           product: item.product,
-          cartQuantity: Number(item.cartQuantity),
-          availableStock: Number(item.availableStock),
+          cartQuantity: Number(item.cartQuantity ?? item.quantity ?? 1),
+          availableStock: Number(item.availableStock ?? 1),
           size: item.size ?? null,
           _id: item._id,
         }));
@@ -81,27 +90,29 @@ const useCartStore = create((set, get) => ({
         set({ cart: [], cartCount: 0 });
       }
     } catch (error) {
+      console.log(error);
+      
       set({ cart: [], cartCount: 0 });
-      console.error("Error fetching cart:", error.response?.data || error.message);
     } finally {
       set({ loading: false });
     }
   },
 
-  updateCart: async (productId, quantity, size = null) => {
+  updateCart: async (productId, quantity, size = null, availableStock = null) => {
     try {
       set({ loading: true });
       const { userId, token } = useAuthStore.getState();
+      if (!token || !userId) return;
 
-      if (!token || !userId) {
-        console.error("User not authenticated. Please log in.");
+      let safeQuantity = Number(quantity);
+      if (availableStock !== null && safeQuantity > availableStock) {
+        toast.error("Cannot exceed available stock!");
+        set({ loading: false });
         return;
       }
+      if (safeQuantity < 1) safeQuantity = 1;
 
-      // Always send as number!
-      const safeQuantity = Number(quantity);
-
-      const response = await axios.put(
+      await axios.put(
         `${BASE}/update`,
         { productId, quantity: safeQuantity, size },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -131,8 +142,6 @@ const useCartStore = create((set, get) => ({
       set({ loading: true });
       const { userId, token } = useAuthStore.getState();
       if (!token || !userId) return;
-
-      // Accepts size for unique cart row handling
       await axios.delete(
         `${BASE}/remove/${product}?userId=${userId}&size=${size ?? ""}`,
         { headers: { Authorization: `Bearer ${token}` } }
