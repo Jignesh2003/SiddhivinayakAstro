@@ -1,4 +1,5 @@
 import Cart from "../models/cart.js";
+import Product from "../models/Product.js";
 import { updateCartSchema } from "../validation/cartValidation.js";
 
 // 📌 Add item to cart
@@ -14,7 +15,7 @@ export const addToCart = async (req, res) => {
     if (!cart) {
       cart = new Cart({ userId, items: [] });
     }
-    
+
     const productDoc = await Product.findById(product);
     console.log(`Adding to cart: ${productDoc.name} - Current stock:`, productDoc.stock);
     const existingItem = cart.items.find(item => item.product.toString() === product);
