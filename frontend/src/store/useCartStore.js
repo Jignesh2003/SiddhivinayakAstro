@@ -10,78 +10,64 @@ const useCartStore = create((set, get) => ({
   cartCount: 0,
   loading: false,
 
- addToCart: async ({ product, size = "", quantity = 1 }) => {
-  set({ loading: true });
-  try {
-    const { token } = useAuthStore.getState();
-    if (!token) {
-      toast.error("Please log in first!");
-      return;
-    }
-
-    // Check if already in cart
-    const state = get();
-    const cartItem = state.cart.find(
-      (item) =>
-        item.product._id === product &&
-        ((size && item.size === size) || (!size && !item.size))
-    );
-
-    // Get correct availableStock (use cartItem, or pass it in dispatch if needed)
-    const availableStock = cartItem
-      ? Number(cartItem.availableStock)
-      : 1; // fallback
-
-    let newQuantity = Number(quantity);
-    if (cartItem) {
-      // Already in cart, increment but never exceed stock
-      newQuantity = Math.min(
-        Number(cartItem.cartQuantity ?? cartItem.quantity ?? 1) + 1,
-        availableStock
+  addToCart: async ({ product, size = "", quantity = 1, availableStock = 1 }) => {
+    set({ loading: true });
+    try {
+      const { token } = useAuthStore.getState();
+      if (!token) {
+        toast.error("Please log in first!");
+        return;
+      }
+      // Merge: check if already in cart
+      const cartItem = get().cart.find(
+        (item) =>
+          item.product._id === product &&
+          ((size && item.size === size) || (!size && !item.size))
       );
-      if (newQuantity > availableStock) {
-        toast.error("Cannot add more than available stock!");
-        set({ loading: false });
-        return;
+      let newQuantity = Number(quantity);
+      if (cartItem) {
+        newQuantity = Math.min(
+          Number(cartItem.cartQuantity ?? cartItem.quantity ?? 1) + 1,
+          availableStock
+        );
+        if (newQuantity > availableStock) {
+          toast.error("Cannot add more than available stock!");
+          set({ loading: false });
+          return;
+        }
+      } else {
+        if (newQuantity > availableStock) {
+          toast.error("Cannot add more than available stock!");
+          set({ loading: false });
+          return;
+        }
       }
-    } else {
-      if (newQuantity > availableStock) {
-        toast.error("Cannot add more than available stock!");
-        set({ loading: false });
-        return;
-      }
+      if (newQuantity < 1) newQuantity = 1;
+      const { data } = await axios.post(
+        `${BASE}/add-cart`,
+        { product, size, quantity: newQuantity },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const items = data.items || [];
+      set({
+        cart: items,
+        cartCount: items.reduce((sum, i) => sum + Number(i.cartQuantity ?? i.quantity), 0)
+      });
+      toast.success(cartItem ? "Increased quantity in cart!" : "Added to cart!");
+      return data;
+    } catch (err) {
+      toast.error("Failed to add to cart.");
+      throw err;
+    } finally {
+      set({ loading: false });
     }
-
-    const { data } = await axios.post(
-      `${BASE}/add-cart`,
-      { product, size, quantity: newQuantity },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    const items = data.items || [];
-    set({
-      cart: items,
-      cartCount: items.reduce((sum, i) => sum + Number(i.cartQuantity ?? i.quantity), 0)
-    });
-
-    toast.success(cartItem ? "Increased quantity in cart!" : "Added to cart!");
-    return data;
-  } catch (err) {
-    toast.error("Failed to add to cart.");
-    throw err;
-  } finally {
-    set({ loading: false });
-  }
-},
-
+  },
 
   fetchCart: async () => {
+    set({ loading: true });
     try {
-      set({ loading: true });
       const { userId, token } = useAuthStore.getState();
-
       if (!token || !userId) return;
-
       const response = await axios.get(
         `${BASE}/cart/${userId}`,
         {
@@ -89,7 +75,6 @@ const useCartStore = create((set, get) => ({
           params: { timestamp: new Date().getTime() },
         }
       );
-
       if (Array.isArray(response.data.items)) {
         const updatedCart = response.data.items.map((item) => ({
           product: item.product,
@@ -98,18 +83,12 @@ const useCartStore = create((set, get) => ({
           size: item.size ?? null,
           _id: item._id,
         }));
-
-        const totalCount = updatedCart.reduce(
-          (sum, item) => sum + (item.cartQuantity ?? 0),
-          0
-        );
+        const totalCount = updatedCart.reduce((sum, item) => sum + (item.cartQuantity ?? 0), 0);
         set({ cart: updatedCart, cartCount: totalCount });
       } else {
         set({ cart: [], cartCount: 0 });
       }
     } catch (error) {
-      console.log(error);
-      
       set({ cart: [], cartCount: 0 });
     } finally {
       set({ loading: false });
@@ -117,11 +96,10 @@ const useCartStore = create((set, get) => ({
   },
 
   updateCart: async (productId, quantity, size = null, availableStock = null) => {
+    set({ loading: true });
     try {
-      set({ loading: true });
       const { userId, token } = useAuthStore.getState();
       if (!token || !userId) return;
-
       let safeQuantity = Number(quantity);
       if (availableStock !== null && safeQuantity > availableStock) {
         toast.error("Cannot exceed available stock!");
@@ -129,17 +107,13 @@ const useCartStore = create((set, get) => ({
         return;
       }
       if (safeQuantity < 1) safeQuantity = 1;
-
       await axios.put(
         `${BASE}/update`,
         { productId, quantity: safeQuantity, size },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       await get().fetchCart();
     } catch (error) {
-      console.log(error);
-      
       await get().fetchCart();
     } finally {
       set({ loading: false });
@@ -155,9 +129,8 @@ const useCartStore = create((set, get) => ({
       ),
       cartCount: state.cartCount - 1,
     }));
-
+    set({ loading: true });
     try {
-      set({ loading: true });
       const { userId, token } = useAuthStore.getState();
       if (!token || !userId) return;
       await axios.delete(
@@ -166,8 +139,6 @@ const useCartStore = create((set, get) => ({
       );
       await get().fetchCart();
     } catch (error) {
-      console.log(error);
-      
       await get().fetchCart();
     } finally {
       set({ loading: false });
@@ -176,15 +147,14 @@ const useCartStore = create((set, get) => ({
 
   clearCart: async () => {
     set({ cart: [], cartCount: 0 });
+    set({ loading: true });
     try {
-      set({ loading: true });
       const { userId, token } = useAuthStore.getState();
       if (!token || !userId) return;
       await axios.delete(`${BASE}/clear-cart/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-    } catch (error) {console.log(error);
-    } finally {
+    } catch (error) {} finally {
       set({ loading: false });
     }
   },

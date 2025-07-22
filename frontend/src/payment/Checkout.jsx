@@ -8,7 +8,7 @@ import useCartStore from "../store/useCartStore";
 export default function Checkout() {
   const navigate = useNavigate();
   const { userId, token, logout } = useAuthStore.getState();
-  const { cart, clearCart } = useCartStore.getState();
+  const { cart, clearCart, fetchCart } = useCartStore.getState();
 
   const [selectedMethod, setSelectedMethod] = useState("cod");
   const [loading, setLoading] = useState(false);
@@ -54,8 +54,14 @@ export default function Checkout() {
       throw new Error("Phone number must be 10 digits");
     }
     cart.forEach((item) => {
+      let available = 0;
+      if (item.product.sizeType !== "Quantity" && item.size) {
+        const variant = item.product.stock?.find((v) => v.size === item.size);
+        available = variant ? variant.quantity : 0;
+      } else {
+        available = Number(item.product?.stock?.[0]?.quantity ?? 0);
+      }
       const quantity = Number(item.quantity ?? 1);
-      const available = Number(item.product?.stock?.[0]?.quantity ?? 0);
       if (!Number.isFinite(quantity) || quantity < 1)
         throw new Error(
           `Cart item "${item.product?.name}" has invalid quantity (${item.quantity})`
@@ -71,14 +77,15 @@ export default function Checkout() {
     setLoading(true);
 
     try {
+      // 🔄 Always refresh cart before validating/ordering!
+      await fetchCart();
+
       validateInputs();
 
       const totalAmount = cart.reduce(
         (sum, item) => sum + item.product.price * Number(item.quantity ?? 1),
         0
       );
-
-      // Prepare sanitized order items with numbers only
       const orderItems = cart.map((item) => ({
         product: item.product._id,
         quantity: Number(item.quantity ?? 1),
@@ -122,7 +129,7 @@ export default function Checkout() {
         {
           amount: totalAmount,
           shippingAddress,
-          items: orderItems, // always numbers!
+          items: orderItems, // always numbers
         },
         {
           headers: {
@@ -137,7 +144,7 @@ export default function Checkout() {
 
       cashfreeInstance.checkout({
         paymentSessionId: payment_session_id,
-        redirectTarget: "_self", // Or "_blank"
+        redirectTarget: "_self",
       });
 
     } catch (err) {
