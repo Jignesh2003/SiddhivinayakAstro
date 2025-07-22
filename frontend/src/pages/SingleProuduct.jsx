@@ -90,31 +90,33 @@ const SingleProduct = () => {
   const selectedStock = variant?.quantity || 0;
 
   const handleAddToCart = async () => {
-    if (!userId) {
-      toast.error("Please log in first!");
-      logout();
-      return navigate("/login");
-    }
-    if (product.sizeType !== "Quantity" && !selectedSize) {
-      return toast.error("Please select a size!");
-    }
-    if (product.sizeType !== "Quantity" && selectedStock === 0) {
-      return toast.error(`Size ${selectedSize} is out of stock!`);
-    }
-    if (product.sizeType === "Quantity" && totalStock === 0) {
-      return toast.error("Out of stock!");
-    }
-    try {
-      await addToCart({
-        product: product._id,
-        size: selectedSize,
-        quantity: 1,
-      });
-      toast.success("Added to cart!");
-    } catch {
-      toast.error("Failed to add to cart.");
-    }
-  };
+  if (!userId) {
+    toast.error("Please log in first!");
+    logout();
+    return navigate("/login");
+  }
+  if (product.sizeType !== "Quantity" && !selectedSize) {
+    return toast.error("Please select a size!");
+  }
+  const stockToUse =
+    product.sizeType !== "Quantity" ? selectedStock : totalStock;
+
+  if (stockToUse === 0) {
+    return toast.error("Out of stock!");
+  }
+  try {
+    await addToCart({
+      product: product._id,
+      size: selectedSize,
+      quantity: 1,
+      availableStock: stockToUse, // 💡 pass this in!
+    });
+    toast.success("Added to cart!");
+  } catch {
+    toast.error("Failed to add to cart.");
+  }
+};
+
 
   const handleBuyNow = async () => {
     await handleAddToCart();

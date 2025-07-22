@@ -10,52 +10,70 @@ const useCartStore = create((set, get) => ({
   cartCount: 0,
   loading: false,
 
-  addToCart: async ({ product, size = "", quantity = 1, availableStock = 1 }) => {
-    set({ loading: true });
-    try {
-      const { token } = useAuthStore.getState();
-      if (!token) {
-        toast.error("Please log in first!");
-        return;
-      }
+ addToCart: async ({ product, size = "", quantity = 1 }) => {
+  set({ loading: true });
+  try {
+    const { token } = useAuthStore.getState();
+    if (!token) {
+      toast.error("Please log in first!");
+      return;
+    }
 
-      // Find if product+size already in cart
-      const cartItem = get().cart.find(
-        (item) =>
-          item.product._id === product &&
-          (size ? item.size === size : true)
+    // Check if already in cart
+    const state = get();
+    const cartItem = state.cart.find(
+      (item) =>
+        item.product._id === product &&
+        ((size && item.size === size) || (!size && !item.size))
+    );
+
+    // Get correct availableStock (use cartItem, or pass it in dispatch if needed)
+    const availableStock = cartItem
+      ? Number(cartItem.availableStock)
+      : 1; // fallback
+
+    let newQuantity = Number(quantity);
+    if (cartItem) {
+      // Already in cart, increment but never exceed stock
+      newQuantity = Math.min(
+        Number(cartItem.cartQuantity ?? cartItem.quantity ?? 1) + 1,
+        availableStock
       );
-      let newQuantity = Number(quantity);
-      if (cartItem) {
-        newQuantity = Number(cartItem.cartQuantity ?? cartItem.quantity ?? 1) + 1;
-      }
-      // Clamp to available stock
       if (newQuantity > availableStock) {
         toast.error("Cannot add more than available stock!");
         set({ loading: false });
         return;
       }
-      if (newQuantity < 1) newQuantity = 1;
-
-      const { data } = await axios.post(
-        `${BASE}/add-cart`,
-        { product, size, quantity: newQuantity },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const items = data.items || [];
-      set({
-        cart: items,
-        cartCount: items.reduce((sum, i) => sum + Number(i.cartQuantity ?? i.quantity), 0),
-      });
-      toast.success(cartItem ? "Quantity increased!" : "Added to cart!");
-      return data;
-    } catch (err) {
-      toast.error("Failed to add to cart.");
-      throw err;
-    } finally {
-      set({ loading: false });
+    } else {
+      if (newQuantity > availableStock) {
+        toast.error("Cannot add more than available stock!");
+        set({ loading: false });
+        return;
+      }
     }
-  },
+
+    const { data } = await axios.post(
+      `${BASE}/add-cart`,
+      { product, size, quantity: newQuantity },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const items = data.items || [];
+    set({
+      cart: items,
+      cartCount: items.reduce((sum, i) => sum + Number(i.cartQuantity ?? i.quantity), 0)
+    });
+
+    toast.success(cartItem ? "Increased quantity in cart!" : "Added to cart!");
+    return data;
+  } catch (err) {
+    toast.error("Failed to add to cart.");
+    throw err;
+  } finally {
+    set({ loading: false });
+  }
+},
+
 
   fetchCart: async () => {
     try {
