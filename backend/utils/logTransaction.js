@@ -18,7 +18,7 @@ export async function logTransactionToPostgres(transactionData) {
 
   try {
     const query = `
-      INSERT INTO transactions (
+      INSERT INTO productOrders_transactions (
         order_id,
         cf_order_id,
         cf_payment_id,
