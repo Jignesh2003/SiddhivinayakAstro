@@ -1,25 +1,27 @@
 import Cart from "../models/cart.js";
-import {  updateCartSchema } from "../validation/cartValidation.js";
+import { updateCartSchema } from "../validation/cartValidation.js";
 
 // 📌 Add item to cart
 export const addToCart = async (req, res) => {
   try {
- 
+
     const { product, size, quantity = 1 } = req.body;
     console.log(product);
-    
+
     const userId = req.user.id;
 
     let cart = await Cart.findOne({ userId });
     if (!cart) {
       cart = new Cart({ userId, items: [] });
     }
-
+    
+    const productDoc = await Product.findById(product);
+    console.log(`Adding to cart: ${productDoc.name} - Current stock:`, productDoc.stock);
     const existingItem = cart.items.find(item => item.product.toString() === product);
     if (existingItem) {
       existingItem.quantity += quantity;
     } else {
-      cart.items.push({ product, quantity ,size});
+      cart.items.push({ product, quantity, size });
     }
 
     await cart.save();
@@ -46,31 +48,37 @@ export const getCart = async (req, res) => {
 
     // Build cart with per-item live stock
     const cartWithStock = cart.items.map(item => {
-      // Find matching stock entry by size if present; fallback to first stock if not using sizes
       let availableStock = 0;
-      if (item.product && Array.isArray(item.product.stock)) {
-        if (item.size) {
-          // Look for exact size match
-          const stockEntry = item.product.stock.find(s => s.size === item.size);
-          availableStock = stockEntry ? stockEntry.quantity : 0;
+
+      if (item.product) {
+        if (item.product.sizeType !== "Quantity" && item.size) {
+          // Variant stock (size-based)
+          const stockEntry = item.product.stock.find(
+            (entry) => entry.size === item.size
+          );
+          availableStock = stockEntry ? Number(stockEntry.quantity) : 0;
         } else {
-          // No size: fallback to first stock entry
-          availableStock = item.product.stock[0]?.quantity || 0;
+          // Non-size product: sum all stock
+          availableStock = item.product.stock.reduce(
+            (sum, entry) => sum + Number(entry.quantity || 0),
+            0
+          );
         }
       }
+
       return {
         product: {
           _id: item.product._id,
           name: item.product.name,
           price: item.product.price,
           image: item.product.image,
-          // ...add any other fields you want
         },
         cartQuantity: item.quantity,
         size: item.size || null,
         availableStock,
       };
     });
+
 
     res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     res.set("Pragma", "no-cache");
