@@ -5,34 +5,47 @@ import { toast } from "react-toastify";
 import { ClipLoader } from "react-spinners";
 
 const Cart = () => {
-  const { cart, fetchCart, updateCart, removeFromCart, loading } = useCartStore();
+  const {
+    cart,
+    fetchCart,
+    updateCart,
+    removeFromCart,
+    loading,
+  } = useCartStore();
 
+  // Fetch cart on mount
   useEffect(() => {
     fetchCart();
   }, []);
 
+  // Auto remove out-of-stock items
   useEffect(() => {
-    // Remove out-of-stock items automatically
     cart.forEach((item) => {
       if (item.availableStock === 0) {
         removeFromCart(item.product._id, item.size ?? null);
-        toast.warn(
-          `Removed ${item.product.name} (Out of Stock)`,
-          { position: "top-right" }
-        );
+        toast.warn(`Removed ${item.product.name} (Out of Stock)`, {
+          position: "top-right",
+        });
       }
     });
     // eslint-disable-next-line
   }, [cart]);
 
-  const handleUpdateCart = async (productId, newQuantity, availableStock, size) => {
-    if (newQuantity > availableStock) {
+  // Always send valid number to store!
+  const handleUpdateCart = async (
+    productId,
+    newQuantity,
+    availableStock,
+    size
+  ) => {
+    const safeQty = Number(newQuantity);
+    if (!Number.isFinite(safeQty) || safeQty < 1) return;
+    if (safeQty > availableStock) {
       toast.error("Cannot exceed available stock!", { position: "top-right" });
       return;
     }
-    if (newQuantity < 1) return;
     try {
-      await updateCart(productId, newQuantity, size);
+      await updateCart(productId, safeQty, size);
       toast.success("Cart updated successfully!", { position: "top-right" });
       await fetchCart();
     } catch (error) {
@@ -52,7 +65,10 @@ const Cart = () => {
 
   const totalPrice = cart.reduce((total, item) => {
     if (!item.product || !item.product.price) return total;
-    return total + item.product.price * (item.cartQuantity ?? item.quantity ?? 1);
+    return (
+      total +
+      item.product.price * Number(item.cartQuantity ?? item.quantity ?? 1)
+    );
   }, 0);
 
   return (
@@ -68,7 +84,9 @@ const Cart = () => {
         <div>
           {cart.map((item) => {
             if (!item.product) return null;
-            const availableStock = item.availableStock ?? 0;
+            const currQty = Number(item.cartQuantity ?? item.quantity ?? 1);
+            const availableStock = Number(item.availableStock ?? 0);
+
             return (
               <div
                 key={item.product._id + (item.size ?? "")}
@@ -96,30 +114,30 @@ const Cart = () => {
                     }
                   >
                     {availableStock > 0
-                      ? `Stock: ${availableStock}${availableStock < 10 ? " (Hurry!)" : ""}`
+                      ? `Stock: ${availableStock}${
+                          availableStock < 10 ? " (Hurry!)" : ""
+                        }`
                       : "SORRY! Out of Stock"}
                   </p>
                   <p className="font-semibold">
-                    Quantity: {item.cartQuantity ?? item.quantity ?? 1}
+                    Quantity: {currQty}
                   </p>
                   <div className="flex gap-2 mt-2">
                     <button
                       onClick={() =>
                         handleUpdateCart(
                           item.product._id,
-                          (item.cartQuantity ?? item.quantity ?? 1) + 1,
+                          currQty + 1,
                           availableStock,
                           item.size
                         )
                       }
                       className={`px-2 py-1 rounded ${
-                        (item.cartQuantity ?? item.quantity ?? 1) >= availableStock
+                        currQty >= availableStock
                           ? "bg-gray-400 cursor-not-allowed"
                           : "bg-green-500 text-white"
                       }`}
-                      disabled={
-                        (item.cartQuantity ?? item.quantity ?? 1) >= availableStock
-                      }
+                      disabled={currQty >= availableStock}
                     >
                       +
                     </button>
@@ -127,13 +145,13 @@ const Cart = () => {
                       onClick={() =>
                         handleUpdateCart(
                           item.product._id,
-                          (item.cartQuantity ?? item.quantity ?? 1) - 1,
+                          currQty - 1,
                           availableStock,
                           item.size
                         )
                       }
                       className="px-2 py-1 bg-yellow-500 text-white rounded"
-                      disabled={(item.cartQuantity ?? item.quantity ?? 1) <= 1}
+                      disabled={currQty <= 1}
                     >
                       -
                     </button>
@@ -148,7 +166,7 @@ const Cart = () => {
                   </div>
                 </div>
                 <p className="font-bold">
-                  ₹{item.product.price * (item.cartQuantity ?? item.quantity ?? 1)}
+                  ₹{item.product.price * currQty}
                 </p>
               </div>
             );

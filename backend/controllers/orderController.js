@@ -58,36 +58,37 @@ export const placeOrder = async (req, res) => {
     const userId = req.user.id;
     const { items, totalAmount, paymentMethod, shippingAddress } = req.body;
 
-    if (!items?.length) {
+    if (!Array.isArray(items) || !items.length) {
       return res.status(400).json({ message: "No items in the order." });
     }
 
     const orderItems = [];
-
     for (const item of items) {
-      // 1. Find exactly the array entry whose quantity is ≥ the requested amount:
+      // Convert and validate quantity
+      const quantity = Number(item.quantity);
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        return res.status(400).json({ message: `Invalid quantity for product ${item.product}` });
+      }
+
       const updatedProduct = await Product.findOneAndUpdate(
         {
           _id: item.product,
-          "stock.quantity": { $gte: item.quantity }
+          "stock.quantity": { $gte: quantity }
         },
         {
-          // 2. Decrement that matching array element’s quantity
-          $inc: { "stock.$.quantity": -item.quantity }
+          $inc: { "stock.$.quantity": -quantity }
         },
         { new: true }
       );
 
       if (!updatedProduct) {
-        return res.status(400).json({
-          message: `Not enough stock for product ${item.product}.`
-        });
+        return res.status(400).json({ message: `Not enough stock for product ${item.product}.` });
       }
 
       orderItems.push({
         product: updatedProduct._id,
-        quantity: item.quantity
-        // — don’t push `size` unless you’ve added it to your Order schema
+        quantity, // always number
+        // include size if you support sizes: size: item.size
       });
     }
 
@@ -98,7 +99,7 @@ export const placeOrder = async (req, res) => {
       paymentMethod: paymentMethod || "cod",
       paymentStatus: paymentMethod === "cod" ? "Pending" : "Initiated",
       orderStatus: "Pending",
-      shippingAddress
+      shippingAddress,
     });
 
     await order.save();
@@ -106,12 +107,17 @@ export const placeOrder = async (req, res) => {
     // Clear the cart
     await Cart.findOneAndDelete({ user: userId });
 
-return res.status(201).json({ message: "Order placed", order, paymentStatus: order.paymentStatus });
+    return res.status(201).json({
+      message: "Order placed",
+      order,
+      paymentStatus: order.paymentStatus,
+    });
   } catch (err) {
     console.error("Place Order Error:", err);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 //getiing user order placed list
 export const getUserOrders = async (req, res) => {

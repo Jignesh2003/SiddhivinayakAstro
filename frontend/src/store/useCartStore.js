@@ -4,12 +4,12 @@ import useAuthStore from "./useAuthStore";
 import { toast } from "react-toastify";
 
 const BASE = import.meta.env.VITE_BASE_URL;
+
 const useCartStore = create((set, get) => ({
   cart: [],
-  cartCount: 0, // ✅ Add cartCount
+  cartCount: 0,
   loading: false,
 
- // ⚠️ Notice the field is called 'product', not 'productId'
   addToCart: async ({ product, size = "", quantity = 1 }) => {
     set({ loading: true });
     try {
@@ -18,18 +18,16 @@ const useCartStore = create((set, get) => ({
         toast.error("Please log in first!");
         return;
       }
-
-      // <-- This body shape must match your controller’s destructuring
+      // Ensure quantity is sent as a number!
       const { data } = await axios.post(
         `${BASE}/add-cart`,
-        { product, size, quantity },
+        { product, size, quantity: Number(quantity) },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      const items = data.items;
+      const items = data.items || [];
       set({
         cart: items,
-        cartCount: items.reduce((sum, i) => sum + i.quantity, 0),
+        cartCount: items.reduce((sum, i) => sum + Number(i.quantity), 0),
       });
       toast.success("Added to cart!");
       return data;
@@ -42,58 +40,7 @@ const useCartStore = create((set, get) => ({
     }
   },
 
- fetchCart: async () => {
-  try {
-    set({ loading: true });
-    const { userId, token } = useAuthStore.getState();
-
-    if (!token || !userId) {
-      console.error("User not authenticated. Please log in.");
-      return;
-    }
-
-    const response = await axios.get(
-      `${import.meta.env.VITE_BASE_URL}/cart/${userId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache",
-        },
-        params: { timestamp: new Date().getTime() },
-      }
-    );
-
-    console.log("Cart API Response:", response.data);
-
-    if (Array.isArray(response.data.items)) {
-      // Each item has: product, cartQuantity, availableStock, size (optional)
-      const updatedCart = response.data.items.map((item) => ({
-        product: item.product,
-        cartQuantity: item.cartQuantity,
-        availableStock: item.availableStock,
-        size: item.size ?? null,
-        _id: item._id,
-      }));
-
-      const totalCount = updatedCart.reduce(
-        (sum, item) => sum + (item.cartQuantity ?? 0),
-        0
-      );
-      set({ cart: updatedCart, cartCount: totalCount });
-    } else {
-      set({ cart: [], cartCount: 0 });
-    }
-  } catch (error) {
-    set({ cart: [], cartCount: 0 });
-    console.error("Error fetching cart:", error.response?.data || error.message);
-  } finally {
-    set({ loading: false });
-  }
-},
-
-
-  updateCart: async (productId, quantity) => {
+  fetchCart: async () => {
     try {
       set({ loading: true });
       const { userId, token } = useAuthStore.getState();
@@ -103,77 +50,113 @@ const useCartStore = create((set, get) => ({
         return;
       }
 
-      const response = await axios.put(
-        `${import.meta.env.VITE_BASE_URL}/update`,
-        { productId, quantity },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await axios.get(
+        `${BASE}/cart/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+          params: { timestamp: new Date().getTime() },
+        }
       );
 
-      if (response.data.cart) {
-        const totalCount = response.data.cart.items.reduce((sum, item) => sum + item.quantity, 0); // ✅ Calculate total count
-        set({ cart: response.data.cart.items, cartCount: totalCount });
+      if (Array.isArray(response.data.items)) {
+        // Ensure numbers
+        const updatedCart = response.data.items.map((item) => ({
+          product: item.product,
+          cartQuantity: Number(item.cartQuantity),
+          availableStock: Number(item.availableStock),
+          size: item.size ?? null,
+          _id: item._id,
+        }));
+
+        const totalCount = updatedCart.reduce(
+          (sum, item) => sum + (item.cartQuantity ?? 0),
+          0
+        );
+        set({ cart: updatedCart, cartCount: totalCount });
       } else {
-        console.warn("Unexpected API response format:", response.data);
-        get().fetchCart();
+        set({ cart: [], cartCount: 0 });
       }
     } catch (error) {
-      console.error("Error updating cart:", error.response?.data || error.message);
-      get().fetchCart();
+      set({ cart: [], cartCount: 0 });
+      console.error("Error fetching cart:", error.response?.data || error.message);
     } finally {
       set({ loading: false });
     }
   },
 
-  removeFromCart: async (product) => {
+  updateCart: async (productId, quantity, size = null) => {
+    try {
+      set({ loading: true });
+      const { userId, token } = useAuthStore.getState();
+
+      if (!token || !userId) {
+        console.error("User not authenticated. Please log in.");
+        return;
+      }
+
+      // Always send as number!
+      const safeQuantity = Number(quantity);
+
+      const response = await axios.put(
+        `${BASE}/update`,
+        { productId, quantity: safeQuantity, size },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      await get().fetchCart();
+    } catch (error) {
+      console.log(error);
+      
+      await get().fetchCart();
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  removeFromCart: async (product, size = null) => {
     set((state) => ({
-      cart: state.cart.filter((item) => item.product._id !== product),
-      cartCount: state.cartCount - 1, // ✅ Update cartCount
+      cart: state.cart.filter(
+        (item) =>
+          item.product._id !== product ||
+          (size && item.size !== size)
+      ),
+      cartCount: state.cartCount - 1,
     }));
 
     try {
       set({ loading: true });
       const { userId, token } = useAuthStore.getState();
-      if (!token || !userId) {
-        
-        console.error("User not authenticated. Please log in.");
-        return;
-      }
+      if (!token || !userId) return;
 
-      const response = await axios.delete(
-        `${import.meta.env.VITE_BASE_URL}/remove/${product}?userId=${userId}`,
+      // Accepts size for unique cart row handling
+      await axios.delete(
+        `${BASE}/remove/${product}?userId=${userId}&size=${size ?? ""}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      if (response.status === 200) {
-        await get().fetchCart();
-      } else {
-        console.warn("Unexpected API response format:", response.data);
-        get().fetchCart();
-      }
+      await get().fetchCart();
     } catch (error) {
-      console.error("Error removing from cart:", error.response?.data || error.message);
-      get().fetchCart();
+      console.log(error);
+      
+      await get().fetchCart();
     } finally {
       set({ loading: false });
     }
   },
 
   clearCart: async () => {
-    set({ cart: [], cartCount: 0 }); // ✅ Clear cart and reset count
-
+    set({ cart: [], cartCount: 0 });
     try {
       set({ loading: true });
       const { userId, token } = useAuthStore.getState();
-      if (!token || !userId) {
-        console.error("User not authenticated. Please log in.");
-        return;
-      }
-
-      await axios.delete(`${import.meta.env.VITE_BASE_URL}/clear-cart/${userId}`, {
+      if (!token || !userId) return;
+      await axios.delete(`${BASE}/clear-cart/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-    } catch (error) {
-      console.error("Error clearing cart:", error.response?.data || error.message);
+    } catch (error) {console.log(error);
     } finally {
       set({ loading: false });
     }
