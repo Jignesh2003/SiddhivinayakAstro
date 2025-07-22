@@ -20,6 +20,7 @@ const useCartStore = create((set, get) => ({
         return;
       }
 
+      await get().fetchCart();
       const state = get();
       const cartItem = state.cart.find(
         (item) =>
@@ -48,7 +49,7 @@ const useCartStore = create((set, get) => ({
         cart: items,
         cartCount: items.reduce((sum, i) => sum + Number(i.cartQuantity ?? i.quantity), 0),
       });
-
+      console.log("🛒 Cart after add:", get().cart);
       toast.success("Added to cart!");
       return data;
 
