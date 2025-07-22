@@ -44,15 +44,49 @@ export const getCart = async (req, res) => {
       return res.status(404).json({ message: "Cart not found" });
     }
 
+    // Build cart with per-item live stock
+    const cartWithStock = cart.items.map(item => {
+      // Find matching stock entry by size if present; fallback to first stock if not using sizes
+      let availableStock = 0;
+      if (item.product && Array.isArray(item.product.stock)) {
+        if (item.size) {
+          // Look for exact size match
+          const stockEntry = item.product.stock.find(s => s.size === item.size);
+          availableStock = stockEntry ? stockEntry.quantity : 0;
+        } else {
+          // No size: fallback to first stock entry
+          availableStock = item.product.stock[0]?.quantity || 0;
+        }
+      }
+      return {
+        product: {
+          _id: item.product._id,
+          name: item.product.name,
+          price: item.product.price,
+          image: item.product.image,
+          // ...add any other fields you want
+        },
+        cartQuantity: item.quantity,
+        size: item.size || null,
+        availableStock,
+      };
+    });
+
     res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     res.set("Pragma", "no-cache");
     res.set("Expires", "0");
 
-    res.json(cart);
+    return res.json({
+      items: cartWithStock,
+      cartId: cart._id,
+      totalPrice: cart.totalPrice, // if you store it
+      // ...other cart-level info if needed
+    });
   } catch (error) {
     res.status(500).json({ message: "Error fetching cart", error: error.message });
   }
 };
+
 
 // 📌 Remove item from cart
 export const removeFromCart = async (req, res) => {

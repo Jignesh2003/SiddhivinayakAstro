@@ -42,46 +42,56 @@ const useCartStore = create((set, get) => ({
     }
   },
 
-  fetchCart: async () => {
-    try {
-      set({ loading: true });
-      const { userId, token } = useAuthStore.getState();
+ fetchCart: async () => {
+  try {
+    set({ loading: true });
+    const { userId, token } = useAuthStore.getState();
 
-      if (!token || !userId) {
-        console.error("User not authenticated. Please log in.");
-        return;
-      }
+    if (!token || !userId) {
+      console.error("User not authenticated. Please log in.");
+      return;
+    }
 
-      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/cart/${userId}`, {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BASE_URL}/cart/${userId}`,
+      {
         headers: {
           Authorization: `Bearer ${token}`,
           "Cache-Control": "no-cache",
           Pragma: "no-cache",
         },
         params: { timestamp: new Date().getTime() },
-      });
-
-      console.log("Cart API Response:", response.data);
-
-      if (response.data.userId === userId) {
-        const updatedCart = response.data.items.map((item) => ({
-          product: item.product,
-          quantity: item.quantity,
-          _id: item._id,
-        }));
-
-        const totalCount = updatedCart.reduce((sum, item) => sum + item.quantity, 0); // ✅ Calculate total count
-        set({ cart: updatedCart, cartCount: totalCount });
-      } else {
-        console.warn("Mismatched user cart detected! Clearing cart.");
-        set({ cart: [], cartCount: 0 });
       }
-    } catch (error) {
-      console.error("Error fetching cart:", error.response?.data || error.message);
-    } finally {
-      set({ loading: false });
+    );
+
+    console.log("Cart API Response:", response.data);
+
+    if (Array.isArray(response.data.items)) {
+      // Each item has: product, cartQuantity, availableStock, size (optional)
+      const updatedCart = response.data.items.map((item) => ({
+        product: item.product,
+        cartQuantity: item.cartQuantity,
+        availableStock: item.availableStock,
+        size: item.size ?? null,
+        _id: item._id,
+      }));
+
+      const totalCount = updatedCart.reduce(
+        (sum, item) => sum + (item.cartQuantity ?? 0),
+        0
+      );
+      set({ cart: updatedCart, cartCount: totalCount });
+    } else {
+      set({ cart: [], cartCount: 0 });
     }
-  },
+  } catch (error) {
+    set({ cart: [], cartCount: 0 });
+    console.error("Error fetching cart:", error.response?.data || error.message);
+  } finally {
+    set({ loading: false });
+  }
+},
+
 
   updateCart: async (productId, quantity) => {
     try {

@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { logTransactionToPostgres } from "../utils/logTransaction.js";
 import Order from "../models/Order.js";
+import Product from "../models/Product.js"; // ← Make sure this line is present
 
 export const verifyPayment = async (req, res) => {
   try {
@@ -107,9 +108,11 @@ export const verifyPayment = async (req, res) => {
 
     const mongoUpdate = statusMap[paymentStatus];
 
+    let updated = null;
+
     if (mongoUpdate) {
       try {
-        const updated = await Order.findOneAndUpdate(
+        updated = await Order.findOneAndUpdate(
           { customOrderId: orderId },
           mongoUpdate,
           { new: true }
@@ -125,6 +128,39 @@ export const verifyPayment = async (req, res) => {
       }
     } else {
       console.log(`ℹ️ Payment status '${paymentStatus}' not mapped to MongoDB update`);
+    }
+
+    // --- DEDUCT STOCK IF PAYMENT SUCCESS ---
+    if (paymentStatus === "SUCCESS" && updated) {
+      try {
+        for (const item of updated.items) {
+          // If you have a specific stock structure, adjust accordingly:
+          const incRes = await Product.findOneAndUpdate(
+            {
+              _id: item.product,
+              "stock.quantity": { $gte: item.quantity }
+            },
+            {
+              $inc: { "stock.$.quantity": -item.quantity }
+            },
+            { new: true }
+          );
+
+          if (!incRes) {
+            console.warn(
+              `⚠️ Insufficient stock for product ${item.product}; not deducted`
+            );
+            // optional: handle partial stock deductions or rollback
+          } else {
+            console.log(
+              `✅ Deducted ${item.quantity} from stock for product ${item.product}`
+            );
+          }
+        }
+      } catch (stockErr) {
+        console.error("❌ Error deducting stock in verifyPayment:", stockErr);
+        // You can choose to alert, retry, or mark order for manual review here
+      }
     }
 
     return res.status(200).send("✅ Webhook processed");

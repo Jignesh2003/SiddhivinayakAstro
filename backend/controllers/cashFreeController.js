@@ -2,8 +2,11 @@ import axios from "axios";
 import User from "../models/User.js"; // assuming you have a User model
 import Order from "../models/Order.js"; // Make sure this is imported
 import { v4 as uuidv4 } from "uuid";
+import Product from "../models/Product.js";
 
 export const createCashfreeOrder = async (req, res) => {
+  const session = await Order.startSession();
+  session.startTransaction();
   try {
     const { amount, shippingAddress, items } = req.body;
     const userId = req.user?.id;
@@ -30,18 +33,51 @@ export const createCashfreeOrder = async (req, res) => {
 
     const customOrderId = `PREORDER_${userId}_${Date.now()}`;
 
-    // ✅ Step 1: Save order to MongoDB
-    const newOrder = await Order.create({
-      user: userId,
-      items,
-      totalAmount: amount,
-      paymentMethod: "online",
-      paymentStatus: "Initiated",
-      shippingAddress,
-      customOrderId, // ✅ Required for webhook mapping
-    });
+    // ✅ Step 1: Double-check stock and deduct
+    const updatedOrderItems = [];
+    for (const item of items) {
+      // Atomically check and decrement stock
+      const product = await Product.findOneAndUpdate(
+        {
+          _id: item.product,
+          "stock.quantity": { $gte: item.quantity }
+        },
+        {
+          $inc: { "stock.$.quantity": -item.quantity }
+        },
+        { new: true, session }
+      );
+      if (!product) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({ message: `Not enough stock for product ${item.product}` });
+      }
+      updatedOrderItems.push({
+        product: product._id,
+        quantity: item.quantity
+      });
+    }
 
-    // ✅ Step 2: Create Cashfree order
+    // ✅ Step 2: Save order to MongoDB
+    const newOrder = await Order.create(
+      [{
+        user: userId,
+        items: updatedOrderItems,
+        totalAmount: amount,
+        paymentMethod: "online",
+        paymentStatus: "Initiated",
+        orderStatus: "Pending",
+        shippingAddress,
+        customOrderId,
+      }],
+      { session }
+    );
+
+    // ✅ Step 3: Commit transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    // Step 4: Prepare Cashfree order payload
     const payload = {
       order_id: customOrderId,
       order_amount: Number(amount),
@@ -95,6 +131,8 @@ export const createCashfreeOrder = async (req, res) => {
     });
 
   } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
     const errorData = err.response?.data || err.message || err;
     console.error("❌ Cashfree order creation failed:", errorData);
     return res.status(500).json({
