@@ -49,6 +49,8 @@ const Cart = () => {
       toast.success("Cart updated successfully!", { position: "top-right" });
       await fetchCart();
     } catch (error) {
+      console.log(error);
+      
       toast.error("Failed to update cart.", { position: "top-right" });
     }
   };
@@ -59,6 +61,8 @@ const Cart = () => {
       toast.success("Item removed from cart!", { position: "top-right" });
       await fetchCart();
     } catch (error) {
+      console.log(error);
+      
       toast.error("Failed to remove item.", { position: "top-right" });
     }
   };

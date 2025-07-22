@@ -81,7 +81,7 @@ export default function Checkout() {
           user: userId,
           items: cart.map((item) => ({
             product: item.product._id,
-            quantity: item.quantity,
+            quantity: Number(item.quantity),
           })),
           totalAmount,
           paymentMethod: "cod",
