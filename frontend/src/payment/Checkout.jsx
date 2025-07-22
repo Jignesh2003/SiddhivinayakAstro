@@ -23,6 +23,7 @@ export default function Checkout() {
     landmark: "",
   });
 
+  // Load Cashfree payment SDK
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
@@ -44,41 +45,57 @@ export default function Checkout() {
     setShippingAddress((prev) => ({ ...prev, [name]: value }));
   };
 
-  // HERE IS THE UPDATED VALIDATION BLOCK
-  const validateInputs = () => {
+  // ✅ Fetch live stock for each product
+  const fetchLiveStock = async (productId) => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_BASE_URL}/products/${productId}`);
+      return res.data;
+    } catch (error) {
+      console.error("❌ Failed to fetch live product:", productId, error);
+      return null;
+    }
+  };
+
+  // ✅ Validate inputs and live stock before order
+  const validateInputs = async () => {
     if (!userId) throw new Error("User not logged in");
     if (!cart.length) throw new Error("Cart is empty");
+
     for (const [key, value] of Object.entries(shippingAddress)) {
       if (!value) throw new Error(`Please fill in ${key}`);
     }
+
     if (shippingAddress.phone.length !== 10) {
       throw new Error("Phone number must be 10 digits");
     }
-    cart.forEach((item) => {
-      let available = 0;
-      // For size-based products
-      if (item.product.sizeType !== "Quantity" && item.size) {
-        const variant = item.product.stock?.find((v) => v.size === item.size);
-        available = variant ? Number(variant.quantity) : 0;
-      }
-      // For "Quantity"-type (your case)
-      else {
-        available = Array.isArray(item.product.stock)
-          ? item.product.stock.reduce((sum, v) => sum + Number(v.quantity || 0), 0)
-          : Number(item.product.stock?.quantity ?? 0);
-      }
+
+    // Validate each cart item against fresh product stock
+    for (const item of cart) {
       const quantity = Number(item.quantity ?? 1);
-      // DEBUG (optional, remove in prod): 
-      console.log(`Validating: ${item.product.name}, want ${quantity}, available ${available}`);
+      const product = await fetchLiveStock(item.product._id);
+      if (!product) throw new Error(`Failed to verify "${item.product.name}"`);
+
+      let available = 0;
+
+      if (product.sizeType !== "Quantity" && item.size) {
+        const variant = product.stock.find(v => v.size === item.size);
+        available = variant ? Number(variant.quantity) : 0;
+      } else {
+        available = Array.isArray(product.stock)
+          ? product.stock.reduce((sum, s) => sum + Number(s.quantity || 0), 0)
+          : Number(product.stock?.quantity ?? 0);
+      }
+
+      console.log(`Validating: ${product.name}, want ${quantity}, available ${available}`);
 
       if (!Number.isFinite(quantity) || quantity < 1)
         throw new Error(
-          `Cart item "${item.product?.name}" has invalid quantity (${item.quantity})`
+          `Cart item "${product.name}" has invalid quantity (${item.quantity})`
         );
       if (quantity > available) {
-        throw new Error(`Only ${available} left of "${item.product?.name}"`);
+        throw new Error(`Only ${available} left of "${product.name}"`);
       }
-    });
+    }
   };
 
   const handleOrderSubmit = async () => {
@@ -86,13 +103,14 @@ export default function Checkout() {
     setLoading(true);
 
     try {
-      await fetchCart(); // Ensure cart/product data is fresh from server
-      validateInputs();
+      await fetchCart(); // Ensure cart is refreshed
+      await validateInputs(); // ❗ Live product validation
 
       const totalAmount = cart.reduce(
         (sum, item) => sum + item.product.price * Number(item.quantity ?? 1),
         0
       );
+
       const orderItems = cart.map((item) => ({
         product: item.product._id,
         quantity: Number(item.quantity ?? 1),
@@ -114,21 +132,17 @@ export default function Checkout() {
           `${import.meta.env.VITE_BASE_URL}/place-order`,
           orderData,
           {
-            headers: {
-              Authorization: token ? `Bearer ${token}` : "",
-            },
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
 
         toast.success("✅ Order placed with Cash on Delivery!");
         clearCart();
-        navigate(
-          `/cod-confirmation?order_id=${data.order._id}&paymentStatus=${data.paymentStatus}`
-        );
+        navigate(`/cod-confirmation?order_id=${data.order._id}&paymentStatus=${data.paymentStatus}`);
         return;
       }
 
-      // ONLINE PAYMENT
+      // ✅ Online Payment (Cashfree)
       if (!cashfreeInstance) throw new Error("Cashfree SDK not ready");
 
       const cfRes = await axios.post(
@@ -139,15 +153,12 @@ export default function Checkout() {
           items: orderItems,
         },
         {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : "",
-          },
+          headers: { Authorization: token ? `Bearer ${token}` : "" },
         }
       );
 
       const { payment_session_id } = cfRes.data;
-      if (!payment_session_id)
-        throw new Error("No payment session ID received");
+      if (!payment_session_id) throw new Error("No payment session ID received");
 
       cashfreeInstance.checkout({
         paymentSessionId: payment_session_id,
@@ -156,11 +167,7 @@ export default function Checkout() {
 
     } catch (err) {
       console.error("❌ Checkout error:", err);
-      toast.error(
-        err?.response?.data?.message ||
-          err.message ||
-          "Something went wrong"
-      );
+      toast.error(err?.response?.data?.message || err.message || "Checkout failed.");
       if (err.message && err.message.includes("not logged in")) logout();
     } finally {
       setLoading(false);
@@ -193,16 +200,14 @@ export default function Checkout() {
             type="radio"
             checked={selectedMethod === "cod"}
             onChange={() => setSelectedMethod("cod")}
-          />
-          Cash on Delivery
+          /> Cash on Delivery
         </label>
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="radio"
             checked={selectedMethod === "online"}
             onChange={() => setSelectedMethod("online")}
-          />
-          UPI / Card (via Cashfree)
+          /> UPI / Card (via Cashfree)
         </label>
       </div>
 
