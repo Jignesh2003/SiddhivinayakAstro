@@ -44,6 +44,7 @@ export default function Checkout() {
     setShippingAddress((prev) => ({ ...prev, [name]: value }));
   };
 
+  // HERE IS THE UPDATED VALIDATION BLOCK
   const validateInputs = () => {
     if (!userId) throw new Error("User not logged in");
     if (!cart.length) throw new Error("Cart is empty");
@@ -55,13 +56,21 @@ export default function Checkout() {
     }
     cart.forEach((item) => {
       let available = 0;
+      // For size-based products
       if (item.product.sizeType !== "Quantity" && item.size) {
         const variant = item.product.stock?.find((v) => v.size === item.size);
-        available = variant ? variant.quantity : 0;
-      } else {
-        available = Number(item.product?.stock?.[0]?.quantity ?? 0);
+        available = variant ? Number(variant.quantity) : 0;
+      }
+      // For "Quantity"-type (your case)
+      else {
+        available = Array.isArray(item.product.stock)
+          ? item.product.stock.reduce((sum, v) => sum + Number(v.quantity || 0), 0)
+          : Number(item.product.stock?.quantity ?? 0);
       }
       const quantity = Number(item.quantity ?? 1);
+      // DEBUG (optional, remove in prod): 
+      // console.log(`Validating: ${item.product.name}, want ${quantity}, available ${available}`);
+
       if (!Number.isFinite(quantity) || quantity < 1)
         throw new Error(
           `Cart item "${item.product?.name}" has invalid quantity (${item.quantity})`
@@ -77,9 +86,7 @@ export default function Checkout() {
     setLoading(true);
 
     try {
-      // 🔄 Always refresh cart before validating/ordering!
-      await fetchCart();
-
+      await fetchCart(); // Ensure cart/product data is fresh from server
       validateInputs();
 
       const totalAmount = cart.reduce(
@@ -129,7 +136,7 @@ export default function Checkout() {
         {
           amount: totalAmount,
           shippingAddress,
-          items: orderItems, // always numbers
+          items: orderItems,
         },
         {
           headers: {
