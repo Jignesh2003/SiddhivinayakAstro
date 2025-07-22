@@ -75,6 +75,8 @@ const useCartStore = create((set, get) => ({
           params: { timestamp: new Date().getTime() },
         }
       );
+      console.log(response);
+      
       if (Array.isArray(response.data.items)) {
         const updatedCart = response.data.items.map((item) => ({
           product: item.product,
@@ -89,6 +91,8 @@ const useCartStore = create((set, get) => ({
         set({ cart: [], cartCount: 0 });
       }
     } catch (error) {
+      console.log(error);
+      
       set({ cart: [], cartCount: 0 });
     } finally {
       set({ loading: false });
@@ -114,6 +118,8 @@ const useCartStore = create((set, get) => ({
       );
       await get().fetchCart();
     } catch (error) {
+      console.log(error);
+      
       await get().fetchCart();
     } finally {
       set({ loading: false });
@@ -139,6 +145,8 @@ const useCartStore = create((set, get) => ({
       );
       await get().fetchCart();
     } catch (error) {
+      console.log(error);
+      
       await get().fetchCart();
     } finally {
       set({ loading: false });
@@ -154,7 +162,8 @@ const useCartStore = create((set, get) => ({
       await axios.delete(`${BASE}/clear-cart/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-    } catch (error) {} finally {
+    } catch (error) {console.log(error);
+    } finally {
       set({ loading: false });
     }
   },
