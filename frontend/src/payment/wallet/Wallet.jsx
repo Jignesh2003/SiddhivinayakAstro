@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import useAuthStore from "@/store/useAuthStore";
 
 const API_BASE = import.meta.env.VITE_PAYMENT_URL;
+const {token} = useAuthStore.getState()
 
 function Wallet() {
   const [balance, setBalance] = useState(0);
@@ -13,15 +15,11 @@ function Wallet() {
     const fetchWalletData = async () => {
       setLoading(true);
       try {
-        const walletRes = await axios.get(`${API_BASE}/api/wallet/me`, {
-          withCredentials: true,
-        });
+        const walletRes = await axios.get(`${API_BASE}/api/wallet/me`, {headers:{Authorization:`Bearer ${token}`}});
         setBalance(walletRes.data.balance);
         setCurrency(walletRes.data.currency);
 
-        const txnsRes = await axios.get(`${API_BASE}/api/wallet/transactions`, {
-          withCredentials: true,
-        });
+        const txnsRes = await axios.get(`${API_BASE}/api/wallet/transactions`, {headers : {Authorization :`Bearer ${token}`}});
         setTransactions(txnsRes.data);
       } catch (err) {
         console.error("Wallet error:", err);
