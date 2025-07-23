@@ -95,7 +95,7 @@ function Wallet() {
                       txn.type === "credit" ? "text-green-600" : "text-red-500"
                     }`}
                   >
-                    {currency} {txn.amount.toFixed(2)}
+                    {currency} {Number(txn.amount.toFixed(2))}
                   </td>
                   <td className="py-2 px-2">{txn.status}</td>
                 </tr>
