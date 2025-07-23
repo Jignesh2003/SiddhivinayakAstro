@@ -84,6 +84,36 @@ const Navbar = () => {
     setIsPlaying(!isPlaying);
   };
 
+  // --- Navigation Menus ---
+  const userLinks = (
+    <>
+      <Link to="/my-orders" className="text-white hover:text-purple-400 text-lg">My Orders</Link>
+      <Link to="/wishlist" className="text-white hover:text-purple-400 text-lg">Loved it</Link>
+      <Link to="/cart" className="relative text-white hover:text-purple-400">
+        <ShoppingCart size={20} />
+        {cartCount > 0 && (
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">
+            {cartCount}
+          </span>
+        )}
+      </Link>
+      <Link to="/wallet" className="flex items-center gap-1 text-white hover:text-purple-400 text-lg">
+        <Wallet size={20} /> Wallet
+      </Link>
+    </>
+  );
+
+  const astroLinks = (
+    <>
+      <Link to="/astrologer-dashboard" className="text-white hover:text-purple-400 text-lg">Astrologer Dashboard</Link>
+      <Link to="/astrologer-chat-request" className="text-white hover:text-purple-400 text-lg">Chat Requests</Link>
+      <Link to="/wallet" className="flex items-center gap-1 text-white hover:text-purple-400 text-lg">
+        <Wallet size={20} /> Wallet
+      </Link>
+    </>
+  );
+
+  // --- Main JSX ---
   return (
     <>
       {loading && (
@@ -128,34 +158,10 @@ const Navbar = () => {
             <Link to="/panchang-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Panchang</Link>
             <Link to="/life-path-number" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Life Path Number</Link>
 
-
-
-
-            {isAuthenticated && role !== "astrologer" && (
-              <>
-                <Link to="/my-orders" className="text-white hover:text-purple-400 text-lg">My Orders</Link>
-                <Link to="/wishlist" className="text-white hover:text-purple-400 text-lg">Loved it</Link>
-                <Link to="/cart" className="relative text-white hover:text-purple-400">
-                  <ShoppingCart size={20} />
-                  {cartCount > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">
-                      {cartCount}
-                    </span>
-                  )}
-                </Link>
-                <Link to="/wallet" className="text-white hover:text-purple-400 text-lg"> <Wallet size={20} />Wallet</Link>
-
-              </>
-            )}
-
-            {isAuthenticated && role === "astrologer" && (
-              <>
-                <Link to="/astrologer-dashboard" className="text-white hover:text-purple-400 text-lg">Astrologer Dashboard</Link>
-                <Link to="/astrologer-chat-request" className="text-white hover:text-purple-400 text-lg">Chat Requests</Link>
-                <Link to="/wallet" className="text-white hover:text-purple-400 text-lg">Wallet</Link>
-
-              </>
-            )}
+            {isAuthenticated
+              ? role !== "astrologer" ? userLinks : astroLinks
+              : null
+            }
 
             {isAuthenticated ? (
               <>
@@ -167,14 +173,6 @@ const Navbar = () => {
                 <button onClick={handleLogout} className="text-white hover:text-red-500 text-lg">
                   Logout
                 </button>
-                <Link
-                  to="/wallet"
-                  className="flex items-center gap-2 text-white hover:text-red-500 text-lg"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <Wallet size={20} />
-                  Wallet
-                </Link>
               </>
             ) : (
               <>
@@ -206,29 +204,29 @@ const Navbar = () => {
             <Link to="/products" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Products</Link>
             <Link to="/daily-prediction" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Daily Prediction</Link>
             <Link to="/kundli-details" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Kundli</Link>
-            <Link to="/matching-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Kundli Matching</Link>
-            <Link to="/panchang-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Panchang</Link>
-            <Link to="/life-path-number" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Life Path Number</Link>
+            <Link to="/matching-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium" onClick={() => setIsOpen(false)}>Kundli Matching</Link>
+            <Link to="/panchang-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium" onClick={() => setIsOpen(false)}>Panchang</Link>
+            <Link to="/life-path-number" className="text-yellow-400 hover:text-purple-300 text-lg font-medium" onClick={() => setIsOpen(false)}>Life Path Number</Link>
 
-
-            {isAuthenticated && role !== "astrologer" && (
-              <>
-                <Link to="/my-orders" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>My Orders</Link>
-                <Link to="/wishlist" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Loved it</Link>
-                <Link to="/cart" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Cart</Link>
-                <Link to="/wallet" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}><Wallet size={20} />Wallet</Link>
-
-              </>
-            )}
-
-            {isAuthenticated && role === "astrologer" && (
-              <>
-                <Link to="/astrologer-dashboard" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Astrologer Dashboard</Link>
-                <Link to="/astrologer-chat-request" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Chat Requests</Link>
-                <Link to="/wallet" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Wallet</Link>
-
-              </>
-            )}
+            {isAuthenticated
+              ? role !== "astrologer"
+                ? (
+                  <>
+                    <Link to="/my-orders" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>My Orders</Link>
+                    <Link to="/wishlist" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Loved it</Link>
+                    <Link to="/cart" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Cart</Link>
+                    <Link to="/wallet" className="flex items-center gap-1 text-white hover:text-purple-500 text-lg" onClick={() => setIsOpen(false)}><Wallet size={20} /> Wallet</Link>
+                  </>
+                )
+                : (
+                  <>
+                    <Link to="/astrologer-dashboard" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Astrologer Dashboard</Link>
+                    <Link to="/astrologer-chat-request" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Chat Requests</Link>
+                    <Link to="/wallet" className="flex items-center gap-1 text-white hover:text-purple-500 text-lg" onClick={() => setIsOpen(false)}><Wallet size={20} /> Wallet</Link>
+                  </>
+                )
+              : null
+            }
 
             {isAuthenticated ? (
               <>
@@ -240,14 +238,6 @@ const Navbar = () => {
                 <button onClick={() => { handleLogout(); setIsOpen(false); }} className="text-white hover:text-red-500 text-lg">
                   Logout
                 </button>
-                <Link
-                  to="/wallet"
-                  className="flex items-center gap-2 text-white hover:text-red-500 text-lg"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <Wallet size={20} />
-                  Wallet
-                </Link>
               </>
             ) : (
               <>
@@ -255,14 +245,12 @@ const Navbar = () => {
                 <Link to="/sign-up" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Sign Up</Link>
               </>
             )}
-
             <button onClick={toggleMusic} className="text-white text-lg">
               <Music size={20} className={`${isPlaying ? "text-yellow-400" : "text-white"}`} />
             </button>
           </div>
         )}
       </nav>
-
       {/* Prevent content from being hidden behind nav */}
       <div className="h-24" />
     </>
