@@ -47,7 +47,7 @@ function Wallet() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="text-3xl font-semibold text-gray-900">
-            {currency} {Number(balance.toFixed(2))}
+            {currency} {Number(balance).toFixed(2)}
           </div>
           <div className="text-sm text-gray-500">Available Balance</div>
         </div>
@@ -95,7 +95,7 @@ function Wallet() {
                       txn.type === "credit" ? "text-green-600" : "text-red-500"
                     }`}
                   >
-                    {currency} {Number(txn.amount.toFixed(2))}
+                    {currency} {Number(txn.amount).toFixed(2)}
                   </td>
                   <td className="py-2 px-2">{txn.status}</td>
                 </tr>
