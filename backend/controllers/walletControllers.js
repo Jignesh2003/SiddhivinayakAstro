@@ -1,11 +1,11 @@
-import db from '../config/postgresDb.js'; // Adjust path as needed
+import PostgresDb from '../config/postgresDb.js'; // Adjust path as needed
 
 // show wallet current money
 export const myWallet = async (req, res) => {
   const userId = req.user.id; // assuming auth middleware sets req.user
 
   try {
-    const { rows } = await db.query(
+    const { rows } = await PostgresDb.query(
       `SELECT balance, currency, status, created_at, updated_at 
        FROM wallet WHERE user_id = $1`,
       [userId]
@@ -28,13 +28,13 @@ export const listWalletTransactions = async (req, res) => {
 
   try {
     // First get wallet id
-    const walletResult = await db.query(`SELECT id FROM wallet WHERE user_id = $1`, [userId]);
+    const walletResult = await PostgresDb.query(`SELECT id FROM wallet WHERE user_id = $1`, [userId]);
     if (walletResult.rows.length === 0) return res.json([]);
 
     const walletId = walletResult.rows[0].id;
 
     // Get transactions for this wallet
-    const { rows } = await db.query(
+    const { rows } = await PostgresDb.query(
       `SELECT id, chat_session_id, type, amount, status, description, created_at 
        FROM wallet_transaction WHERE wallet_id = $1 ORDER BY created_at DESC LIMIT 50`,
       [walletId]
@@ -55,13 +55,13 @@ export const addMoneyToWallet =  async (req, res) => {
 
   try {
     // Get wallet
-    const walletResult = await db.query(`SELECT id, balance FROM wallet WHERE user_id = $1`, [userId]);
+    const walletResult = await PostgresDb.query(`SELECT id, balance FROM wallet WHERE user_id = $1`, [userId]);
     if (!walletResult.rows.length) return res.status(404).json({ error: "Wallet not found" });
 
     const wallet = walletResult.rows[0];
 
     // Insert transaction record as credit, pending initially
-    const txnResult = await db.query(
+    const txnResult = await PostgresDb.query(
       `INSERT INTO wallet_transaction (wallet_id, type, amount, status, description, from_user_id, to_user_id)
        VALUES ($1,'credit',$2,'completed',$3,$4,$4) RETURNING *`,
       [wallet.id, amount, `Top-up via ${paymentReference}`, userId]
@@ -69,7 +69,7 @@ export const addMoneyToWallet =  async (req, res) => {
 
     // Update wallet balance
     const newBalance = Number(wallet.balance) + Number(amount);
-    await db.query(`UPDATE wallet SET balance = $1, updated_at = NOW() WHERE id = $2`, [newBalance, wallet.id]);
+    await PostgresDb.query(`UPDATE wallet SET balance = $1, updated_at = NOW() WHERE id = $2`, [newBalance, wallet.id]);
 
     res.json({ message: "Wallet topped up", newBalance, transaction: txnResult.rows[0] });
   } catch (err) {
@@ -87,7 +87,7 @@ export const withrawFundsFromWallet =  async (req, res) => {
 
   try {
     // Get wallet info
-    const walletResult = await db.query(`SELECT id, balance FROM wallet WHERE user_id = $1`, [userId]);
+    const walletResult = await PostgresDb.query(`SELECT id, balance FROM wallet WHERE user_id = $1`, [userId]);
     if (!walletResult.rows.length) return res.status(404).json({ error: "Wallet not found" });
 
     const wallet = walletResult.rows[0];
@@ -97,7 +97,7 @@ export const withrawFundsFromWallet =  async (req, res) => {
     }
 
     // Insert withdrawal transaction debit
-    const txnResult = await db.query(
+    const txnResult = await PostgresDb.query(
       `INSERT INTO wallet_transaction (wallet_id, type, amount, status, description, from_user_id, to_user_id)
        VALUES ($1, 'debit', $2, 'pending', $3, $4, NULL) RETURNING *`,
       [wallet.id, amount, `Withdrawal requested: ${JSON.stringify(withdrawalDetails)}`, userId]
@@ -105,7 +105,7 @@ export const withrawFundsFromWallet =  async (req, res) => {
 
     // Deduct balance immediately or after approval depending on your flow
     const newBalance = Number(wallet.balance) - Number(amount);
-    await db.query(`UPDATE wallet SET balance = $1, updated_at = NOW() WHERE id = $2`, [newBalance, wallet.id]);
+    await PostgresDb.query(`UPDATE wallet SET balance = $1, updated_at = NOW() WHERE id = $2`, [newBalance, wallet.id]);
 
     res.json({ message: "Withdrawal requested", newBalance, transaction: txnResult.rows[0] });
   } catch (err) {

@@ -6,7 +6,7 @@ import sendEmail from "../utils/sendEmail.js"; // Renamed for clarity
 import crypto from "crypto";
 import Product from "../models/Product.js";
 import { signupValidation ,loginSchema, verifyOtpSchema} from "../validation/userValidation.js";
-import db from '../config/postgresDb.js'
+import PostgresDb from '../config/postgresDb.js'
 
 // ✅ Signup Controller
 export const signupUser = async (req, res) => {
@@ -56,7 +56,7 @@ export const signupUser = async (req, res) => {
     // 🟢 CREATE WALLET in PostgreSQL/Supabase
     // Important: Use newUser._id (Mongo ObjectId as string) as user_id in PostgreSQL
     try {
-      await db.query(
+      await PostgresDb.query(
         `INSERT INTO wallet (user_id, balance, currency, status)
          VALUES ($1, 0.00, 'INR', 'active')`,
         [newUser._id.toString()]

@@ -1,10 +1,10 @@
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import { astrologerListQuerySchema,  } from "../validation/astrologerValidation.js"
+import PostgresDb from '../config/postgresDb.js'
 
 export const astrologerSignup = async (req, res) => {
   try {
-  
     const {
       firstName, lastName, email, phone, password, gender,
       dob, location, expertise, yearsOfExperience, bio,
@@ -15,12 +15,10 @@ export const astrologerSignup = async (req, res) => {
     const existingUser = await User.findOne({
       $or: [{ email }, { phone }],
     });
-
     if (existingUser) {
       let conflictField = "";
       if (existingUser.email === email) conflictField = "Email";
       else if (existingUser.phone === phone) conflictField = "Phone number";
-
       return res
         .status(400)
         .json({ message: `${conflictField} already exists` });
@@ -29,7 +27,7 @@ export const astrologerSignup = async (req, res) => {
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create and save new user
+    // Create and save new astrologer
     const newUser = new User({
       firstName,
       lastName,
@@ -45,14 +43,28 @@ export const astrologerSignup = async (req, res) => {
       languagesSpoken,
       pricePerMinute,
       role,
-      country,city,state
+      country, city, state,
     });
 
     await newUser.save();
 
+    // 🟢 CREATE WALLET for Astrologer in PostgreSQL
+    try {
+      await PostgresDb.query(
+        `INSERT INTO wallet (user_id, balance, currency, status)
+         VALUES ($1, 0.00, 'INR', 'active')`,
+        [newUser._id.toString()]
+      );
+      // Optionally handle duplicate (conflict) wallet, should not happen here.
+    } catch (walletErr) {
+      // Optionally rollback or notify admin of partial failure
+      console.error("Wallet creation error (Astrologer):", walletErr.message);
+      return res.status(500).json({ message: "Signup failed during wallet setup." });
+    }
+
     res
       .status(201)
-      .json({ message: "Signup successful. Please verify your account."});
+      .json({ message: "Signup successful. Please verify your account." });
   } catch (err) {
     console.error("Signup Error:", err);
 
@@ -121,7 +133,6 @@ const updatedUser = await User.findByIdAndUpdate(
     res.status(500).json({ message: "Failed to upload documents" });
   }
 };
-
 
 export const getAstrologerDetails = async (req, res) => {
   const userId = req.user.id;

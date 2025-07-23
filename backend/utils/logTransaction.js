@@ -1,5 +1,5 @@
 // utils/logTransaction.js
-import pool from '../config/postgresDb.js';
+import PostgresDb from '../config/postgresDb.js';
 
 export async function logTransactionToPostgres(transactionData) {
   const {
@@ -50,7 +50,7 @@ export async function logTransactionToPostgres(transactionData) {
       signature,
     ];
 
-    const res = await pool.query(query, values);
+    const res = await PostgresDb.query(query, values);
 
     if (res.rowCount === 0) {
       console.log(`ℹ️ Transaction already logged in Postgres: ${cf_payment_id}`);

@@ -1,8 +1,9 @@
 // postgresDb.js
 import pg from 'pg';
 const { Pool } = pg;
+import { configDotenv } from 'dotenv';
 
-
+configDotenv()
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URI, // or use individual params
   ssl: { rejectUnauthorized: false }, // required for services like Neon
