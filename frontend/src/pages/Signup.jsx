@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import useAuthStore from "../store/useAuthStore";
 import toast from "react-hot-toast";
 import assets from "../assets/assets";
@@ -292,6 +292,12 @@ const Signup = () => {
               </a>
             </p>
           </div>
+             <Link
+            to="/astrologer-signup"
+            className=" block font-semibold text-blue-100 hover:text-yellow-300 text-center text-xl pt-5 text-yellow-500"
+          >
+            Signup as Astrologer
+          </Link>
         </div>
       </div>
     </div>

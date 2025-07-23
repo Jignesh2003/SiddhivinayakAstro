@@ -129,7 +129,6 @@ export const loginUser = async (req, res) => {
   }
 };
 
-
 // ✅ Forgot Password - Generate Reset Token & Send Email
   export const forgotPassword = async (req, res) => {
     try {

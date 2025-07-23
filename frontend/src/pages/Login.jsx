@@ -137,14 +137,9 @@ const Login = () => {
           </form>
 
           {/* Sign-up Links */}
-          <Link to="/sign-up" className="block font-semibold text-blue-100 hover:text-yellow-500 text-center text-xl">
-            Don&apos;t have an account? Sign up as User
-          </Link>
-          <Link
-            to="/astrologer-signup"
-            className="underline block font-semibold text-blue-100 hover:text-yellow-500 text-center text-xl text-yellow-500"
-          >
-            Signup as Astrologer
+          <Link to="/sign-up" className="block font-semibold text-yellow-400 hover:text-yellow-300 text-center text-xl pt-5">
+            Don&apos;t have an account?
+            <h4 className="block font-semibold text-yellow-500 hover:text-yellow-300 text-center text-xl pt-5"> Sign up as User </h4>
           </Link>
         </div>
       </div>

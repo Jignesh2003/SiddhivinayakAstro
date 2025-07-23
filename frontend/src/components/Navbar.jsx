@@ -6,6 +6,7 @@ import {
   Music,
   Loader2,
   ShoppingCart,
+  Wallet,
 } from "lucide-react";
 import assets from "../assets/assets";
 import useAuthStore from "../store/useAuthStore";
@@ -142,7 +143,7 @@ const Navbar = () => {
                     </span>
                   )}
                 </Link>
-                <Link to="/wallet" className="text-white hover:text-purple-400 text-lg">Wallet</Link>
+                <Link to="/wallet" className="text-white hover:text-purple-400 text-lg"> <Wallet size={20} />Wallet</Link>
 
               </>
             )}
@@ -166,6 +167,14 @@ const Navbar = () => {
                 <button onClick={handleLogout} className="text-white hover:text-red-500 text-lg">
                   Logout
                 </button>
+                <Link
+                  to="/wallet"
+                  className="flex items-center gap-2 text-white hover:text-red-500 text-lg"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Wallet size={20} />
+                  Wallet
+                </Link>
               </>
             ) : (
               <>
@@ -207,7 +216,7 @@ const Navbar = () => {
                 <Link to="/my-orders" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>My Orders</Link>
                 <Link to="/wishlist" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Loved it</Link>
                 <Link to="/cart" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Cart</Link>
-                <Link to="/wallet" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Wallet</Link>
+                <Link to="/wallet" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}><Wallet size={20} />Wallet</Link>
 
               </>
             )}
@@ -231,6 +240,14 @@ const Navbar = () => {
                 <button onClick={() => { handleLogout(); setIsOpen(false); }} className="text-white hover:text-red-500 text-lg">
                   Logout
                 </button>
+                <Link
+                  to="/wallet"
+                  className="flex items-center gap-2 text-white hover:text-red-500 text-lg"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Wallet size={20} />
+                  Wallet
+                </Link>
               </>
             ) : (
               <>
