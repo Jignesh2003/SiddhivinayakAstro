@@ -142,6 +142,8 @@ const Navbar = () => {
                     </span>
                   )}
                 </Link>
+                <Link to="/wallet" className="text-white hover:text-purple-400 text-lg">Wallet</Link>
+
               </>
             )}
 
@@ -149,6 +151,8 @@ const Navbar = () => {
               <>
                 <Link to="/astrologer-dashboard" className="text-white hover:text-purple-400 text-lg">Astrologer Dashboard</Link>
                 <Link to="/astrologer-chat-request" className="text-white hover:text-purple-400 text-lg">Chat Requests</Link>
+                <Link to="/wallet" className="text-white hover:text-purple-400 text-lg">Wallet</Link>
+
               </>
             )}
 
@@ -203,6 +207,8 @@ const Navbar = () => {
                 <Link to="/my-orders" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>My Orders</Link>
                 <Link to="/wishlist" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Loved it</Link>
                 <Link to="/cart" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Cart</Link>
+                <Link to="/wallet" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Wallet</Link>
+
               </>
             )}
 
@@ -210,6 +216,8 @@ const Navbar = () => {
               <>
                 <Link to="/astrologer-dashboard" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Astrologer Dashboard</Link>
                 <Link to="/astrologer-chat-request" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Chat Requests</Link>
+                <Link to="/wallet" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Wallet</Link>
+
               </>
             )}
 
@@ -245,7 +253,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-
-
-// drop down hover kudnli all paid service under this name
-// logo round change , siddhi vinayak single 

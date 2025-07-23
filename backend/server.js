@@ -46,7 +46,7 @@ app.use("/api/astrologers", astroRoutes);
 app.use("/api/chat", chatRoutes);
 app.use('/api/horoscope', horoscopeRoutes);
 app.use('/api/astrology',astrologyRoutes)
-app.use("/api/payment", paymentRoutes);
+app.use("/api/payment", paymentRoutes);// orders
 
 app.use((req, res, next) => {
   res.status(404).json({ message: "Route not found" });

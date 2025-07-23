@@ -6,14 +6,13 @@ import sendEmail from "../utils/sendEmail.js"; // Renamed for clarity
 import crypto from "crypto";
 import Product from "../models/Product.js";
 import { signupValidation ,loginSchema, verifyOtpSchema} from "../validation/userValidation.js";
-
+import db from '../config/postgresDb.js'
 
 // ✅ Signup Controller
 export const signupUser = async (req, res) => {
   try {
     const { error, value } = signupValidation.validate(req.body, { abortEarly: false });
-   if (error) {
-      // Collect all error messages
+    if (error) {
       const errors = error.details.map((err) => err.message);
       return res.status(400).json({ message: 'Validation failed', errors });
     }
@@ -53,7 +52,24 @@ export const signupUser = async (req, res) => {
     });
 
     await newUser.save();
-    res.status(201).json({ message: "Signup successfully!" });
+
+    // 🟢 CREATE WALLET in PostgreSQL/Supabase
+    // Important: Use newUser._id (Mongo ObjectId as string) as user_id in PostgreSQL
+    try {
+      await db.query(
+        `INSERT INTO wallet (user_id, balance, currency, status)
+         VALUES ($1, 0.00, 'INR', 'active')`,
+        [newUser._id.toString()]
+      );
+      // Optionally: handle conflict if wallet already exists (should not happen here)
+    } catch (walletErr) {
+      // Optionally roll back user if wallet fails? Depends on business rules
+      console.error("Wallet creation error:", walletErr.message);
+      // You may want to log, alert, or even undo newUser in case of wallet failure
+      return res.status(500).json({ message: "Signup failed during wallet setup." });
+    }
+
+    res.status(201).json({ message: "Signup successful and wallet created!" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

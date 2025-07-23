@@ -54,6 +54,7 @@ import LifePathNumber from '../src/astrology/LifePathNumber';
 import CancellationRefundPolicy from "@/pages/CancellationRefundPolicy";
 import ShippingDeliveryPolicy from "@/pages/ShippingDeliveryPolicy";
 import CodOrderConfirmation from "../src/pages/CodOrderConfirmation";
+import Wallet from "@/payment/wallet/Wallet";
 
 const AppRoutes = () => {
   return (
@@ -118,6 +119,8 @@ const AppRoutes = () => {
           <Route path="/panchang-form" element={<PanchangForm />} />
           <Route path="/panchang-result" element={<PanchangResult />} />
           <Route path="/cod-confirmation" element={<CodOrderConfirmation />} />
+          <Route path="/wallet" element={<Wallet />} />
+
 
         </Route>
 
