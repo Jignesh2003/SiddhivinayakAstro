@@ -10,9 +10,9 @@ router.post("/cashfree/create-order", authMiddleware, createCashfreeOrder);
 router.get("/cashfree/check-status", authMiddleware, checkPaymentStatus)
 
 //wallet related
-router.get('/api/wallet/me', authMiddleware, myWallet)  //check wallet balance    
-router.get('/api/wallet/transactions', authMiddleware, listWalletTransactions); // list of all wallet transactions   
-router.post('/api/wallet/add-money', authMiddleware, addMoneyToWallet); // add money to wallet
-router.post('/api/wallet/withdraw', authMiddleware, withrawFundsFromWallet); // withdraw money from wallet
+router.get('/wallet/me', authMiddleware, myWallet)  //check wallet balance    
+router.get('/wallet/transactions', authMiddleware, listWalletTransactions); // list of all wallet transactions   
+router.post('/wallet/add-money', authMiddleware, addMoneyToWallet); // add money to wallet
+router.post('/wallet/withdraw', authMiddleware, withrawFundsFromWallet); // withdraw money from wallet
 
 export default router;
