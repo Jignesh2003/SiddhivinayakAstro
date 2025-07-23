@@ -11,32 +11,24 @@ import PostgresDb from '../config/postgresDb.js'
 // ✅ Signup Controller
 export const signupUser = async (req, res) => {
   try {
+    // 1. Validate input
     const { error, value } = signupValidation.validate(req.body, { abortEarly: false });
     if (error) {
       const errors = error.details.map((err) => err.message);
       return res.status(400).json({ message: 'Validation failed', errors });
     }
 
-    const {
-      email,
-      firstName,
-      lastName,
-      phone,
-      address,
-      pincode,
-      city,
-      state,
-      password,
-      country,
-    } = value;
-
+    // 2. Check for duplicate email
+    const { email, firstName, lastName, phone, address, pincode, city, state, password, country } = value;
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(409).json({ message: "User already exists! Please log in." });
     }
 
+    // 3. Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // 4. Create Mongo user
     const newUser = new User({
       firstName,
       lastName,
@@ -53,22 +45,28 @@ export const signupUser = async (req, res) => {
 
     await newUser.save();
 
-    // 🟢 CREATE WALLET in PostgreSQL/Supabase
-    // Important: Use newUser._id (Mongo ObjectId as string) as user_id in PostgreSQL
+    // 5. Create wallet in Postgres/Supabase
     try {
       await PostgresDb.query(
         `INSERT INTO wallet (user_id, balance, currency, status)
          VALUES ($1, 0.00, 'INR', 'active')`,
         [newUser._id.toString()]
       );
-      // Optionally: handle conflict if wallet already exists (should not happen here)
     } catch (walletErr) {
-      // Optionally roll back user if wallet fails? Depends on business rules
       console.error("Wallet creation error:", walletErr.message);
-      // You may want to log, alert, or even undo newUser in case of wallet failure
-      return res.status(500).json({ message: "Signup failed during wallet setup." });
+
+      // Compensating transaction: delete the user for DB consistency
+      try {
+        await User.findByIdAndDelete(newUser._id);
+        return res.status(500).json({ message: "Signup failed during wallet setup. User record rolled back." });
+      } catch (deleteErr) {
+        // If this also fails, you must alert admin for manual intervention
+        console.error("CRITICAL: User rollback failed:", deleteErr);
+        return res.status(500).json({ message: "Signup failed and rollback failed! Contact support." });
+      }
     }
 
+    // 6. All OK
     res.status(201).json({ message: "Signup successful and wallet created!" });
   } catch (error) {
     res.status(500).json({ message: error.message });

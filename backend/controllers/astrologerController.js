@@ -5,13 +5,14 @@ import PostgresDb from '../config/postgresDb.js'
 
 export const astrologerSignup = async (req, res) => {
   try {
+
     const {
       firstName, lastName, email, phone, password, gender,
       dob, location, expertise, yearsOfExperience, bio,
       languagesSpoken, pricePerMinute, role, country, city, state
     } = req.body;
 
-    // Check if user already exists with same email or phone
+    // 1. Check if astrologer already exists
     const existingUser = await User.findOne({
       $or: [{ email }, { phone }],
     });
@@ -24,10 +25,10 @@ export const astrologerSignup = async (req, res) => {
         .json({ message: `${conflictField} already exists` });
     }
 
-    // Hash the password
+    // 2. Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create and save new astrologer
+    // 3. Create and save new astrologer in MongoDB
     const newUser = new User({
       firstName,
       lastName,
@@ -48,27 +49,33 @@ export const astrologerSignup = async (req, res) => {
 
     await newUser.save();
 
-    // 🟢 CREATE WALLET for Astrologer in PostgreSQL
+    // 4. Create wallet for astrologer in Postgres/Supabase
     try {
       await PostgresDb.query(
         `INSERT INTO wallet (user_id, balance, currency, status)
          VALUES ($1, 0.00, 'INR', 'active')`,
         [newUser._id.toString()]
       );
-      // Optionally handle duplicate (conflict) wallet, should not happen here.
     } catch (walletErr) {
-      // Optionally rollback or notify admin of partial failure
       console.error("Wallet creation error (Astrologer):", walletErr.message);
-      return res.status(500).json({ message: "Signup failed during wallet setup." });
+
+      // Compensating action: delete the user if wallet setup fails
+      try {
+        await User.findByIdAndDelete(newUser._id);
+        return res.status(500).json({ message: "Signup failed during wallet setup. User record rolled back." });
+      } catch (deleteErr) {
+        // If user deletion also fails, alert for manual intervention
+        console.error("CRITICAL: Astrologer rollback failed:", deleteErr);
+        return res.status(500).json({ message: "Signup failed and rollback failed! Contact support." });
+      }
     }
 
-    res
-      .status(201)
-      .json({ message: "Signup successful. Please verify your account." });
+    // 5. All OK!
+    res.status(201).json({ message: "Signup successful. Please verify your account." });
   } catch (err) {
     console.error("Signup Error:", err);
 
-    // Handle duplicate key error gracefully
+    // Handle duplicate key error from Mongo _before_ save (should not happen here, but safe)
     if (err.code === 11000) {
       const field = Object.keys(err.keyValue)[0];
       return res
