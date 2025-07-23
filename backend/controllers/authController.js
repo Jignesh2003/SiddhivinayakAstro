@@ -18,8 +18,11 @@ export const signupUser = async (req, res) => {
       return res.status(400).json({ message: 'Validation failed', errors });
     }
 
-    // 2. Check for duplicate email
-    const { email, firstName, lastName, phone, address, pincode, city, state, password, country } = value;
+    // Normalize email to lowercase for consistency
+    let { email, firstName, lastName, phone, address, pincode, city, state, password, country } = value;
+    email = email.trim().toLowerCase(); // <---- NORMALIZE EMAIL
+
+    // 2. Check for duplicate email (in lowercase)
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(409).json({ message: "User already exists! Please log in." });
@@ -28,11 +31,11 @@ export const signupUser = async (req, res) => {
     // 3. Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 4. Create Mongo user
+    // 4. Create Mongo user (store normalized email)
     const newUser = new User({
       firstName,
       lastName,
-      email,
+      email, // already normalized
       phone,
       address,
       pincode,
@@ -55,12 +58,11 @@ export const signupUser = async (req, res) => {
     } catch (walletErr) {
       console.error("Wallet creation error:", walletErr.message);
 
-      // Compensating transaction: delete the user for DB consistency
+      // Delete user for DB consistency if wallet creation fails
       try {
         await User.findByIdAndDelete(newUser._id);
         return res.status(500).json({ message: "Signup failed during wallet setup. User record rolled back." });
       } catch (deleteErr) {
-        // If this also fails, you must alert admin for manual intervention
         console.error("CRITICAL: User rollback failed:", deleteErr);
         return res.status(500).json({ message: "Signup failed and rollback failed! Contact support." });
       }
@@ -84,9 +86,23 @@ export const loginUser = async (req, res) => {
         .json({ message: error.details.map((err) => err.message).join(", ") });
     }
 
-    const { email, password } = value;
-    // ✅ Check if user exists
-    const user = await User.findOne({$or : [{email},{phone:email} ]});
+    let { email, password } = value;
+
+    //👇 Normalize email for case-insensitive authentication
+    if (email && email.includes('@')) {
+      email = email.trim().toLowerCase();
+    } else if (email) {
+      email = email.trim();  // if phone, just trim
+    }
+
+    // ✅ Check if user exists (by email or phone)
+    const user = await User.findOne({
+      $or: [
+        { email: email },       // now always lowercase, matches signup standard
+        { phone: email }
+      ]
+    });
+
     if (!user) {
       console.log("User not found");
       return res.status(404).json({ message: "User not found" });
@@ -106,12 +122,13 @@ export const loginUser = async (req, res) => {
 
     return res
       .status(200)
-      .json({ message: "Token sent!", token, role: user.role ,isVerified:user.isVerified , userId:user._id});
+      .json({ message: "Token sent!", token, role: user.role, isVerified: user.isVerified, userId: user._id });
   } catch (error) {
     console.error("Login Error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 // ✅ Forgot Password - Generate Reset Token & Send Email
   export const forgotPassword = async (req, res) => {

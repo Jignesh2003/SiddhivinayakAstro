@@ -5,14 +5,16 @@ import PostgresDb from '../config/postgresDb.js'
 
 export const astrologerSignup = async (req, res) => {
   try {
-
-    const {
+    let {
       firstName, lastName, email, phone, password, gender,
       dob, location, expertise, yearsOfExperience, bio,
       languagesSpoken, pricePerMinute, role, country, city, state
     } = req.body;
 
-    // 1. Check if astrologer already exists
+    // 1. Normalize email
+    email = email.trim().toLowerCase();
+
+    // 2. Check if astrologer already exists
     const existingUser = await User.findOne({
       $or: [{ email }, { phone }],
     });
@@ -25,14 +27,14 @@ export const astrologerSignup = async (req, res) => {
         .json({ message: `${conflictField} already exists` });
     }
 
-    // 2. Hash the password
+    // 3. Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 3. Create and save new astrologer in MongoDB
+    // 4. Create and save new astrologer in MongoDB
     const newUser = new User({
       firstName,
       lastName,
-      email,
+      email,      // always saved lowercase
       phone,
       password: hashedPassword,
       gender,
@@ -49,7 +51,7 @@ export const astrologerSignup = async (req, res) => {
 
     await newUser.save();
 
-    // 4. Create wallet for astrologer in Postgres/Supabase
+    // 5. Create wallet for astrologer in Postgres/Supabase
     try {
       await PostgresDb.query(
         `INSERT INTO wallet (user_id, balance, currency, status)
@@ -70,7 +72,7 @@ export const astrologerSignup = async (req, res) => {
       }
     }
 
-    // 5. All OK!
+    // 6. All OK!
     res.status(201).json({ message: "Signup successful. Please verify your account." });
   } catch (err) {
     console.error("Signup Error:", err);
@@ -86,6 +88,7 @@ export const astrologerSignup = async (req, res) => {
     res.status(500).json({ message: "Server error during signup" });
   }
 };
+
 
 export const astrologerList = async (req, res) => {
   try {
