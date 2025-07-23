@@ -3,13 +3,13 @@ import axios from "axios";
 import useAuthStore from "@/store/useAuthStore";
 
 const API_BASE = import.meta.env.VITE_PAYMENT_URL;
-const {token} = useAuthStore.getState()
-
 function Wallet() {
   const [balance, setBalance] = useState(0);
   const [currency, setCurrency] = useState("INR");
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const token = useAuthStore(state => state.token);
+
 
   useEffect(() => {
     const fetchWalletData = async () => {
