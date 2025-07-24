@@ -6,7 +6,7 @@ import PostgresDb from '../config/postgresDb.js';
  * If cf_payment_id already exists, does nothing (idempotent).
  * Optionally accepts a Knex transaction (`trx`); otherwise uses default PostgresDb.
  */
-export async function logTransactionToPostgres(transactionData, trx = PostgresDb) {
+ async function logTransactionToPostgres(transactionData, trx = PostgresDb) {
   const {
     order_id,
     cf_order_id,
@@ -51,3 +51,5 @@ export async function logTransactionToPostgres(transactionData, trx = PostgresDb
     throw error;
   }
 }
+
+export default logTransactionToPostgres
