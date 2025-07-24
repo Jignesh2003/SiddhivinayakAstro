@@ -158,6 +158,7 @@ export const initiateWalletTopupOrder = async (req, res) => {
   try {
     const userId = req.user.id;
     const { amount } = req.body;
+
     if (!userId || !amount || amount <= 0) {
       return res.status(400).json({ message: "Invalid wallet top-up request." });
     }
@@ -209,8 +210,12 @@ export const initiateWalletTopupOrder = async (req, res) => {
       return res.status(500).json({ message: "Cashfree did not return a payment session." });
     }
 
-    // (Optional but recommended) Store a pending transaction or audit log if needed
+    // ✅ Generate an explicit id for wallet_transaction
+    const txnId = uuidv4(); // Or: new ObjectId().toString();
+
+    // Store a pending transaction or audit log if needed
     await PostgresDb('wallet_transaction').insert({
+      id: txnId,
       wallet_id: null, // Will attach after webhook, if you wish
       type: 'credit',
       amount,
@@ -218,7 +223,7 @@ export const initiateWalletTopupOrder = async (req, res) => {
       description: `Pending wallet top-up order: ${customOrderId}`,
       from_user_id: userId,
       to_user_id: userId,
-      payment_reference: customOrderId, // For audit and matching with webhook
+      payment_reference: customOrderId,
     });
 
     // Respond with payment session data for frontend
@@ -235,3 +240,4 @@ export const initiateWalletTopupOrder = async (req, res) => {
     res.status(500).json({ message: "Failed to initiate wallet top-up.", error: err.message });
   }
 };
+
