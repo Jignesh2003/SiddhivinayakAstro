@@ -66,7 +66,7 @@ function Wallet() {
       const { payment_link, checkout_url } = res.data;
       setShowAddModal(false);
       // Open payment link in new tab or redirect
-      window.open(payment_link || checkout_url, "_blank");
+      window.open(payment_link || checkout_url);
     } catch (err) {
       alert((err.response?.data?.message) || "Failed to initiate top-up");
       console.error("Add money error:", err);
