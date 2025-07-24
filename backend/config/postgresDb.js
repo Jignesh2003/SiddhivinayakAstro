@@ -1,21 +1,24 @@
-// postgresDb.js
-import pg from 'pg';
-const { Pool } = pg;
+// knexDb.js
 import { configDotenv } from 'dotenv';
+import knex from 'knex';
 
-configDotenv()
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URI, // or use individual params
-  ssl: { rejectUnauthorized: false }, // required for services like Neon
+configDotenv();
+
+const KnexDb = knex({
+  client: 'pg',
+  connection: process.env.POSTGRES_URI,
+  ssl: { rejectUnauthorized: false },
+  pool: { min: 2, max: 10 },
 });
 
-pool.on("error", err => {
-  console.error("Postgres idle client error", err);
-});
+// Test connection on startup using async/await:
+(async () => {
+  try {
+    const res = await KnexDb.raw('SELECT 1+1 as result');
+    console.log('✅ Connected to Supabase Postgres via Knex:', res.rows ? res.rows : res);
+  } catch (err) {
+    console.error('❌ Knex connection failed:', err.message || err);
+  }
+})();
 
-pool.connect()
-  .then(() => console.log("✅ Connected to Supabase Postgres"))
-  .catch((err) => console.error("❌ Postgres connection failed:", err));
-
-
-  export default pool;
+export default KnexDb;

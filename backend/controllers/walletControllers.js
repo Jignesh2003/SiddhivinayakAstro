@@ -1,117 +1,152 @@
-import PostgresDb from '../config/postgresDb.js'; // Adjust path as needed
+import PostgresDb from '../config/postgresDb.js';
 
-// show wallet current money
+// ✅ Show wallet balance
 export const myWallet = async (req, res) => {
-  const userId = req.user.id; // assuming auth middleware sets req.user
+  const userId = req.user.id;
 
   try {
-    const { rows } = await PostgresDb.query(
-      `SELECT balance, currency, status, created_at, updated_at 
-       FROM wallet WHERE user_id = $1`,
-      [userId]
-    );
+    const wallet = await PostgresDb('wallet')
+      .select('balance', 'currency', 'status', 'created_at', 'updated_at')
+      .where({ user_id: userId })
+      .first();
 
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Wallet not found" });
+    if (!wallet) {
+      return res.status(404).json({ message: 'Wallet not found' });
     }
 
-    res.json(rows[0]);
+    res.json(wallet);
   } catch (error) {
-    console.error("Get wallet error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error('🔥 Wallet fetch error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-}
+};
 
-// list wallet transactions
+
+
+// ✅ List wallet transactions
 export const listWalletTransactions = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    // First get wallet id
-    const walletResult = await PostgresDb.query(`SELECT id FROM wallet WHERE user_id = $1`, [userId]);
-    if (walletResult.rows.length === 0) return res.json([]);
+    const wallet = await PostgresDb('wallet')
+      .select('id')
+      .where({ user_id: userId })
+      .first();
 
-    const walletId = walletResult.rows[0].id;
+    if (!wallet) return res.json([]);
 
-    // Get transactions for this wallet
-    const { rows } = await PostgresDb.query(
-      `SELECT id, chat_session_id, type, amount, status, description, created_at 
-       FROM wallet_transaction WHERE wallet_id = $1 ORDER BY created_at DESC LIMIT 50`,
-      [walletId]
-    );
-    res.json(rows);
+    const transactions = await PostgresDb('wallet_transaction')
+      .select('id', 'chat_session_id', 'type', 'amount', 'status', 'description', 'created_at')
+      .where({ wallet_id: wallet.id })
+      .orderBy('created_at', 'desc')
+      .limit(50);
+
+    res.json(transactions);
   } catch (error) {
-    console.error("List transactions error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error('🔥 Transaction list error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-}
+};
 
 
-export const addMoneyToWallet =  async (req, res) => {
+
+// ✅ Add money to wallet
+export const addMoneyToWallet = async (req, res) => {
   const userId = req.user.id;
   const { amount, paymentReference } = req.body;
 
-  if (amount <= 0) return res.status(400).json({ error: "Invalid amount" });
+  if (!amount || amount <= 0) {
+    return res.status(400).json({ error: 'Invalid amount' });
+  }
 
   try {
-    // Get wallet
-    const walletResult = await PostgresDb.query(`SELECT id, balance FROM wallet WHERE user_id = $1`, [userId]);
-    if (!walletResult.rows.length) return res.status(404).json({ error: "Wallet not found" });
+    await PostgresDb.transaction(async trx => {
+      const wallet = await trx('wallet')
+        .select('id', 'balance')
+        .where({ user_id: userId })
+        .first();
 
-    const wallet = walletResult.rows[0];
+      if (!wallet) {
+        throw new Error('Wallet not found');
+      }
 
-    // Insert transaction record as credit, pending initially
-    const txnResult = await PostgresDb.query(
-      `INSERT INTO wallet_transaction (wallet_id, type, amount, status, description, from_user_id, to_user_id)
-       VALUES ($1,'credit',$2,'completed',$3,$4,$4) RETURNING *`,
-      [wallet.id, amount, `Top-up via ${paymentReference}`, userId]
-    );
+      // Step 1: Create transaction
+      const [transaction] = await trx('wallet_transaction')
+        .insert({
+          wallet_id: wallet.id,
+          type: 'credit',
+          amount,
+          status: 'completed',
+          description: `Top-up via ${paymentReference}`,
+          from_user_id: userId,
+          to_user_id: userId
+        })
+        .returning('*');
 
-    // Update wallet balance
-    const newBalance = Number(wallet.balance) + Number(amount);
-    await PostgresDb.query(`UPDATE wallet SET balance = $1, updated_at = NOW() WHERE id = $2`, [newBalance, wallet.id]);
+      // Step 2: Update wallet
+      const newBalance = Number(wallet.balance) + Number(amount);
+      await trx('wallet')
+        .update({ balance: newBalance, updated_at: trx.fn.now() })
+        .where({ id: wallet.id });
 
-    res.json({ message: "Wallet topped up", newBalance, transaction: txnResult.rows[0] });
+      res.json({ message: 'Wallet topped up', newBalance, transaction });
+    });
   } catch (err) {
-    console.error("Add money error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error('🔥 Add money error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
-}
+};
 
 
-export const withrawFundsFromWallet =  async (req, res) => {
+
+// ✅ Withdraw funds from wallet
+export const withrawFundsFromWallet = async (req, res) => {
   const userId = req.user.id;
   const { amount, withdrawalDetails } = req.body;
 
-  if (amount <= 0) return res.status(400).json({ error: "Invalid amount" });
+  if (!amount || amount <= 0) {
+    return res.status(400).json({ error: 'Invalid amount' });
+  }
 
   try {
-    // Get wallet info
-    const walletResult = await PostgresDb.query(`SELECT id, balance FROM wallet WHERE user_id = $1`, [userId]);
-    if (!walletResult.rows.length) return res.status(404).json({ error: "Wallet not found" });
+    await PostgresDb.transaction(async trx => {
+      const wallet = await trx('wallet')
+        .select('id', 'balance')
+        .where({ user_id: userId })
+        .first();
 
-    const wallet = walletResult.rows[0];
+      if (!wallet) {
+        throw new Error('Wallet not found');
+      }
 
-    if (Number(wallet.balance) < Number(amount)) {
-      return res.status(400).json({ error: "Insufficient balance" });
-    }
+      if (Number(wallet.balance) < Number(amount)) {
+        throw new Error('Insufficient balance');
+      }
 
-    // Insert withdrawal transaction debit
-    const txnResult = await PostgresDb.query(
-      `INSERT INTO wallet_transaction (wallet_id, type, amount, status, description, from_user_id, to_user_id)
-       VALUES ($1, 'debit', $2, 'pending', $3, $4, NULL) RETURNING *`,
-      [wallet.id, amount, `Withdrawal requested: ${JSON.stringify(withdrawalDetails)}`, userId]
-    );
+      // Step 1: Create withdrawal transaction (pending)
+      const [transaction] = await trx('wallet_transaction')
+        .insert({
+          wallet_id: wallet.id,
+          type: 'debit',
+          amount,
+          status: 'pending', // approval flow logic can handle later
+          description: `Withdrawal requested: ${JSON.stringify(withdrawalDetails)}`,
+          from_user_id: userId,
+          to_user_id: null
+        })
+        .returning('*');
 
-    // Deduct balance immediately or after approval depending on your flow
-    const newBalance = Number(wallet.balance) - Number(amount);
-    await PostgresDb.query(`UPDATE wallet SET balance = $1, updated_at = NOW() WHERE id = $2`, [newBalance, wallet.id]);
+      // Step 2: Deduct balance
+      const newBalance = Number(wallet.balance) - Number(amount);
+      await trx('wallet')
+        .update({ balance: newBalance, updated_at: trx.fn.now() })
+        .where({ id: wallet.id });
 
-    res.json({ message: "Withdrawal requested", newBalance, transaction: txnResult.rows[0] });
+      res.json({ message: 'Withdrawal requested', newBalance, transaction });
+    });
   } catch (err) {
-    console.error("Withdraw error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error('🔥 Withdraw error:', err.message || err);
+    res.status(500).json({ error: err.message || 'Internal server error' });
   }
-}
-
+};
 

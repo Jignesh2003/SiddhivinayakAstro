@@ -22,9 +22,7 @@ export const astrologerSignup = async (req, res) => {
       let conflictField = "";
       if (existingUser.email === email) conflictField = "Email";
       else if (existingUser.phone === phone) conflictField = "Phone number";
-      return res
-        .status(400)
-        .json({ message: `${conflictField} already exists` });
+      return res.status(400).json({ message: `${conflictField} already exists` });
     }
 
     // 3. Hash the password
@@ -34,7 +32,7 @@ export const astrologerSignup = async (req, res) => {
     const newUser = new User({
       firstName,
       lastName,
-      email,      // always saved lowercase
+      email, // always lowercase
       phone,
       password: hashedPassword,
       gender,
@@ -51,13 +49,14 @@ export const astrologerSignup = async (req, res) => {
 
     await newUser.save();
 
-    // 5. Create wallet for astrologer in Postgres/Supabase
+    // 5. Create wallet for astrologer in Postgres (via Knex, but named PostgresDb)
     try {
-      await PostgresDb.query(
-        `INSERT INTO wallet (user_id, balance, currency, status)
-         VALUES ($1, 0.00, 'INR', 'active')`,
-        [newUser._id.toString()]
-      );
+      await PostgresDb('wallet').insert({
+        user_id: newUser._id.toString(),
+        balance: 0.00,
+        currency: 'INR',
+        status: 'active'
+      });
     } catch (walletErr) {
       console.error("Wallet creation error (Astrologer):", walletErr.message);
 

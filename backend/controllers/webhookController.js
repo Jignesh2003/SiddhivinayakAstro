@@ -5,9 +5,7 @@ import Product from "../models/Product.js"; // ← Make sure this line is presen
 
 export const verifyPayment = async (req, res) => {
   try {
-    console.log("📩 Cashfree Webhook received");
-    console.log("📥 Incoming Headers:", req.headers);
-
+    // --- 1. Signature and basic validation ---
     if (!Buffer.isBuffer(req.body)) {
       console.error("❌ Invalid webhook format: body is not raw Buffer");
       return res.status(400).send("Invalid webhook format");
@@ -21,7 +19,6 @@ export const verifyPayment = async (req, res) => {
       return res.status(400).send("Missing signature headers");
     }
 
-    // Verify HMAC Signature
     const computedSignature = crypto
       .createHmac("sha256", process.env.CASHFREE_CLIENT_SECRET)
       .update(`${timestamp}${rawBody}`, "utf8")
@@ -31,18 +28,17 @@ export const verifyPayment = async (req, res) => {
       return res.status(400).send("Invalid signature");
     }
 
-    // Parse Webhook JSON
+    // --- 2. Parse webhook JSON ---
     let payload;
     try {
       payload = JSON.parse(rawBody);
-    } catch (e) {
+    } catch {
       return res.status(400).send("Invalid JSON");
     }
 
     const eventType = payload?.type;
     const data = payload?.data;
     const eventTime = payload?.event_time;
-
     if (!eventType || !data || !eventTime) {
       return res.status(400).send("Malformed webhook");
     }
@@ -67,27 +63,9 @@ export const verifyPayment = async (req, res) => {
       return res.status(200).send("Skipped: Incomplete payment data");
     }
 
-    // Log to Postgres
-    try {
-      await logTransactionToPostgres({
-        order_id: orderId,
-        cf_order_id: cfOrderId || null,
-        cf_payment_id: cfPaymentId,
-        status: paymentStatus,
-        amount: paymentAmount,
-        currency: paymentCurrency,
-        payment_method: JSON.stringify(paymentMethod || {}),
-        payment_time: eventTime,
-        email: customerEmail,
-        phone: customerPhone,
-        signature: incomingSignature,
-      });
-      console.log("✅ Transaction logged to Postgres");
-    } catch (err) {
-      console.error("❌ Failed to log transaction to Postgres:", err.message);
-    }
-
-    // Update MongoDB Order based on status
+    // --- 3. MongoDB Transaction: order update + stock (atomic for these) ---
+    let updatedOrder = null;
+    // Only operate if order status is mapped
     const statusMap = {
       SUCCESS: {
         paymentStatus: "Paid",
@@ -105,64 +83,85 @@ export const verifyPayment = async (req, res) => {
         orderStatus: "Cancelled",
       },
     };
-
     const mongoUpdate = statusMap[paymentStatus];
 
-    let updated = null;
-
     if (mongoUpdate) {
+      const mongoSession = await Order.startSession();
       try {
-        updated = await Order.findOneAndUpdate(
-          { customOrderId: orderId },
-          mongoUpdate,
-          { new: true }
-        );
+        await mongoSession.withTransaction(async () => {
+          updatedOrder = await Order.findOneAndUpdate(
+            { customOrderId: orderId },
+            mongoUpdate,
+            { session: mongoSession, new: true }
+          );
+          if (!updatedOrder) {
+            throw new Error(`No order found with customOrderId=${orderId}`);
+          }
 
-        if (updated) {
-          console.log(`✅ MongoDB order ${updated._id} marked as ${paymentStatus}`);
-        } else {
-          console.warn(`⚠️ No order found with customOrderId=${orderId}`);
-        }
+          // Deduct stock only if payment succeeded
+          if (paymentStatus === "SUCCESS") {
+            for (const item of updatedOrder.items) {
+              const prodRes = await Product.findOneAndUpdate(
+                { _id: item.product, "stock.quantity": { $gte: item.quantity } },
+                { $inc: { "stock.$.quantity": -item.quantity } },
+                { session: mongoSession, new: true }
+              );
+              if (!prodRes) {
+                throw new Error(
+                  `Insufficient stock or product not found for: ${item.product}`
+                );
+              }
+            }
+          }
+        });
+        mongoSession.endSession();
+        console.log(
+          `✅ Mongo order (${orderId}) status & stock processed: ${paymentStatus}`
+        );
       } catch (err) {
-        console.error(`❌ MongoDB update failed for ${orderId}:`, err.message);
+        await mongoSession.abortTransaction();
+        mongoSession.endSession();
+        console.error("❌ MongoDB transaction failed:", err.message);
+        return res.status(500).send("Order/stock update failed.");
       }
     } else {
-      console.log(`ℹ️ Payment status '${paymentStatus}' not mapped to MongoDB update`);
+      // No matching status mapping; just acknowledge
+      console.log(
+        `ℹ️ Payment status '${paymentStatus}' not mapped to MongoDB update`
+      );
     }
 
-    // --- DEDUCT STOCK IF PAYMENT SUCCESS ---
-    if (paymentStatus === "SUCCESS" && updated) {
-      try {
-        for (const item of updated.items) {
-          // If you have a specific stock structure, adjust accordingly:
-          const incRes = await Product.findOneAndUpdate(
-            {
-              _id: item.product,
-              "stock.quantity": { $gte: item.quantity }
-            },
-            {
-              $inc: { "stock.$.quantity": -item.quantity }
-            },
-            { new: true }
-          );
-
-          if (!incRes) {
-            console.warn(
-              `⚠️ Insufficient stock for product ${item.product}; not deducted`
-            );
-            // optional: handle partial stock deductions or rollback
-          } else {
-            console.log(
-              `✅ Deducted ${item.quantity} from stock for product ${item.product}`
-            );
-          }
-        }
-      } catch (stockErr) {
-        console.error("❌ Error deducting stock in verifyPayment:", stockErr);
-        // You can choose to alert, retry, or mark order for manual review here
-      }
+    // --- 4. Postgres Transaction: log payment (atomic for these) ---
+    try {
+      await PostgresDb.transaction(async trx => {
+        await logTransactionToPostgres(
+          {
+            order_id: orderId,
+            cf_order_id: cfOrderId || null,
+            cf_payment_id: cfPaymentId,
+            status: paymentStatus,
+            amount: paymentAmount,
+            currency: paymentCurrency,
+            payment_method: JSON.stringify(paymentMethod || {}),
+            payment_time: eventTime,
+            email: customerEmail,
+            phone: customerPhone,
+            signature: incomingSignature,
+          },
+          trx
+        );
+      });
+      console.log("✅ Postgres: Payment event logged");
+    } catch (pgErr) {
+      // Mongo may already be committed; log for admin
+      console.error(
+        "❌ Postgres logging failed after Mongo commit:",
+        pgErr.message || pgErr
+      );
+      // Optionally: flag for reconciliation or retry
     }
 
+    // --- 5. Webhook done ---
     return res.status(200).send("✅ Webhook processed");
   } catch (err) {
     console.error("❌ verifyPayment controller error:", err);

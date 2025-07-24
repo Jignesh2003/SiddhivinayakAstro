@@ -33,51 +33,39 @@ export const createCashfreeOrder = async (req, res) => {
 
     const customOrderId = `PREORDER_${userId}_${Date.now()}`;
 
-    // ✅ Step 1: Double-check stock and deduct
-    const updatedOrderItems = [];
+    // Step 1: Validate items, DO NOT update stock here!
     for (const item of items) {
-      // Atomically check and decrement stock
-      const product = await Product.findOneAndUpdate(
-        {
-          _id: item.product,
-          "stock.quantity": { $gte: item.quantity }
-        },
-        {
-          $inc: { "stock.$.quantity": -item.quantity }
-        },
-        { new: true, session }
-      );
+      const product = await Product.findById(item.product);
       if (!product) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({ message: `Product not found: ${item.product}` });
+      }
+      // Optionally check stock >= quantity, strictly for early UI feedback
+      const stockEntry = product.stock?.find(s => s.quantity >= item.quantity);
+      if (!stockEntry) {
         await session.abortTransaction();
         session.endSession();
         return res.status(400).json({ message: `Not enough stock for product ${item.product}` });
       }
-      updatedOrderItems.push({
-        product: product._id,
-        quantity: item.quantity
-      });
     }
 
-    // ✅ Step 2: Save order to MongoDB
-    const newOrder = await Order.create(
-      [{
-        user: userId,
-        items: updatedOrderItems,
-        totalAmount: amount,
-        paymentMethod: "online",
-        paymentStatus: "Initiated",
-        orderStatus: "Pending",
-        shippingAddress,
-        customOrderId,
-      }],
-      { session }
-    );
+    // Step 2: Save the pending order in Mongo, but do not touch stock
+    const newOrder = await Order.create([{
+      user: userId,
+      items,
+      totalAmount: amount,
+      paymentMethod: "online",
+      paymentStatus: "Initiated",
+      orderStatus: "Pending",
+      shippingAddress,
+      customOrderId,
+    }], { session });
 
-    // ✅ Step 3: Commit transaction
     await session.commitTransaction();
     session.endSession();
 
-    // Step 4: Prepare Cashfree order payload
+    // Step 3: Prepare and call Cashfree API
     const payload = {
       order_id: customOrderId,
       order_amount: Number(amount),
@@ -118,7 +106,6 @@ export const createCashfreeOrder = async (req, res) => {
     );
 
     const { payment_session_id, payment_link, checkout_url } = response.data;
-
     if (!payment_session_id) {
       return res.status(500).json({ message: "Missing session ID in Cashfree response" });
     }
@@ -129,7 +116,6 @@ export const createCashfreeOrder = async (req, res) => {
       checkout_url,
       customOrderId,
     });
-
   } catch (err) {
     await session.abortTransaction();
     session.endSession();

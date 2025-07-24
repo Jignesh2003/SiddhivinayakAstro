@@ -1,53 +1,59 @@
-import PostgresDb from '../config/postgresDb.js'; // Adjust path as needed
+import PostgresDb from '../config/postgresDb.js'; // Knex instance
 
-
+/**
+ * Atomically debits user and credits astrologer for chat session.
+ * session: { _id, userId, astrologerId, amountCharged }
+ */
 async function createChatSessionTransaction(session) {
-  // session: { _id, userId, astrologerId, amountCharged }
+  const { _id, userId, astrologerId, amountCharged } = session;
+  const amount = Number(amountCharged);
 
-  try {
-    // Fetch wallets for both users
-    const userWalletRes = await PostgresDb.query(`SELECT id, balance FROM wallet WHERE user_id = $1`, [session.userId]);
-    const astrologerWalletRes = await PostgresDb.query(`SELECT id FROM wallet WHERE user_id = $1`, [session.astrologerId]);
-    
-    if (!userWalletRes.rows.length || !astrologerWalletRes.rows.length) {
+  // Use a Knex transaction for all actions
+  return await PostgresDb.transaction(async trx => {
+    // Fetch wallets
+    const userWallet = await trx('wallet').where({ user_id: userId }).first();
+    const astrologerWallet = await trx('wallet').where({ user_id: astrologerId }).first();
+
+    if (!userWallet || !astrologerWallet) {
       throw new Error("Wallets missing for user or astrologer");
     }
-    
-    const userWallet = userWalletRes.rows[0];
-    const astrologerWallet = astrologerWalletRes.rows[0];
-    const amount = Number(session.amountCharged);
-
-    if (userWallet.balance < amount) {
+    if (Number(userWallet.balance) < amount) {
       throw new Error("User has insufficient wallet balance");
     }
 
-    // Begin transaction block
-    await PostgresDb.query('BEGIN');
+    // Debit user's wallet
+    await trx('wallet_transaction').insert({
+      wallet_id: userWallet.id,
+      chat_session_id: _id.toString(),
+      type: 'debit',
+      amount,
+      status: 'completed',
+      from_user_id: userId,
+      to_user_id: astrologerId,
+      description: 'Chat session debit'
+    });
 
-    // Debit user wallet
-    await PostgresDb.query(
-      `INSERT INTO wallet_transaction (wallet_id, chat_session_id, type, amount, status, from_user_id, to_user_id, description)
-       VALUES ($1, $2, 'debit', $3, 'completed', $4, $5, $6)`,
-      [userWallet.id, session._id.toString(), amount, session.userId, session.astrologerId, 'Chat session debit']
-    );
+    // Credit astrologer's wallet
+    await trx('wallet_transaction').insert({
+      wallet_id: astrologerWallet.id,
+      chat_session_id: _id.toString(),
+      type: 'credit',
+      amount,
+      status: 'completed',
+      from_user_id: userId,
+      to_user_id: astrologerId,
+      description: 'Chat session credit'
+    });
 
-    // Credit astrologer wallet
-    await PostgresDb.query(
-      `INSERT INTO wallet_transaction (wallet_id, chat_session_id, type, amount, status, from_user_id, to_user_id, description)
-       VALUES ($1, $2, 'credit', $3, 'completed', $4, $5, $6)`,
-      [astrologerWallet.id, session._id.toString(), amount, session.userId, session.astrologerId, 'Chat session credit']
-    );
+    // Update wallet balances
+    await trx('wallet')
+      .where({ id: userWallet.id })
+      .update({ balance: Number(userWallet.balance) - amount, updated_at: trx.fn.now() });
 
-    // Update balances
-    await PostgresDb.query(`UPDATE wallet SET balance = balance - $1 WHERE id = $2`, [amount, userWallet.id]);
-    await PostgresDb.query(`UPDATE wallet SET balance = balance + $1 WHERE id = $2`, [amount, astrologerWallet.id]);
-
-    await PostgresDb.query('COMMIT');
-
-  } catch (err) {
-    await PostgresDb.query('ROLLBACK');
-    throw err;
-  }
+    await trx('wallet')
+      .where({ id: astrologerWallet.id })
+      .update({ balance: Number(astrologerWallet.balance) + amount, updated_at: trx.fn.now() });
+  });
 }
 
 export default createChatSessionTransaction;

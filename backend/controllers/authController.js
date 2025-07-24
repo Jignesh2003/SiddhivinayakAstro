@@ -18,24 +18,24 @@ export const signupUser = async (req, res) => {
       return res.status(400).json({ message: 'Validation failed', errors });
     }
 
-    // Normalize email to lowercase for consistency
+    // 2. Normalize email to lowercase for consistency
     let { email, firstName, lastName, phone, address, pincode, city, state, password, country } = value;
-    email = email.trim().toLowerCase(); // <---- NORMALIZE EMAIL
+    email = email.trim().toLowerCase();
 
-    // 2. Check for duplicate email (in lowercase)
+    // 3. Check for duplicate email (in lowercase)
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(409).json({ message: "User already exists! Please log in." });
     }
 
-    // 3. Hash password
+    // 4. Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 4. Create Mongo user (store normalized email)
+    // 5. Create Mongo user (store normalized email)
     const newUser = new User({
       firstName,
       lastName,
-      email, // already normalized
+      email,
       phone,
       address,
       pincode,
@@ -48,17 +48,18 @@ export const signupUser = async (req, res) => {
 
     await newUser.save();
 
-    // 5. Create wallet in Postgres/Supabase
+    // 6. Create wallet in Postgres via Knex
     try {
-      await PostgresDb.query(
-        `INSERT INTO wallet (user_id, balance, currency, status)
-         VALUES ($1, 0.00, 'INR', 'active')`,
-        [newUser._id.toString()]
-      );
+      await PostgresDb('wallet').insert({
+        user_id: newUser._id.toString(),
+        balance: 0.00,
+        currency: 'INR',
+        status: 'active',
+      });
     } catch (walletErr) {
       console.error("Wallet creation error:", walletErr.message);
 
-      // Delete user for DB consistency if wallet creation fails
+      // Compensating transaction: delete the user for DB consistency
       try {
         await User.findByIdAndDelete(newUser._id);
         return res.status(500).json({ message: "Signup failed during wallet setup. User record rolled back." });
@@ -68,7 +69,7 @@ export const signupUser = async (req, res) => {
       }
     }
 
-    // 6. All OK
+    // 7. All OK
     res.status(201).json({ message: "Signup successful and wallet created!" });
   } catch (error) {
     res.status(500).json({ message: error.message });

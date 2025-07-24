@@ -1,7 +1,12 @@
 // utils/logTransaction.js
 import PostgresDb from '../config/postgresDb.js';
 
-export async function logTransactionToPostgres(transactionData) {
+/**
+ * Logs a payment transaction to Postgres using Knex.
+ * If cf_payment_id already exists, does nothing (idempotent).
+ * Optionally accepts a Knex transaction (`trx`); otherwise uses default PostgresDb.
+ */
+export async function logTransactionToPostgres(transactionData, trx = PostgresDb) {
   const {
     order_id,
     cf_order_id,
@@ -17,10 +22,11 @@ export async function logTransactionToPostgres(transactionData) {
   } = transactionData;
 
   try {
-    const query = `
-      INSERT INTO productorders_transactions (
+    // Knex insert with conflict/ignore
+    const res = await trx('productorders_transactions')
+      .insert({
         order_id,
-        cf_order_id,
+        cf_order_id: cf_order_id || null,
         cf_payment_id,
         status,
         amount,
@@ -29,30 +35,13 @@ export async function logTransactionToPostgres(transactionData) {
         payment_time,
         email,
         phone,
-        signature
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      ON CONFLICT (cf_payment_id)
-      DO NOTHING
-    `;
+        signature,
+      })
+      .onConflict('cf_payment_id')
+      .ignore()
+      .returning('*');
 
-    const values = [
-      order_id,
-      cf_order_id || null,
-      cf_payment_id,
-      status,
-      amount,
-      currency,
-      payment_method,
-      payment_time,
-      email,
-      phone,
-      signature,
-    ];
-
-    const res = await PostgresDb.query(query, values);
-
-    if (res.rowCount === 0) {
+    if (res.length === 0) {
       console.log(`ℹ️ Transaction already logged in Postgres: ${cf_payment_id}`);
     } else {
       console.log(`✅ Transaction logged to Postgres: ${cf_payment_id}`);
