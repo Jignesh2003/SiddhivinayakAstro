@@ -153,7 +153,6 @@ export const withrawFundsFromWallet = async (req, res) => {
   }
 };
 
-
 export const initiateWalletTopupOrder = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -166,6 +165,17 @@ export const initiateWalletTopupOrder = async (req, res) => {
     // Fetch user email/phone for payment gateway payload
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found." });
+
+    // Fetch the user's wallet to get the id (needed for wallet_transaction)
+    const wallet = await PostgresDb('wallet')
+      .select('id')
+      .where({ user_id: userId })
+      .first();
+
+    if (!wallet) {
+      // Optionally: create wallet if does not exist, or error out
+      return res.status(404).json({ message: "Wallet not found for user." });
+    }
 
     // Compose a unique wallet order_id
     const customOrderId = `WALLET_${userId}_${Date.now()}`;
@@ -211,12 +221,12 @@ export const initiateWalletTopupOrder = async (req, res) => {
     }
 
     // ✅ Generate an explicit id for wallet_transaction
-    const txnId = uuidv4(); // Or: new ObjectId().toString();
+    const txnId = uuidv4();
 
-    // Store a pending transaction or audit log if needed
+    // Store a pending transaction or audit log with wallet_id present
     await PostgresDb('wallet_transaction').insert({
       id: txnId,
-      wallet_id: null, // Will attach after webhook, if you wish
+      wallet_id: wallet.id, // <-- always valid now!
       type: 'credit',
       amount,
       status: 'initiated',
