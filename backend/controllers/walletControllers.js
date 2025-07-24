@@ -153,6 +153,8 @@ export const withrawFundsFromWallet = async (req, res) => {
   }
 };
 
+
+// Initiate Wallet Top-up Order
 export const initiateWalletTopupOrder = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -164,16 +166,17 @@ export const initiateWalletTopupOrder = async (req, res) => {
 
     // Fetch user email/phone for payment gateway payload
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found." });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
 
-    // Fetch the user's wallet to get the id (needed for wallet_transaction)
+    // Fetch the user's wallet id (needed for wallet_transaction)
     const wallet = await PostgresDb('wallet')
       .select('id')
       .where({ user_id: userId })
       .first();
 
     if (!wallet) {
-      // Optionally: create wallet if does not exist, or error out
       return res.status(404).json({ message: "Wallet not found for user." });
     }
 
@@ -208,7 +211,7 @@ export const initiateWalletTopupOrder = async (req, res) => {
       "Content-Type": "application/json",
     };
 
-    // Call Cashfree
+    // Call Cashfree to create the payment order
     const response = await axios.post(
       "https://sandbox.cashfree.com/pg/orders",
       payload,
@@ -220,22 +223,21 @@ export const initiateWalletTopupOrder = async (req, res) => {
       return res.status(500).json({ message: "Cashfree did not return a payment session." });
     }
 
-    // ✅ Generate an explicit id for wallet_transaction
-    const txnId = uuidv4();
-
-    // Store a pending transaction or audit log with wallet_id present
+    // Insert a pending transaction/audit log for this top-up (status 'initiated')
     await PostgresDb('wallet_transaction').insert({
-      wallet_id: wallet.id, // <-- always valid now!
+      wallet_id: wallet.id,
       type: 'credit',
       amount,
-      status: 'initiated',
+      status: 'initiated',  // Mark as initiated, will update later on webhook
       description: `Pending wallet top-up order: ${customOrderId}`,
       from_user_id: userId,
       to_user_id: userId,
       payment_reference: customOrderId,
+      created_at: new Date(), // optional, if not automatic
+      updated_at: new Date()
     });
 
-    // Respond with payment session data for frontend
+    // Respond with info needed for frontend to proceed with payment
     res.json({
       payment_session_id,
       payment_link,
@@ -243,10 +245,10 @@ export const initiateWalletTopupOrder = async (req, res) => {
       order_id: customOrderId,
       amount
     });
-
   } catch (err) {
     console.error("❌ Wallet top-up order creation failed:", err.message);
     res.status(500).json({ message: "Failed to initiate wallet top-up.", error: err.message });
   }
 };
+
 

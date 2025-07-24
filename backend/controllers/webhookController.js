@@ -82,7 +82,6 @@ export const verifyPayment = async (req, res) => {
     const mongoUpdate = statusMap[paymentStatus];
     let updatedOrder = null;
 
-    // Only handle order updates if prefix is for product orders
     if (orderId.startsWith("PREORDER_") && mongoUpdate) {
       const mongoSession = await Order.startSession();
       try {
@@ -123,55 +122,66 @@ export const verifyPayment = async (req, res) => {
       }
     }
 
-    // --- 4. Handle Wallet Top-Ups (new) ---
-    if (orderId.startsWith("WALLET_") && paymentStatus === "SUCCESS") {
-      // Extract userId from orderId (e.g., WALLET_<userId>_<timestamp>)
+    // --- 4. Handle Wallet Top-Ups (UPDATED FLOW) ---
+    // On webhook: update the existing transaction row by payment_reference (orderId)!
+    if (orderId.startsWith("WALLET_")) {
+      // Extract userId from orderId (WALLET_<userId>_<timestamp>)
       const parts = orderId.split("_");
       const userId = parts[1];
-      // Start wallet update in a transaction
+
       try {
         await PostgresDb.transaction(async trx => {
-          const wallet = await trx("wallet").where({ user_id: userId }).first();
-          if (!wallet) {
-            throw new Error(`Wallet not found for user ${userId}`);
+          // 1. Find the existing wallet_transaction by payment_reference
+          const txn = await trx("wallet_transaction")
+            .where({ payment_reference: orderId })
+            .first();
+
+          if (!txn) {
+            // This should not happen except in edge-cases; optionally handle race conditions here:
+            console.error(
+              `❌ No wallet_transaction found for payment_reference=${orderId}`
+            );
+            throw new Error("No pending wallet transaction for this payment");
           }
 
-          // Prevent double-credit: check if this payment already processed
-          const alreadyProcessed = await trx("wallet_transaction")
-            .where({
-              from_user_id: userId,
-              type: "credit",
-              status: "completed",
-              description: orderId,
-            })
-            .first();
-          if (alreadyProcessed) {
-            console.log(`ℹ️ Duplicate wallet credit detected for ${orderId}`);
+          // 2. Only update if not already completed (idempotency)
+          if (txn.status === "completed") {
+            console.log(`ℹ️ Wallet transaction for ${orderId} already completed.`);
             return;
           }
 
-          // Insert credit transaction
-          await trx("wallet_transaction").insert({
-            wallet_id: wallet.id,
-            type: "credit",
-            amount: paymentAmount,
-            status: "completed",
-            description: orderId,
-            from_user_id: userId,
-            to_user_id: userId,
-          });
-
-          // Update wallet balance
-          await trx("wallet")
+          // 3. Update the transaction status & fields
+          await trx("wallet_transaction")
+            .where({ id: txn.id })
             .update({
-              balance: Number(wallet.balance) + Number(paymentAmount),
-              updated_at: trx.fn.now(),
-            })
-            .where({ id: wallet.id });
+              status: paymentStatus === "SUCCESS" ? "completed" : paymentStatus.toLowerCase(),
+              description: orderId, // Optionally, add gateway info
+              updated_at: trx.fn.now()
+            });
 
-          console.log(
-            `✅ Wallet for user ${userId} credited ₹${paymentAmount} via ${orderId}`
-          );
+          // 4. If payment succeeded, add to wallet balance
+          if (paymentStatus === "SUCCESS") {
+            // Fetch wallet (safe: must match wallet_id)
+            const wallet = await trx("wallet")
+              .where({ id: txn.wallet_id })
+              .first();
+            if (!wallet) throw new Error(`Wallet not found for wallet_id=${txn.wallet_id}`);
+
+            await trx("wallet")
+              .update({
+                balance: Number(wallet.balance) + Number(paymentAmount),
+                updated_at: trx.fn.now()
+              })
+              .where({ id: wallet.id });
+
+            console.log(
+              `✅ Wallet for user ${userId} credited ₹${paymentAmount} via ${orderId}`
+            );
+          } else {
+            console.log(
+              `ℹ️ Wallet transaction for ${orderId} updated to status ${paymentStatus}`
+            );
+          }
         });
       } catch (err) {
         console.error("❌ Wallet credit error:", err.message || err);
