@@ -13,9 +13,26 @@ function Wallet() {
   const [addAmount, setAddAmount] = useState("");
   const [addLoading, setAddLoading] = useState(false);
 
-  const token = useAuthStore(state => state.token);
+  // State for Cashfree SDK instance
+  const [cashfreeInstance, setCashfreeInstance] = useState(null);
 
-  // Fetch wallet and TXs
+  const token = useAuthStore((state) => state.token);
+
+  // Load Cashfree SDK (similar to how your checkout does it)
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+    script.async = true;
+    script.onload = () => {
+      if (window.Cashfree) {
+        setCashfreeInstance(window.Cashfree({ mode: "sandbox" })); // Or "production"
+      }
+    };
+    script.onerror = () => alert("Failed to load Cashfree SDK");
+    document.body.appendChild(script);
+  }, []);
+
+  // Fetch wallet and transactions
   useEffect(() => {
     const fetchWalletData = async () => {
       setLoading(true);
@@ -57,16 +74,21 @@ function Wallet() {
     }
     setAddLoading(true);
     try {
-      // Call BE to start topup order
+      // Call backend to start topup order
       const res = await axios.post(
         `${import.meta.env.VITE_PAYMENT_URL}/wallet/initiateTopUp`,
         { amount },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      const { payment_link, checkout_url } = res.data;
+      const { payment_session_id } = res.data;
       setShowAddModal(false);
-      // Open payment link in new tab or redirect
-      window.location.href = payment_link || checkout_url;
+
+      // Use Cashfree JS SDK for overlay/same tab experience!
+      if (!payment_session_id || !cashfreeInstance) throw new Error("Payment environment not ready");
+      cashfreeInstance.checkout({
+        paymentSessionId: payment_session_id,
+        redirectTarget: "_self" // Overlays in current tab, just like product checkout
+      });
     } catch (err) {
       alert((err.response?.data?.message) || "Failed to initiate top-up");
       console.error("Add money error:", err);
@@ -79,11 +101,10 @@ function Wallet() {
     alert("Withdrawal flow coming soon!");
   };
 
-  if (loading) return (
-    <div className="text-center mt-12 text-lg text-gray-500">
-      Loading wallet...
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="text-center mt-12 text-lg text-gray-500">Loading wallet...</div>
+    );
 
   return (
     <div className="w-full max-w-md mx-auto mt-8 bg-white rounded-lg shadow-md p-6 relative">
@@ -173,13 +194,14 @@ function Wallet() {
             ) : (
               transactions.map((txn) => (
                 <tr key={txn.id} className="border-b last:border-b-0">
-                  <td className="py-2 px-2">{new Date(txn.created_at).toLocaleDateString()}</td>
+                  <td className="py-2 px-2">
+                    {new Date(txn.created_at).toLocaleDateString()}
+                  </td>
                   <td className="py-2 px-2">{txn.type}</td>
                   <td
-                    className={`py-2 px-2 text-right ${txn.type === "credit"
-                        ? "text-green-600"
-                        : "text-red-500"
-                      }`}
+                    className={`py-2 px-2 text-right ${
+                      txn.type === "credit" ? "text-green-600" : "text-red-500"
+                    }`}
                   >
                     {currency} {Number(txn.amount).toFixed(2)}
                   </td>
