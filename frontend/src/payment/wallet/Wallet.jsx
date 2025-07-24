@@ -59,7 +59,7 @@ function Wallet() {
     try {
       // Call BE to start topup order
       const res = await axios.post(
-        `${import.meta.env.VITE_PAYMENT_URL}/wallet/initiate-topup`,
+        `${import.meta.env.VITE_PAYMENT_URL}/wallet/initiateTopUp`,
         { amount },
         { headers: { Authorization: `Bearer ${token}` } }
       );

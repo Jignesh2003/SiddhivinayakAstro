@@ -1,4 +1,8 @@
 import PostgresDb from '../config/postgresDb.js';
+import { v4 as uuidv4 } from "uuid";
+import axios from "axios";
+import PostgresDb from "../config/postgresDb.js";
+import User from "../models/User.js";
 
 // ✅ Show wallet balance
 export const myWallet = async (req, res) => {
@@ -150,3 +154,85 @@ export const withrawFundsFromWallet = async (req, res) => {
   }
 };
 
+
+export const initiateWalletTopupOrder = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { amount } = req.body;
+    if (!userId || !amount || amount <= 0) {
+      return res.status(400).json({ message: "Invalid wallet top-up request." });
+    }
+
+    // Fetch user email/phone for payment gateway payload
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    // Compose a unique wallet order_id
+    const customOrderId = `WALLET_${userId}_${Date.now()}`;
+
+    // Prepare Cashfree order (payment) payload
+    const payload = {
+      order_id: customOrderId,
+      order_amount: Number(amount),
+      order_currency: "INR",
+      customer_details: {
+        customer_id: String(userId),
+        customer_email: user.email,
+        customer_phone: user.phone || "",
+      },
+      order_meta: {
+        return_url: `${process.env.CLIENT_URL}/wallet?order_id=${customOrderId}&status={order_status}`,
+        notify_url: process.env.CASHFREE_WEBHOOK_URL || "",
+      },
+      order_tags: {
+        user: String(userId),
+        intent: "wallet_topup"
+      },
+    };
+
+    const headers = {
+      "x-client-id": process.env.CASHFREE_CLIENT_ID,
+      "x-client-secret": process.env.CASHFREE_CLIENT_SECRET,
+      "x-api-version": "2023-08-01",
+      "x-request-id": uuidv4(),
+      "Content-Type": "application/json",
+    };
+
+    // Call Cashfree
+    const response = await axios.post(
+      "https://sandbox.cashfree.com/pg/orders",
+      payload,
+      { headers }
+    );
+
+    const { payment_session_id, payment_link, checkout_url } = response.data;
+    if (!payment_session_id) {
+      return res.status(500).json({ message: "Cashfree did not return a payment session." });
+    }
+
+    // (Optional but recommended) Store a pending transaction or audit log if needed
+    await PostgresDb('wallet_transaction').insert({
+      wallet_id: null, // Will attach after webhook, if you wish
+      type: 'credit',
+      amount,
+      status: 'initiated',
+      description: `Pending wallet top-up order: ${customOrderId}`,
+      from_user_id: userId,
+      to_user_id: userId,
+      payment_reference: customOrderId, // For audit and matching with webhook
+    });
+
+    // Respond with payment session data for frontend
+    res.json({
+      payment_session_id,
+      payment_link,
+      checkout_url,
+      order_id: customOrderId,
+      amount
+    });
+
+  } catch (err) {
+    console.error("❌ Wallet top-up order creation failed:", err.message);
+    res.status(500).json({ message: "Failed to initiate wallet top-up.", error: err.message });
+  }
+};
