@@ -66,7 +66,7 @@ function Wallet() {
       const { payment_link, checkout_url } = res.data;
       setShowAddModal(false);
       // Open payment link in new tab or redirect
-      window.open(payment_link || checkout_url);
+      window.location.href = payment_link || checkout_url;
     } catch (err) {
       alert((err.response?.data?.message) || "Failed to initiate top-up");
       console.error("Add money error:", err);
@@ -176,11 +176,10 @@ function Wallet() {
                   <td className="py-2 px-2">{new Date(txn.created_at).toLocaleDateString()}</td>
                   <td className="py-2 px-2">{txn.type}</td>
                   <td
-                    className={`py-2 px-2 text-right ${
-                      txn.type === "credit"
+                    className={`py-2 px-2 text-right ${txn.type === "credit"
                         ? "text-green-600"
                         : "text-red-500"
-                    }`}
+                      }`}
                   >
                     {currency} {Number(txn.amount).toFixed(2)}
                   </td>
