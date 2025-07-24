@@ -225,7 +225,6 @@ export const initiateWalletTopupOrder = async (req, res) => {
 
     // Store a pending transaction or audit log with wallet_id present
     await PostgresDb('wallet_transaction').insert({
-      id: txnId,
       wallet_id: wallet.id, // <-- always valid now!
       type: 'credit',
       amount,
