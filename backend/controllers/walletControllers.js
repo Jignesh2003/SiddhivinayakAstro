@@ -1,7 +1,6 @@
 import PostgresDb from '../config/postgresDb.js';
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
-import PostgresDb from "../config/postgresDb.js";
 import User from "../models/User.js";
 
 // ✅ Show wallet balance
