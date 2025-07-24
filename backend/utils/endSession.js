@@ -1,6 +1,6 @@
 import ChatSession from "../models/chatSession.js";
 import Message from "../models/message.js";
-import User from "../models/user.js";
+import User from "../models/User.js";
 import createChatSessionTransaction from "./chatEndedMoneyTransferAstro.js"; // 🚀 Wallet transaction handler
 
 export const endSession = async (sessionId, io) => {

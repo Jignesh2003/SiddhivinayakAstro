@@ -12,7 +12,7 @@ router.get("/cashfree/check-status", authMiddleware, checkPaymentStatus)
 //wallet related
 router.get('/wallet/me', authMiddleware, myWallet)  //check wallet balance    
 router.get('/wallet/transactions', authMiddleware, listWalletTransactions); // list of all wallet transactions   
-router.post('/wallet/add-money', authMiddleware, addMoneyToWallet); // add money to wallet
+router.post('/wallet/add-money', authMiddleware, addMoneyToWallet); // add money to wallet manually for admin refund bonnus etc cases
 router.post('/wallet/withdraw', authMiddleware, withrawFundsFromWallet); // withdraw money from wallet
 
 export default router;
