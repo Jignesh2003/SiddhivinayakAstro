@@ -134,20 +134,20 @@ export const respondToRequest = async (req, res) => {
       const astro = await User.findById(session.astrologerId);
       if (!astro || typeof astro.pricePerMinute !== "number")
         return res.status(400).json({ success: false, message: "Astrologer or rate not found" });
-      console.log("THIS IS SESSION FROM MONGODB :-" , session.userId);
 
-      console.log("THIS IS SESSION USERID FROM MONGODB :-" , session.userId);
+      const userIdString = session.userId.toString(); // <-- ENSURE STRING!
       
       // 2. Check wallet again
-      const balance = await getUserWalletBalance(session.userId);
+      const balance = await getUserWalletBalance(userIdString);
       if (balance === null)
         return res.status(400).json({ success: false, message: "User wallet not found" });
       if (balance < astro.pricePerMinute)
         return res.status(402).json({ success: false, message: "Insufficient balance. Please recharge!" });
 
       // 3. Debit advance for first minute (wallet)
+      
       const debitResult = await deductFromWallet({
-        userId: session.userId,
+        userId: userIdString,
         amount: astro.pricePerMinute,
         businessType: 'chat_session_advance',
         chatSessionId: session._id,
