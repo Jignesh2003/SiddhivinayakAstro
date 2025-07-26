@@ -95,16 +95,14 @@ function Wallet() {
         paymentSessionId: payment_session_id,
         redirectTarget: "_self",
         onSuccess: () => {
-          // User completed payment (optional: poll for confirmation)
-          fetchWalletData();
+          fetchWalletData(); // reload after payment
         },
         onFailure: () => {
           alert("Payment cancelled or failed.");
         }
       });
 
-      // NOTE: Your server/webhook must update wallet, and the UI can poll/refetch after user returns
-      setTimeout(fetchWalletData, 7000); // Poll for payment result after a few seconds
+      setTimeout(fetchWalletData, 7000); // poll for payment after user returns
 
     } catch (err) {
       alert(err.response?.data?.message || "Failed to initiate top-up");
@@ -114,28 +112,20 @@ function Wallet() {
     }
   };
 
-  // Withdraw: future flow
-  const handleWithdraw = () => {
-    alert("Withdrawal flow coming soon!");
-  };
-
-  // Helper for transaction label and color
+  // Transaction UI helpers
   function txnLabel(txn) {
     if (!txn) return "";
-    // Prefer business_type if present, otherwise fallback to direction
     if (txn.business_type)
       return txn.business_type.replaceAll("_", " ");
     return txn.direction || txn.type || "";
   }
   function txnClass(txn) {
-    // 'credit' = money in, green; 'debit' = out, red
     return txn.direction === "credit" ? "text-green-600" : "text-red-500";
   }
   function txnSign(txn) {
     return txn.direction === "credit" ? "+" : "-";
   }
 
-  // loading state
   if (loading)
     return (
       <div className="text-center mt-12 text-lg text-gray-500">Loading wallet...</div>
@@ -151,18 +141,12 @@ function Wallet() {
           </div>
           <div className="text-sm text-gray-500">Available Balance</div>
         </div>
-        <div className="flex space-x-2">
+        <div>
           <button
             onClick={handleOpenAddModal}
             className="px-4 py-2 rounded bg-green-500 text-white font-medium hover:bg-green-600 transition"
           >
             Add Money
-          </button>
-          <button
-            onClick={handleWithdraw}
-            className="px-4 py-2 rounded bg-blue-500 text-white font-medium hover:bg-blue-600 transition"
-          >
-            Withdraw
           </button>
         </div>
       </div>
