@@ -21,8 +21,9 @@ async function createChatSessionTransaction(session) {
 
   return await PostgresDb.transaction(async trx => {
     // 1. Fetch wallets (atomic for update - use 'forUpdate' in prod if heavy traffic)
-    const userWallet = await trx('wallet').where({ user_id: userId }).first();
-    const astrologerWallet = await trx('wallet').where({ user_id: astrologerId }).first();
+  const userWallet = await trx('wallet').where({ user_id: userId }).forUpdate().first();
+const astrologerWallet = await trx('wallet').where({ user_id: astrologerId }).forUpdate().first();
+
 
     if (!userWallet || !astrologerWallet) throw new Error("Wallets not found");
     if (Number(userWallet.balance) < amount) throw new Error("User has insufficient wallet balance");
