@@ -166,15 +166,13 @@ export const verifyPayment = async (req, res) => {
               .where({ id: txn.wallet_id })
               .first();
             if (!wallet) throw new Error(`Wallet not found for wallet_id=${txn.wallet_id}`);
-            console.log("Amount IN WEBOOK before update ORIGNAL BALANCE PRESENT AND UPDATE AMOUNT", wallet.balance, paymentAmount);
 
             await trx("wallet")
               .update({
-                balance: Number(wallet.balance) + Number(paymentAmount),
+                // balance: Number(wallet.balance) + Number(paymentAmount),
                 updated_at: trx.fn.now()
               })
               .where({ id: wallet.id });
-            console.log("Amount IN WEBOOK AFTER update ORIGNAL BALANCE PRESENT AND UPDATE AMOUNT", wallet.balance, paymentAmount);
 
             console.log(
               `✅ Wallet for user ${userId} credited ₹${paymentAmount} via ${orderId}`

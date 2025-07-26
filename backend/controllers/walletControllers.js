@@ -256,7 +256,6 @@ export const initiateWalletTopupOrder = async (req, res) => {
       payment_reference: customOrderId,
       meta: {}
     });
-console.log("Amount BEFORE SENDING TO FE WITH ORDERID FROM BE", amount);
 
     res.json({
       success: true,
