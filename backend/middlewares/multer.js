@@ -37,7 +37,7 @@ const kycStorage = new CloudinaryStorage({
 const kycUpload = multer({ 
   storage: kycStorage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // you can adjust per‐file size if needed
+    fileSize: 5 * 1024 * 1024, // you can adjust per‐file size if needed
   },
 });
 

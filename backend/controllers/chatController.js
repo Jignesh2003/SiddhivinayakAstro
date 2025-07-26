@@ -39,11 +39,9 @@ export const createChatRequest = async (req, res) => {
   // You should extract userId from the session/JWT, not req.body to avoid spoofing
   const userId = req.user.id;
   const { astrologerId } = req.body;
-
   if (!userId || !astrologerId) {
     return res.status(400).json({ success: false, message: "Missing required userId or astrologerId" });
   }
-
   try {
     // 1. Check if active session exists
     const activeSession = await ChatSession.findOne({
@@ -60,13 +58,11 @@ export const createChatRequest = async (req, res) => {
         sessionData: activeSession,
       });
     }
-
     // 2. Get astrologer rate
     const astrologer = await User.findById(astrologerId);
     if (!astrologer || typeof astrologer.pricePerMinute !== "number") {
       return res.status(400).json({ success: false, message: "Invalid astrologer." });
     }
-
     // 3. Check wallet
     const balance = await getUserWalletBalance(userId);
     if (balance === null) {
@@ -79,7 +75,7 @@ export const createChatRequest = async (req, res) => {
         minRequired: astrologer.pricePerMinute
       });
     }
-
+    console.log('Creating new session:', { userId, astrologerId });
     // 4. Create new session
     const newSession = new ChatSession({
       userId,
@@ -88,7 +84,7 @@ export const createChatRequest = async (req, res) => {
     });
 
     await newSession.save();
-
+    console.log('Session saved:', newSession._id);
     res.status(201).json({
       success: true,
       message: "New chat request created successfully",
@@ -96,7 +92,7 @@ export const createChatRequest = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Error creating chat request:", err);
-    res.status(500).json({ success: false, message: "Failed to create chat request" });
+    res.status(500).json({ success: false, message: "Failed to create chat request", error: err.message });
   }
 };
 

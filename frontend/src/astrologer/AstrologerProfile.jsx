@@ -5,6 +5,8 @@ import { UploadCloud } from "lucide-react";
 import AstrologerSidebar from "./AstrologerSidebar";
 import useAuthStore from "../store/useAuthStore";
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
 const AstrologerProfile = () => {
   const [files, setFiles] = useState({
     aadhaar: null,
@@ -17,8 +19,26 @@ const AstrologerProfile = () => {
 
   const token = useAuthStore((state) => state.token);
 
+  // Check file size and type before accepting
   const handleFileChange = (e, field) => {
-    setFiles((prev) => ({ ...prev, [field]: e.target.files[0] }));
+    const file = e.target.files[0];
+    if (!file) {
+      setFiles((prev) => ({ ...prev, [field]: null }));
+      return;
+    }
+    // Client side file size check
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(`${file.name} is too large. Max 5MB per document.`);
+      e.target.value = "";
+      return;
+    }
+    // Accept only images
+    if (!file.type.startsWith("image/")) {
+      toast.error("Invalid file type. Only images are allowed.");
+      e.target.value = "";
+      return;
+    }
+    setFiles((prev) => ({ ...prev, [field]: file }));
   };
 
   const handleSubmit = async () => {
@@ -45,18 +65,23 @@ const AstrologerProfile = () => {
           },
         }
       );
-
       // Set kyc status from response
       if (res.data.user?.kyc) {
         setKycStatus(res.data.user.kyc);
       }
-
       toast.success(res.data.message);
-      // Clear files (this will force inputs to remount)
       setFiles({ aadhaar: null, pan: null, education: null, bank: null });
     } catch (err) {
-      console.error(err);
-      toast.error("Failed to upload. Please try again.");
+      if (
+        err?.response?.data?.message?.includes("too large") ||
+        err?.response?.data?.message?.includes("5MB")
+      ) {
+        toast.error(err.response.data.message);
+      } else {
+        toast.error(
+          err.response?.data?.message || "Failed to upload. Please try again."
+        );
+      }
     } finally {
       setLoading(false);
     }
