@@ -169,7 +169,7 @@ export const verifyPayment = async (req, res) => {
 
             await trx("wallet")
               .update({
-                // balance: Number(wallet.balance) + Number(paymentAmount),
+                 balance: Number(wallet.balance) + Number(paymentAmount),
                 updated_at: trx.fn.now()
               })
               .where({ id: wallet.id });
