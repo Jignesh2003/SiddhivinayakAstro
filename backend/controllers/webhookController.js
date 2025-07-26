@@ -4,14 +4,19 @@ import Product from "../models/Product.js";
 import PostgresDb from "../config/postgresDb.js";
 import logTransactionToPostgres from "../utils/logTransaction.js";
 
+// Helper: For pretty logs (optional)
+function logWithTS(...args) {
+  console.log(`[${new Date().toISOString()}]`, ...args);
+}
+
 /**
- * Webhook from Cashfree: verifies signature, updates wallet/accounting.
+ * Webhook from Cashfree/Razorpay to process payments safely.
  */
 export const verifyPayment = async (req, res) => {
   try {
     // --- 1. Signature and basic validation ---
     if (!Buffer.isBuffer(req.body)) {
-      console.error("❌ Invalid webhook format: body is not raw Buffer");
+      logWithTS("❌ Invalid webhook format: body is not raw Buffer");
       return res.status(400).send("Invalid webhook format");
     }
     const rawBody = req.body.toString("utf8");
@@ -62,7 +67,7 @@ export const verifyPayment = async (req, res) => {
       return res.status(200).send("Skipped: Incomplete payment data");
     }
 
-    // --- 3. Handle Product Orders ("PREORDER_") ---
+    // --- 3. Handle Product Orders ("PREORDER_") as before ---
     const statusMap = {
       SUCCESS: {
         paymentStatus: "Paid",
@@ -92,9 +97,7 @@ export const verifyPayment = async (req, res) => {
             mongoUpdate,
             { session: mongoSession, new: true }
           );
-          if (!updatedOrder) {
-            throw new Error(`No order found with customOrderId=${orderId}`);
-          }
+          if (!updatedOrder) throw new Error(`No order found with customOrderId=${orderId}`);
           if (paymentStatus === "SUCCESS") {
             for (const item of updatedOrder.items) {
               const prodRes = await Product.findOneAndUpdate(
@@ -102,94 +105,70 @@ export const verifyPayment = async (req, res) => {
                 { $inc: { "stock.$.quantity": -item.quantity } },
                 { session: mongoSession, new: true }
               );
-              if (!prodRes) {
+              if (!prodRes)
                 throw new Error(
                   `Insufficient stock or product not found for: ${item.product}`
                 );
-              }
             }
           }
         });
         mongoSession.endSession();
-        console.log(
-          `✅ Mongo order (${orderId}) status & stock processed: ${paymentStatus}`
-        );
+        logWithTS(`✅ Mongo order (${orderId}) status & stock processed: ${paymentStatus}`);
       } catch (err) {
         await mongoSession.abortTransaction();
         mongoSession.endSession();
-        console.error("❌ MongoDB transaction failed:", err.message);
+        logWithTS("❌ MongoDB transaction failed:", err.message);
         return res.status(500).send("Order/stock update failed.");
       }
     }
 
-    // --- 4. Handle Wallet Top-Ups ("WALLET_...") ---
+    // --- 4. Handle Wallet Top-Ups ("WALLET_...") with ATOMIC SAFE PATTERN ---
     if (orderId.startsWith("WALLET_")) {
-      // Only update wallet if payment succeeded
       try {
         await PostgresDb.transaction(async trx => {
-          // 1. Lock the wallet_transaction to avoid concurrency
-          const txn = await trx("wallet_transaction")
+          // ATOMICALLY set to completed if not already done, then proceed.
+          const updatedTxnRows = await trx("wallet_transaction")
             .where({ payment_reference: orderId })
-            .forUpdate()
-            .first();
+            .andWhere("status", "!=", "completed")
+            .update({
+              status: paymentStatus === "SUCCESS" ? "completed" : paymentStatus.toLowerCase(),
+              business_type: paymentStatus === "SUCCESS" ? "wallet_topup" : undefined,
+              updated_at: trx.fn.now(),
+              description: `PG webhook: ${paymentStatus.toLowerCase()}`
+            })
+            .returning("*");
 
-          if (!txn) {
-            console.error(`❌ No wallet_transaction found for payment_reference=${orderId}`);
-            throw new Error("No pending wallet transaction for this payment");
-          }
-
-          console.log(`Wallet transaction ${txn.id} status before: ${txn.status}`);
-
-          if (txn.status === "completed") {
-            console.log(`ℹ️ Wallet transaction for ${orderId} already completed, skip credit.`);
+          if (!updatedTxnRows.length) {
+            logWithTS(`ℹ️ Wallet transaction for ${orderId} already completed, skipping credit.`);
             return;
           }
 
-          // 2. Lock wallet row
-          const wallet = await trx("wallet")
-            .where({ id: txn.wallet_id })
-            .forUpdate()
-            .first();
-          if (!wallet) throw new Error(`Wallet not found for wallet_id=${txn.wallet_id}`);
-
-          // 3. Update transaction status
-          let updateData = {
-            status:
-              paymentStatus === "SUCCESS" ? "completed" : paymentStatus.toLowerCase(),
-            updated_at: trx.fn.now(),
-            description: `PG webhook: ${paymentStatus.toLowerCase()}`
-          };
-
-          // 4. On SUCCESS: also credit wallet balance and set balance_after
+          const txn = updatedTxnRows[0];
           if (paymentStatus === "SUCCESS") {
-            const newBalance = Number(wallet.balance) + Number(paymentAmount);
+            // Lock and fetch wallet for safe balance update
+            const wallet = await trx("wallet")
+              .where({ id: txn.wallet_id })
+              .forUpdate()
+              .first();
+            if (!wallet) throw new Error(`Wallet not found for wallet_id=${txn.wallet_id}`);
 
-            // Both updates are atomic!
-            await trx("wallet_transaction").where({ id: txn.id }).update({
-              ...updateData,
-              business_type: "wallet_topup",
-              balance_after: newBalance
-            });
+            const newBalance = Number(wallet.balance) + Number(paymentAmount);
             await trx("wallet")
               .where({ id: wallet.id })
               .update({
                 balance: newBalance,
                 updated_at: trx.fn.now()
               });
-
-            console.log(
+            await trx("wallet_transaction").where({ id: txn.id }).update({
+              balance_after: newBalance
+            });
+            logWithTS(
               `✅ Wallet for user ${wallet.user_id} credited ₹${paymentAmount} via ${orderId}. New balance: ${newBalance}`
-            );
-          } else {
-            // Not success, set just status (no balance change)
-            await trx("wallet_transaction").where({ id: txn.id }).update(updateData);
-            console.log(
-              `ℹ️ Wallet transaction for ${orderId} updated to status ${paymentStatus}`
             );
           }
         });
       } catch (err) {
-        console.error("❌ Wallet credit error:", err.message || err);
+        logWithTS("❌ Wallet credit error:", err.message || err);
         return res.status(500).send("Wallet credit failed.");
       }
     }
@@ -214,17 +193,14 @@ export const verifyPayment = async (req, res) => {
           trx
         );
       });
-      console.log("✅ Postgres: Payment event logged");
+      logWithTS("✅ Postgres: Payment event logged");
     } catch (pgErr) {
-      console.error(
-        "❌ Postgres logging failed after Mongo/Wallet commit:",
-        pgErr.message || pgErr
-      );
+      logWithTS("❌ Postgres logging failed after Mongo/Wallet commit:", pgErr.message || pgErr);
     }
 
     return res.status(200).send("✅ Webhook processed");
   } catch (err) {
-    console.error("❌ verifyPayment controller error:", err);
+    logWithTS("❌ verifyPayment controller error:", err);
     return res.status(500).send("Internal Server Error");
   }
 };
