@@ -1,40 +1,53 @@
 import ChatSession from "../models/chatSession.js";
 import Message from "../models/message.js";
 import User from "../models/User.js";
-import createChatSessionTransaction from "./chatEndedMoneyTransferAstro.js"; // 🚀 Wallet transaction handler
+import createChatSessionTransaction from "./chatEndedMoneyTransferAstro.js"; // PostgreSQL atomic wallet handler
 
-export const endSession = async (sessionId, io) => {
+/**
+ * Ends a chat session:
+ * - Calculates total minutes/charges
+ * - Updates Mongo session as ended
+ * - Processes wallet settlement (user pays, platform fees/commission, astrologer net)
+ * - Emits socket notification (optional)
+ */
+export const endSession = async (sessionId, io = null) => {
   try {
+    // 1. Fetch session
     const session = await ChatSession.findById(sessionId);
-
-    // Exit early if session already ended or not found
     if (!session || session.status === "ended") {
       console.log(`⚠️ Skipping end — session not found or already ended: ${sessionId}`);
-      return;
+      return { success: false, message: "Session not found or already ended." };
     }
 
-    // Check if session has messages
+    // 2. Make sure session actually has messages (no free empty sessions)
     const messageCount = await Message.countDocuments({ chatSessionId: sessionId });
     if (messageCount === 0) {
       console.log(`🟡 Session ${sessionId} has no messages. Skipping end & billing.`);
-      return;
+      // Optionally mark ended without billing
+      session.status = "ended";
+      session.endTime = new Date();
+      await session.save();
+      return { success: false, message: "No messages, session ended without billing." };
     }
 
-    // 1. Fetch astrologer to get their rate
+    // 3. Fetch astrologer and chat rate
     const astrologer = await User.findById(session.astrologerId);
     if (!astrologer || typeof astrologer.pricePerMinute !== "number") {
       console.error(`❌ Astrologer not found or pricePerMinute missing for ${session.astrologerId}`);
-      return;
+      session.status = "ended";
+      session.endTime = new Date();
+      await session.save();
+      return { success: false, message: "Astrologer/rate missing." };
     }
-    const ratePerMinute = astrologer.pricePerMinute; // 💸 Dynamic rate
+    const ratePerMinute = astrologer.pricePerMinute;
 
-    // 2. Calculate duration & charge
+    // 4. Calculate charge duration
     const endTime = new Date();
     const durationMs = endTime - new Date(session.startTime);
-    const minutes = Math.max(Math.ceil(durationMs / 60000), 1); // At least 1 minute
+    const minutes = Math.max(Math.ceil(durationMs / 60000), 1); // Always round up to nearest min
     const amountCharged = minutes * ratePerMinute;
 
-    // 3. Update session info in MongoDB
+    // 5. Update Mongo session
     session.endTime = endTime;
     session.status = "ended";
     session.amountCharged = amountCharged;
@@ -42,28 +55,39 @@ export const endSession = async (sessionId, io) => {
 
     console.log(`💾 Session ${sessionId} marked ended. Duration: ${minutes} min. Astrologer rate: ₹${ratePerMinute}/min. Amount: ₹${amountCharged}`);
 
-    // 4. 💰 Trigger wallet transactions using Supabase/PostgreSQL
+    // 6. Trigger wallet settlement (atomic in Postgres)
     try {
+      // This function should internally handle:
+      // - User debit (amountCharged)
+      // - Astrologer credit (net after fees)
+      // - Wallet audit logs
+      // - Platform fee collection
       await createChatSessionTransaction({
         _id: session._id,
         userId: session.userId,
         astrologerId: session.astrologerId,
-        amountCharged
+        amountCharged // always the full amount, commission/net handled in wallet handler
       });
       console.log(`💳 Wallet transaction processed for session ${sessionId}`);
     } catch (transactionErr) {
-      console.error(`❌ Failed to create wallet transaction:`, transactionErr.message);
+      console.error(`❌ Failed to create wallet transaction:`, transactionErr);
+      // Optionally emit notification of wallet failure here
+      return { success: false, message: "Session ended, but wallet settlement failed.", error: transactionErr.message };
     }
 
-    // 5. 🔔 Notify involved users and room
-    io.to(sessionId).emit("session-ended", { sessionId, amountCharged });
-    io.to(session.userId.toString()).emit("session-ended", { sessionId, amountCharged });
-    io.to(session.astrologerId.toString()).emit("session-ended", { sessionId, amountCharged });
+    // 7. Notify both users and room (if io/socket provided)
+    if (io) {
+      io.to(sessionId).emit("session-ended", { sessionId, amountCharged });
+      io.to(session.userId.toString()).emit("session-ended", { sessionId, amountCharged });
+      io.to(session.astrologerId.toString()).emit("session-ended", { sessionId, amountCharged });
+    }
 
     console.log(`✅ Session ${sessionId} fully ended and notified.`);
+    return { success: true, sessionId, amountCharged, minutes };
 
   } catch (err) {
-    console.error("❌ Error in endSession:", err.message);
+    console.error("❌ Error in endSession:", err);
+    return { success: false, message: "Unexpected server error in endSession", error: err.message };
   }
 };
 

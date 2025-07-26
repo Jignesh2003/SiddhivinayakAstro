@@ -32,6 +32,9 @@ const chatSessionSchema = new mongoose.Schema(
     approvedAt: {
       type: Date, // optional timestamp for when astrologer approved
     },
+    nextDebitAt: {
+  type: Date
+},
   },
   {
     timestamps: true, // adds createdAt and updatedAt
