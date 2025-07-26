@@ -52,7 +52,8 @@ const AstrologerChatRequests = () => {
       console.error("Error responding to request", err);
     }
   };
-
+  console.log("REQUESTS :" ,requests);
+  
   useEffect(() => {
     fetchRequests();
     const intervalId = setInterval(fetchRequests, 10000);

@@ -1,12 +1,13 @@
 import PostgresDb from "../config/postgresDb.js";
 
 export async function getUserWalletBalance(userId) {
-    const row = await PostgresDb('wallet')
-        .where({ user_id: userId })
-        .first('balance');
-    return row ? Number(row.balance) : null;
+  if (!userId) return null;
+  const id = typeof userId === "string" ? userId : userId.toString(); // Always string!
+  const row = await PostgresDb('wallet')
+    .where({ user_id: id })
+    .first('balance');
+  return row ? Number(row.balance) : null;
 }
-
 /**
  * Deducts an amount from user's wallet and logs the transaction with all audit fields.
  * Throws for insufficient funds.
