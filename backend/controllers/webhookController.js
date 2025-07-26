@@ -4,6 +4,9 @@ import Product from "../models/Product.js";
 import PostgresDb from "../config/postgresDb.js";
 import logTransactionToPostgres from "../utils/logTransaction.js";
 
+/**
+ * Webhook from Cashfree: verifies signature, updates wallet/accounting.
+ */
 export const verifyPayment = async (req, res) => {
   try {
     // --- 1. Signature and basic validation ---
@@ -11,14 +14,12 @@ export const verifyPayment = async (req, res) => {
       console.error("❌ Invalid webhook format: body is not raw Buffer");
       return res.status(400).send("Invalid webhook format");
     }
-
     const rawBody = req.body.toString("utf8");
     const timestamp = req.headers["x-webhook-timestamp"];
     const incomingSignature = req.headers["x-webhook-signature"];
     if (!timestamp || !incomingSignature) {
       return res.status(400).send("Missing signature headers");
     }
-
     const computedSignature = crypto
       .createHmac("sha256", process.env.CASHFREE_CLIENT_SECRET)
       .update(`${timestamp}${rawBody}`, "utf8")
@@ -61,7 +62,7 @@ export const verifyPayment = async (req, res) => {
       return res.status(200).send("Skipped: Incomplete payment data");
     }
 
-    // --- 3. Handle Order Payments (existing functionality) ---
+    // --- 3. Handle Product Orders ("PREORDER_") ---
     const statusMap = {
       SUCCESS: {
         paymentStatus: "Paid",
@@ -94,7 +95,6 @@ export const verifyPayment = async (req, res) => {
           if (!updatedOrder) {
             throw new Error(`No order found with customOrderId=${orderId}`);
           }
-
           if (paymentStatus === "SUCCESS") {
             for (const item of updatedOrder.items) {
               const prodRes = await Product.findOneAndUpdate(
@@ -122,62 +122,67 @@ export const verifyPayment = async (req, res) => {
       }
     }
 
-    // --- 4. Handle Wallet Top-Ups (UPDATED FLOW) ---
-    // On webhook: update the existing transaction row by payment_reference (orderId)!
+    // --- 4. Handle Wallet Top-Ups ("WALLET_...") ---
     if (orderId.startsWith("WALLET_")) {
-      // Extract userId from orderId (WALLET_<userId>_<amounttimestamp>)
-      const parts = orderId.split("_");
-      const userId = parts[1];
-
+      // Only update wallet if payment succeeded
       try {
         await PostgresDb.transaction(async trx => {
-          // 1. Find the existing wallet_transaction by payment_reference
+          // 1. Lock the wallet_transaction to avoid concurrency
           const txn = await trx("wallet_transaction")
             .where({ payment_reference: orderId })
+            .forUpdate()
             .first();
 
           if (!txn) {
-            // This should not happen except in edge-cases; optionally handle race conditions here:
-            console.error(
-              `❌ No wallet_transaction found for payment_reference=${orderId}`
-            );
+            console.error(`❌ No wallet_transaction found for payment_reference=${orderId}`);
             throw new Error("No pending wallet transaction for this payment");
           }
 
-          // 2. Only update if not already completed (idempotency)
+          console.log(`Wallet transaction ${txn.id} status before: ${txn.status}`);
+
           if (txn.status === "completed") {
-            console.log(`ℹ️ Wallet transaction for ${orderId} already completed.`);
+            console.log(`ℹ️ Wallet transaction for ${orderId} already completed, skip credit.`);
             return;
           }
 
-          // 3. Update the transaction status & fields
-          await trx("wallet_transaction")
-            .where({ id: txn.id })
-            .update({
-              status: paymentStatus === "SUCCESS" ? "completed" : paymentStatus.toLowerCase(),
-              description: orderId, // Optionally, add gateway info
-              updated_at: trx.fn.now()
-            });
+          // 2. Lock wallet row
+          const wallet = await trx("wallet")
+            .where({ id: txn.wallet_id })
+            .forUpdate()
+            .first();
+          if (!wallet) throw new Error(`Wallet not found for wallet_id=${txn.wallet_id}`);
 
-          // 4. If payment succeeded, add to wallet balance
+          // 3. Update transaction status
+          let updateData = {
+            status:
+              paymentStatus === "SUCCESS" ? "completed" : paymentStatus.toLowerCase(),
+            updated_at: trx.fn.now(),
+            description: `PG webhook: ${paymentStatus.toLowerCase()}`
+          };
+
+          // 4. On SUCCESS: also credit wallet balance and set balance_after
           if (paymentStatus === "SUCCESS") {
-            // Fetch wallet (safe: must match wallet_id)
-            const wallet = await trx("wallet")
-              .where({ id: txn.wallet_id })
-              .first();
-            if (!wallet) throw new Error(`Wallet not found for wallet_id=${txn.wallet_id}`);
+            const newBalance = Number(wallet.balance) + Number(paymentAmount);
 
+            // Both updates are atomic!
+            await trx("wallet_transaction").where({ id: txn.id }).update({
+              ...updateData,
+              business_type: "wallet_topup",
+              balance_after: newBalance
+            });
             await trx("wallet")
+              .where({ id: wallet.id })
               .update({
-                 balance: Number(wallet.balance) + Number(paymentAmount),
+                balance: newBalance,
                 updated_at: trx.fn.now()
-              })
-              .where({ id: wallet.id });
+              });
 
             console.log(
-              `✅ Wallet for user ${userId} credited ₹${paymentAmount} via ${orderId}`
+              `✅ Wallet for user ${wallet.user_id} credited ₹${paymentAmount} via ${orderId}. New balance: ${newBalance}`
             );
           } else {
+            // Not success, set just status (no balance change)
+            await trx("wallet_transaction").where({ id: txn.id }).update(updateData);
             console.log(
               `ℹ️ Wallet transaction for ${orderId} updated to status ${paymentStatus}`
             );
@@ -189,7 +194,7 @@ export const verifyPayment = async (req, res) => {
       }
     }
 
-    // --- 5. Postgres Transaction: log payment (atomic for these) ---
+    // --- 5. Postgres Transaction: log payment (atomic for audit) ---
     try {
       await PostgresDb.transaction(async trx => {
         await logTransactionToPostgres(
