@@ -13,58 +13,63 @@ function Wallet() {
   const [addAmount, setAddAmount] = useState("");
   const [addLoading, setAddLoading] = useState(false);
 
-  // State for Cashfree SDK instance
+  // Cashfree SDK
   const [cashfreeInstance, setCashfreeInstance] = useState(null);
 
   const token = useAuthStore((state) => state.token);
 
-  // Load Cashfree SDK (similar to how your checkout does it)
+  // Load Cashfree SDK (ONE TIME)
   useEffect(() => {
+    if (window.Cashfree) {
+      setCashfreeInstance(window.Cashfree({ mode: "sandbox" }));
+      return;
+    }
     const script = document.createElement("script");
     script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
     script.async = true;
     script.onload = () => {
       if (window.Cashfree) {
-        setCashfreeInstance(window.Cashfree({ mode: "sandbox" })); // Or "production"
+        setCashfreeInstance(window.Cashfree({ mode: "sandbox" }));
       }
     };
     script.onerror = () => alert("Failed to load Cashfree SDK");
     document.body.appendChild(script);
   }, []);
 
-  // Fetch wallet and transactions
-  useEffect(() => {
-    const fetchWalletData = async () => {
-      setLoading(true);
-      try {
-        const walletRes = await axios.get(
-          `${import.meta.env.VITE_PAYMENT_URL}/wallet/me`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setBalance(walletRes.data.balance || 0);
-        setCurrency(walletRes.data.currency || "INR");
+  // Fetch wallet & txns
+  async function fetchWalletData() {
+    setLoading(true);
+    try {
+      const [walletRes, txnsRes] = await Promise.all([
+        axios.get(`${import.meta.env.VITE_PAYMENT_URL}/wallet/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${import.meta.env.VITE_PAYMENT_URL}/wallet/transactions`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+      setBalance(walletRes.data.wallet?.balance ?? 0);
+      setCurrency(walletRes.data.wallet?.currency ?? "INR");
+      setTransactions(txnsRes.data.transactions ?? []);
+    } catch (err) {
+      console.error("Wallet error:", err);
+      alert("Error loading wallet. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-        const txnsRes = await axios.get(
-          `${import.meta.env.VITE_PAYMENT_URL}/wallet/transactions`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setTransactions(txnsRes.data);
-      } catch (err) {
-        console.error("Wallet error:", err);
-        alert("Error loading wallet. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchWalletData();
+  useEffect(() => {
+    if (token) fetchWalletData();
   }, [token]);
 
-  // Add money modal logic
+  // Add money UI
   const handleOpenAddModal = () => {
     setAddAmount("");
     setShowAddModal(true);
   };
 
+  // Add money flow
   const handleSubmitAddMoney = async (e) => {
     e.preventDefault();
     const amount = Number(addAmount);
@@ -74,7 +79,7 @@ function Wallet() {
     }
     setAddLoading(true);
     try {
-      // Call backend to start topup order
+      // Backend starts top-up order and returns payment session ID
       const res = await axios.post(
         `${import.meta.env.VITE_PAYMENT_URL}/wallet/initiateTopUp`,
         { amount },
@@ -83,24 +88,54 @@ function Wallet() {
       const { payment_session_id } = res.data;
       setShowAddModal(false);
 
-      // Use Cashfree JS SDK for overlay/same tab experience!
       if (!payment_session_id || !cashfreeInstance) throw new Error("Payment environment not ready");
+
+      // Start Cashfree checkout
       cashfreeInstance.checkout({
         paymentSessionId: payment_session_id,
-        redirectTarget: "_self" // Overlays in current tab, just like product checkout
+        redirectTarget: "_self",
+        onSuccess: () => {
+          // User completed payment (optional: poll for confirmation)
+          fetchWalletData();
+        },
+        onFailure: () => {
+          alert("Payment cancelled or failed.");
+        }
       });
+
+      // NOTE: Your server/webhook must update wallet, and the UI can poll/refetch after user returns
+      setTimeout(fetchWalletData, 7000); // Poll for payment result after a few seconds
+
     } catch (err) {
-      alert((err.response?.data?.message) || "Failed to initiate top-up");
+      alert(err.response?.data?.message || "Failed to initiate top-up");
       console.error("Add money error:", err);
     } finally {
       setAddLoading(false);
     }
   };
 
+  // Withdraw: future flow
   const handleWithdraw = () => {
     alert("Withdrawal flow coming soon!");
   };
 
+  // Helper for transaction label and color
+  function txnLabel(txn) {
+    if (!txn) return "";
+    // Prefer business_type if present, otherwise fallback to direction
+    if (txn.business_type)
+      return txn.business_type.replaceAll("_", " ");
+    return txn.direction || txn.type || "";
+  }
+  function txnClass(txn) {
+    // 'credit' = money in, green; 'debit' = out, red
+    return txn.direction === "credit" ? "text-green-600" : "text-red-500";
+  }
+  function txnSign(txn) {
+    return txn.direction === "credit" ? "+" : "-";
+  }
+
+  // loading state
   if (loading)
     return (
       <div className="text-center mt-12 text-lg text-gray-500">Loading wallet...</div>
@@ -179,7 +214,7 @@ function Wallet() {
           <thead>
             <tr className="text-gray-600 bg-gray-100">
               <th className="py-2 px-2">Date</th>
-              <th className="py-2 px-2">Type</th>
+              <th className="py-2 px-2">Label</th>
               <th className="py-2 px-2 text-right">Amount</th>
               <th className="py-2 px-2">Status</th>
             </tr>
@@ -195,17 +230,17 @@ function Wallet() {
               transactions.map((txn) => (
                 <tr key={txn.id} className="border-b last:border-b-0">
                   <td className="py-2 px-2">
-                    {new Date(txn.created_at).toLocaleDateString()}
+                    {new Date(txn.created_at).toLocaleDateString("en-IN")}
                   </td>
-                  <td className="py-2 px-2">{txn.type}</td>
-                  <td
-                    className={`py-2 px-2 text-right ${
-                      txn.type === "credit" ? "text-green-600" : "text-red-500"
-                    }`}
-                  >
-                    {currency} {Number(txn.amount).toFixed(2)}
+                  <td className="py-2 px-2">
+                    <span className="capitalize">{txnLabel(txn)}</span>
                   </td>
-                  <td className="py-2 px-2">{txn.status}</td>
+                  <td className={`py-2 px-2 text-right font-mono ${txnClass(txn)}`}>
+                    {txnSign(txn)} {currency} {Number(txn.amount).toFixed(2)}
+                  </td>
+                  <td className="py-2 px-2 capitalize">
+                    {txn.status}
+                  </td>
                 </tr>
               ))
             )}
