@@ -134,7 +134,10 @@ export const respondToRequest = async (req, res) => {
       const astro = await User.findById(session.astrologerId);
       if (!astro || typeof astro.pricePerMinute !== "number")
         return res.status(400).json({ success: false, message: "Astrologer or rate not found" });
+      console.log("THIS IS SESSION FROM MONGODB :-" , session.userId);
 
+      console.log("THIS IS SESSION USERID FROM MONGODB :-" , session.userId);
+      
       // 2. Check wallet again
       const balance = await getUserWalletBalance(session.userId);
       if (balance === null)
