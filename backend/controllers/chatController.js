@@ -36,13 +36,12 @@ export const fetchChat = async (req, res) => {
 
 // Create a pending chat request (checks balance, no debit)
 export const createChatRequest = async (req, res) => {
-  if (!userId || !astrologerId) {
-    return res.status(400).json({ success: false, message: "Missing required userId or astrologerId" });
-  }
   // You should extract userId from the session/JWT, not req.body to avoid spoofing
   const userId = req.user.id;
   const { astrologerId } = req.body;
-
+  if (!userId || !astrologerId) {
+    return res.status(400).json({ success: false, message: "Missing required userId or astrologerId" });
+  }
   try {
     // 1. Check if active session exists
     const activeSession = await ChatSession.findOne({
