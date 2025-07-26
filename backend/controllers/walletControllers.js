@@ -9,7 +9,6 @@ import calculateWithdrawDetails from '../utils/calaculateTax.js'; // implements 
 // Show wallet balance
 export const myWallet = async (req, res) => {
   const userId = req.user.id;
-
   try {
     const wallet = await PostgresDb('wallet')
       .select('balance', 'currency', 'status', 'created_at', 'updated_at')
@@ -26,82 +25,54 @@ export const myWallet = async (req, res) => {
   }
 };
 
-
-// List wallet transactions
-export const listWalletTransactions = async (req, res) => {
-  const userId = req.user.id;
-  try {
-    const wallet = await PostgresDb('wallet')
-      .select('id')
-      .where({ user_id: userId })
-      .first();
-    if (!wallet) return res.json([]);
-
-    const transactions = await PostgresDb('wallet_transaction')
-      .select(
-        'id', 'chat_session_id', 'direction', 'business_type', 'amount',
-        'status', 'description', 'created_at',
-        'platform_fee', 'gst_amount', 'payment_gateway_fee', 'balance_after', 'meta'
-      )
-      .where({ wallet_id: wallet.id })
-      .orderBy('created_at', 'desc')
-      .limit(50);
-
-    res.json({ success: true, transactions });
-  } catch (error) {
-    console.error('🔥 Transaction list error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-
 // Add money to wallet - Only for manual/verified top-up (not async PG flow)
-export const addMoneyToWallet = async (req, res) => {
-  const userId = req.user.id;
-  const { amount, paymentReference } = req.body;
 
-  if (!amount || amount <= 0) {
-    return res.status(400).json({ error: 'Invalid amount' });
-  }
+// export const addMoneyToWallet = async (req, res) => {
+//   const userId = req.user.id;
+//   const { amount, paymentReference } = req.body;
 
-  try {
-    await PostgresDb.transaction(async trx => {
-      const wallet = await trx('wallet')
-        .select('id', 'balance')
-        .where({ user_id: userId })
-        .first();
+//   if (!amount || amount <= 0) {
+//     return res.status(400).json({ error: 'Invalid amount' });
+//   }
 
-      if (!wallet) throw new Error('Wallet not found');
-      const newBalance = Number(wallet.balance) + Number(amount);
+//   try {
+//     await PostgresDb.transaction(async trx => {
+//       const wallet = await trx('wallet')
+//         .select('id', 'balance')
+//         .where({ user_id: userId })
+//         .first();
 
-      // Insert transaction row
-      const [transaction] = await trx('wallet_transaction')
-        .insert({
-          wallet_id: wallet.id,
-          direction: 'credit',
-          business_type: 'wallet_topup',
-          amount,
-          status: 'completed',
-          description: `Top-up via ${paymentReference}`,
-          from_user_id: userId,
-          to_user_id: userId,
-          balance_after: newBalance,
-          meta: {} // extend if needed
-        })
-        .returning('*');
+//       if (!wallet) throw new Error('Wallet not found');
+//       const newBalance = Number(wallet.balance) + Number(amount);
 
-      // Update wallet amount
-      await trx('wallet')
-        .update({ balance: newBalance, updated_at: trx.fn.now() })
-        .where({ id: wallet.id });
+//       // Insert transaction row
+//       const [transaction] = await trx('wallet_transaction')
+//         .insert({
+//           wallet_id: wallet.id,
+//           direction: 'credit',
+//           business_type: 'wallet_topup',
+//           amount,
+//           status: 'completed',
+//           description: `Top-up via ${paymentReference}`,
+//           from_user_id: userId,
+//           to_user_id: userId,
+//           balance_after: newBalance,
+//           meta: {} // extend if needed
+//         })
+//         .returning('*');
 
-      res.json({ success: true, message: 'Wallet topped up', newBalance, transaction });
-    });
-  } catch (err) {
-    console.error('🔥 Add money error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
+//       // Update wallet amount
+//       await trx('wallet')
+//         .update({ balance: newBalance, updated_at: trx.fn.now() })
+//         .where({ id: wallet.id });
+
+//       res.json({ success: true, message: 'Wallet topped up', newBalance, transaction });
+//     });
+//   } catch (err) {
+//     console.error('🔥 Add money error:', err);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// };
 
 
 // Request withdrawal with tax/fee deduction & parent/child transaction structure
@@ -285,6 +256,7 @@ export const initiateWalletTopupOrder = async (req, res) => {
       payment_reference: customOrderId,
       meta: {}
     });
+console.log("Amount BEFORE SENDING TO FE WITH ORDERID FROM BE", amount);
 
     res.json({
       success: true,
@@ -297,6 +269,32 @@ export const initiateWalletTopupOrder = async (req, res) => {
   } catch (err) {
     console.error("❌ Wallet top-up order creation failed:", err.message);
     res.status(500).json({ message: "Failed to initiate wallet top-up.", error: err.message });
+  }
+};
+
+export const listWalletTransactions = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const wallet = await PostgresDb('wallet')
+      .select('id')
+      .where({ user_id: userId })
+      .first();
+    if (!wallet) return res.json([]);
+
+    const transactions = await PostgresDb('wallet_transaction')
+      .select(
+        'id', 'chat_session_id', 'direction', 'business_type', 'amount',
+        'status', 'description', 'created_at',
+        'platform_fee', 'gst_amount', 'payment_gateway_fee', 'balance_after', 'meta'
+      )
+      .where({ wallet_id: wallet.id })
+      .orderBy('created_at', 'desc')
+      .limit(50);
+
+    res.json({ success: true, transactions });
+  } catch (error) {
+    console.error('🔥 Transaction list error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
