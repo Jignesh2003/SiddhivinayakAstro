@@ -19,22 +19,26 @@ const chatSessionSchema = new mongoose.Schema(
       default: Date.now,
     },
     endTime: Date,
-      amountCharged: {
-        type: Number,
-        default: 0,
+    amountCharged: {
+      type: Number,
+      default: 0,
     },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected","ended"],
+      enum: ["pending", "approved", "rejected", "ended"],
       default: "pending",
       index: true,
     },
+    minutesDebited: {
+      type: Number, default: 0
+    },
+
     approvedAt: {
       type: Date, // optional timestamp for when astrologer approved
     },
     nextDebitAt: {
-  type: Date
-},
+      type: Date
+    },
   },
   {
     timestamps: true, // adds createdAt and updatedAt

@@ -68,6 +68,20 @@ export function initializeMinuteBillingCron(io) {
           continue;
         }
 
+        // INCREMENT minutesDebited after successful debit!
+        session.minutesDebited = (session.minutesDebited || 0) + 1;
+        session.nextDebitAt = new Date(Date.now() + 60 * 1000);
+        await session.save();
+
+        console.log(`[MinuteBilling] Debited ₹${astro.pricePerMinute} for user ${userId} on session ${session._id}. minutesDebited now ${session.minutesDebited}. Next debit at ${session.nextDebitAt.toISOString()}`);
+
+
+        if (!debitResult.success) {
+          console.error(`[MinuteBilling] Debit failed for session ${session._id}:`, debitResult.error);
+          // Optionally pause session or notify user here
+          continue;
+        }
+
         // Update nextDebitAt to one minute later (schedule next debit)
         session.nextDebitAt = new Date(Date.now() + 60 * 1000);
         await session.save();

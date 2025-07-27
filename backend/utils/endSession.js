@@ -49,19 +49,17 @@ export const endSession = async (sessionId, io = null) => {
       }
       return { success: false, message: "Astrologer/rate missing." };
     }
-    const ratePerMinute = astrologer.pricePerMinute;
-    const endTime = new Date();
-    const durationMs = endTime - new Date(session.startTime);
-    const minutes = Math.max(Math.ceil(durationMs / 60000), 1); // Always round up
-    const amountCharged = minutes * ratePerMinute;
+   const ratePerMinute = astrologer.pricePerMinute;
+const endTime = new Date();
+const minutes = session.minutesDebited || 1;
+const amountCharged = minutes * ratePerMinute;
 
-    // 4. Mark session ended in Mongo
-    session.endTime = endTime;
-    session.status = "ended";
-    session.amountCharged = amountCharged;
-    await session.save();
+session.endTime = endTime;
+session.status = "ended";
+session.amountCharged = amountCharged;
+await session.save();
 
-    console.log(`💾 Session ${sessionId} marked ended. Duration: ${minutes} min. Rate: ₹${ratePerMinute}. Amount: ₹${amountCharged}`);
+console.log(`💾 Session ${sessionId} marked ended. Minutes debited: ${minutes}. Rate: ₹${ratePerMinute}. Amount: ₹${amountCharged}`);
 
     // 5. Attempt wallet transaction (NEVER early return on error)
     let walletError = null;
