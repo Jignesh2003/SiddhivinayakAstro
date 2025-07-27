@@ -7,11 +7,10 @@ import { getUserWalletBalance, deductFromWallet } from '../services/walletServic
 // Run every minute
 cron.schedule('* * * * *', async () => {
   try {
-    const now = Date.now();
     const sessions = await ChatSession.find({
-      status: "approved",
-      nextDebitAt: { $lte: now }
-    });
+  status: "approved",
+  nextDebitAt: { $lte: new Date(Date.now() + 5000) } // allow 5 seconds grace
+});
 
     for (const session of sessions) {
       const userId = session.userId.toString();
