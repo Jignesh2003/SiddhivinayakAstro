@@ -17,7 +17,8 @@ import { fetchHoroscopes } from './jobs/fetchHoroscope.js';
 import astrologyRoutes from './routes/astrologyRoutes.js'
 import paymentRoutes from "./routes/paymentRoutes.js"
 import webhookRoutes from "./routes/webhookRoutes.js"
-import './jobs/minuteBilling.js';
+import { initializeMinuteBillingCron } from "./jobs/minuteBilling.js";
+
 dotenv.config();
 const app = express();
 connectDB();
@@ -52,6 +53,7 @@ app.use((req, res, next) => {
   res.status(404).json({ message: "Route not found" });
 });
 
+
 // Socket + HTTP Server
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -68,6 +70,7 @@ const io = new Server(server, {
 
 // Socket logic moved to handler
 setupSocketHandlers(io);
+initializeMinuteBillingCron(io);
 
 // Start server
 const PORT = process.env.PORT || 5000;
