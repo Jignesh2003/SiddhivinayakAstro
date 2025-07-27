@@ -18,11 +18,11 @@ const chatSessionSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
-    endTime: Date,
-    amountCharged: {
-      type: Number,
-      default: 0,
-    },
+    // endTime: Date,
+    //   amountCharged: {
+    //     type: Number,
+    //     default: 0,
+    // },
     status: {
       type: String,
       enum: ["pending", "approved", "rejected","ended"],
