@@ -75,9 +75,10 @@ const ChatBox = () => {
           setReceiverId(otherId);
 
           if (isNewSession && msgs.length === 0) {
+            // Welcome message from USER side so it appears on right for user
             const welcomeMsg = {
-              senderId: astrologerIdInSession,
-              receiverId: userIdInSession,
+              senderId: userIdInSession,
+              receiverId: astrologerIdInSession,
               createdAt: new Date().toISOString(),
               _id: `local-${Date.now()}-auto`,
               content:
@@ -169,9 +170,10 @@ const ChatBox = () => {
     role,
   ]);
 
-  // Send message handler
+  // Send message handler  
   const handleSend = () => {
-    if (input.trim() && receiverId && !sessionEnded && !lowBalanceWarning) {
+    // Allow send when lowBalanceWarning is true; only disable on sessionEnded
+    if (input.trim() && receiverId && !sessionEnded) {
       sendMessage({
         sessionId,
         senderId,
@@ -268,6 +270,7 @@ const ChatBox = () => {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Low balance warning bar */}
       {lowBalanceWarning && !sessionEnded && (
         <div
           className="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-red-600 text-white p-4 rounded-lg shadow-lg z-50 flex items-center justify-between max-w-md w-full gap-4"
@@ -286,6 +289,7 @@ const ChatBox = () => {
         </div>
       )}
 
+      {/* Overlay when session ended */}
       {sessionEnded && (
         <div className="absolute inset-0 bg-gray-100 bg-opacity-70 flex items-center justify-center pointer-events-none">
           <p className="text-lg font-semibold text-gray-700 select-none">
@@ -293,6 +297,28 @@ const ChatBox = () => {
           </p>
         </div>
       )}
+
+      {/* Input area */}
+      <div className="mt-4 flex items-center gap-2 border-t pt-4">
+        <input
+          type="text"
+          className="flex-1 rounded-full border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 text-gray-900 focus:ring-blue-400 disabled:cursor-not-allowed disabled:bg-gray-100"
+          placeholder="Type a message..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          disabled={loading || !receiverId || sessionEnded}
+          aria-label="Type a message"
+        />
+        <button
+          onClick={handleSend}
+          disabled={!receiverId || loading || input.trim() === "" || sessionEnded}
+          className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Send message"
+        >
+          <SendHorizonal className="w-5 h-5" />
+        </button>
+      </div>
     </div>
   );
 };
