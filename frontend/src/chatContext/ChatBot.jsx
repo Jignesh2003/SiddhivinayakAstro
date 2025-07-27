@@ -69,15 +69,14 @@ const ChatBox = () => {
           const userInSession = session.userId._id.toString();
           const astrologerInSession = session.astrologerId._id.toString();
 
-          // Determine the other participant's ID
+          // Determine the other participant's ID (the receiver)
           let otherId = null;
-
           if (userInSession && astrologerInSession) {
             otherId = userIdStr === userInSession ? astrologerInSession : userInSession;
           }
           setReceiverId(otherId);
 
-          // Debug logs to help troubleshooting
+          // Debug logs for all relevant info, helpful to understand behavior on both roles
           console.log("ChatBox Debug Info:", {
             loggedInUserId: userIdStr,
             userInSession,
@@ -86,8 +85,14 @@ const ChatBox = () => {
             role,
           });
 
+          if (!otherId) {
+            console.warn("Warning: Receiver ID is null; trying fallback");
+            if (role === "user" && astrologerInSession) setReceiverId(astrologerInSession);
+            else if (role === "astrologer" && userInSession) setReceiverId(userInSession);
+          }
+
+          // Welcome message shows from logged-in user side, so message appears correctly on that user's client
           if (isNewSession && msgs.length === 0) {
-            // Welcome message from current user (to appear on right side)
             const welcomeMsg = {
               senderId: role === "user" ? userInSession : astrologerInSession,
               receiverId: role === "user" ? astrologerInSession : userInSession,
@@ -117,15 +122,17 @@ const ChatBox = () => {
 
   // Setup socket listeners and join room
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId) {
+      console.log(`📡 Joining room: ${sessionId}`);
+      return;
+    }
 
     joinRoom(sessionId);
 
     const handleMessage = (msg) => {
       setMessages((prev) => {
         const exists = prev.some((m) => m._id === msg._id);
-        if (exists) return prev;
-        return [...prev, msg];
+        return exists ? prev : [...prev, msg];
       });
     };
     onMessage(handleMessage);
@@ -283,7 +290,7 @@ const ChatBox = () => {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           aria-label="Message input"
-          className="flex-1 rounded-full border border-gray-300 px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:cursor-not-allowed disabled:bg-gray-100"
+          className="flex-1 rounded-full border border-gray-300 px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:cursor-not-allowed disabled:bg-gray-100"
         />
         <button
           onClick={handleSend}

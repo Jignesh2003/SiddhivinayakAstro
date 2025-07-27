@@ -52,7 +52,6 @@ const AstrologerChatRequests = () => {
       console.error("Error responding to request", err);
     }
   };
-  console.log("REQUESTS :" ,requests);
   
   useEffect(() => {
     fetchRequests();
