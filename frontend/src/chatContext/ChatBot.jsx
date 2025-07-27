@@ -38,21 +38,21 @@ const ChatBox = () => {
   const navigate = useNavigate();
   const senderId = userId;
 
-  // Register user to socket personal room
+  // Register user socket room
   useEffect(() => {
     if (userId) {
       register(userId);
     }
   }, [userId, register]);
 
-  // Scroll to bottom on new messages
+  // Scroll messages to bottom on updates
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
 
-  // Fetch messages and session info once on mount/sessionId change
+  // Fetch messages and session data once per sessionId or relevant params
   useEffect(() => {
     const fetchMessages = async () => {
       try {
@@ -65,18 +65,19 @@ const ChatBox = () => {
         const session = res.data.session;
 
         if (session?.userId?._id && session?.astrologerId?._id) {
-          const userIdStr = userId.toString();
+          // Convert all IDs to string for safe consistent comparison
           const userInSession = session.userId._id.toString();
           const astrologerInSession = session.astrologerId._id.toString();
+          const userIdStr = userId.toString();
 
-          // Determine the other participant's ID (the receiver)
+          // Compute the other participant's ID dynamically based on logged user
           let otherId = null;
           if (userInSession && astrologerInSession) {
             otherId = userIdStr === userInSession ? astrologerInSession : userInSession;
           }
           setReceiverId(otherId);
 
-          // Debug logs for all relevant info, helpful to understand behavior on both roles
+          // Debug info to help troubleshoot client state and roles
           console.log("ChatBox Debug Info:", {
             loggedInUserId: userIdStr,
             userInSession,
@@ -85,13 +86,13 @@ const ChatBox = () => {
             role,
           });
 
+          // Defensive fallback to set receiverId if above fails
           if (!otherId) {
-            console.warn("Warning: Receiver ID is null; trying fallback");
             if (role === "user" && astrologerInSession) setReceiverId(astrologerInSession);
             else if (role === "astrologer" && userInSession) setReceiverId(userInSession);
           }
 
-          // Welcome message shows from logged-in user side, so message appears correctly on that user's client
+          // Show welcome message from logged in user's perspective
           if (isNewSession && msgs.length === 0) {
             const welcomeMsg = {
               senderId: role === "user" ? userInSession : astrologerInSession,
@@ -120,19 +121,16 @@ const ChatBox = () => {
     fetchMessages();
   }, [sessionId, token, userId, isNewSession, role]);
 
-  // Setup socket listeners and join room
+  // Socket listeners for new messages, session end, low balance, user left
   useEffect(() => {
-    if (!sessionId) {
-      console.log(`📡 Joining room: ${sessionId}`);
-      return;
-    }
+    if (!sessionId) return;
 
     joinRoom(sessionId);
 
     const handleMessage = (msg) => {
       setMessages((prev) => {
-        const exists = prev.some((m) => m._id === msg._id);
-        return exists ? prev : [...prev, msg];
+        if (prev.some((m) => m._id === msg._id)) return prev;
+        return [...prev, msg];
       });
     };
     onMessage(handleMessage);
@@ -178,16 +176,16 @@ const ChatBox = () => {
   }, [
     sessionId,
     joinRoom,
+    leaveRoom,
     onMessage,
     offMessage,
-    leaveRoom,
     onSessionEnded,
     offSessionEnded,
     navigate,
     role,
   ]);
 
-  // Send message handler
+  // Send message - enabled during low balance warning, disabled only after session ended
   const handleSend = () => {
     if (input.trim() && receiverId && !sessionEnded) {
       sendMessage({
@@ -200,7 +198,7 @@ const ChatBox = () => {
     }
   };
 
-  // Handle chat end action
+  // End chat handler
   const handleEndChat = () => {
     if (sessionId) {
       emitSessionEnded(sessionId);
@@ -216,7 +214,7 @@ const ChatBox = () => {
 
   return (
     <div
-      className="flex flex-col w-full sm:max-w-3xl max-w-full mx-auto h-[70vh] mt-6 sm:mt-10 border rounded-2xl shadow-lg p-6 bg-white relative"
+      className="flex flex-col w-full sm:max-w-3xl max-w-full mx-auto h-[70vh] mt-6 sm:mt-10 border rounded-2xl shadow-lg p-6 bg-white relative select-none"
       style={{
         backgroundImage: `url(${assets.GalaxyBackground})`,
         backgroundSize: "cover",
@@ -239,7 +237,7 @@ const ChatBox = () => {
         </button>
       </div>
 
-      {/* Messages Area */}
+      {/* Messages list */}
       <div
         className="flex-1 overflow-y-auto p-3 scrollbar scrollbar-thumb-blue-400 scrollbar-track-gray-100 rounded-lg mb-4 bg-white"
         aria-live="polite"
@@ -248,7 +246,7 @@ const ChatBox = () => {
         {loading && <p className="text-gray-500 text-center">Loading chat...</p>}
         {error && <p className="text-red-600 text-center">{error}</p>}
         {!loading && !error && messages.length === 0 && (
-          <p className="text-center text-gray-400 italic">No messages yet</p>
+          <p className="text-center italic text-gray-400">No messages yet</p>
         )}
         {messages.map((msg) => {
           const sender =
@@ -280,7 +278,7 @@ const ChatBox = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
+      {/* Input and Send */}
       <div className="flex gap-3 border-t pt-3">
         <input
           type="text"
@@ -302,7 +300,7 @@ const ChatBox = () => {
         </button>
       </div>
 
-      {/* Low Balance Warning bar */}
+      {/* Low Balance Warning */}
       {lowBalanceWarning && !sessionEnded && (
         <div
           className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center justify-between max-w-md w-full gap-4 z-50"
@@ -321,7 +319,7 @@ const ChatBox = () => {
         </div>
       )}
 
-      {/* Session Ended overlay */}
+      {/* Session Ended Overlay */}
       {sessionEnded && (
         <div className="absolute inset-0 bg-white bg-opacity-80 flex items-center justify-center pointer-events-none">
           <p className="text-xl font-semibold text-gray-900 select-none">Chat session ended.</p>
