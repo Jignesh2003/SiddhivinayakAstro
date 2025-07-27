@@ -21,11 +21,14 @@ async function createChatSessionTransaction(session) {
 
   return await PostgresDb.transaction(async trx => {
     // 1. Fetch wallets (atomic for update - use 'forUpdate' in prod if heavy traffic)
-  const userWallet = await trx('wallet').where({ user_id: userId }).forUpdate().first();
-const astrologerWallet = await trx('wallet').where({ user_id: astrologerId }).forUpdate().first();
+const userIdStr = typeof userId === "string" ? userId : userId.toString();
+const astrologerIdStr = typeof astrologerId === "string" ? astrologerId : astrologerId.toString();
 
+const userWallet = await trx('wallet').where({ user_id: userIdStr }).forUpdate().first();
+const astrologerWallet = await trx('wallet').where({ user_id: astrologerIdStr }).forUpdate().first();
 
-    if (!userWallet || !astrologerWallet) throw new Error("Wallets not found");
+if (!userWallet || !astrologerWallet) throw new Error("Wallets not found");
+
     if (Number(userWallet.balance) < amount) throw new Error("User has insufficient wallet balance");
 
     // PREPARE NEW BALANCES
@@ -40,8 +43,8 @@ const astrologerWallet = await trx('wallet').where({ user_id: astrologerId }).fo
       business_type: 'chat_session_settle',
       amount,
       status: 'completed',
-      from_user_id: userId,
-      to_user_id: astrologerId,
+      from_user_id: userIdStr,
+      to_user_id: astrologerIdStr,
       platform_fee: platformFee,
       gst_amount: gstAmount,
       payment_gateway_fee: paymentGatewayFee,
@@ -59,8 +62,8 @@ const astrologerWallet = await trx('wallet').where({ user_id: astrologerId }).fo
       business_type: 'chat_session_settle',
       amount: astrologerNet,
       status: 'completed',
-      from_user_id: userId,
-      to_user_id: astrologerId,
+      from_user_id: userIdStr,
+      to_user_id: astrologerIdStr,
       description: 'Chat session credit (net after platform fees)',
       balance_after: astroBalanceAfter,
       meta: JSON.stringify({ gross: amount, platformFee, gstAmount, paymentGatewayFee }),
