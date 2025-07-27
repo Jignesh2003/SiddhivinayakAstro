@@ -17,7 +17,7 @@ import { fetchHoroscopes } from './jobs/fetchHoroscope.js';
 import astrologyRoutes from './routes/astrologyRoutes.js'
 import paymentRoutes from "./routes/paymentRoutes.js"
 import webhookRoutes from "./routes/webhookRoutes.js"
-
+import './jobs/minuteBilling.js';
 dotenv.config();
 const app = express();
 connectDB();
@@ -75,6 +75,9 @@ server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
 // Run at 00:00 UTC → 05:30 IST every day
+if (process.env.NODE_ENV === 'production') {
 cron.schedule('30 0 * * *', fetchHoroscopes, {
   timezone: 'Asia/Kolkata'
-});
+})
+}
+
