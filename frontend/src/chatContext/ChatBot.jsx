@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
-import useChatStore from "../store/ChatStore";
+import useChatStore from "../store/useChatStore";
 import useAuthStore from "../store/AuthStore";
 import { SendHorizonal, LogOut } from "lucide-react";
 import assets from "../assets";
