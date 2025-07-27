@@ -52,7 +52,7 @@ const ChatBox = () => {
     }
   }, [messages]);
 
-  // Fetch messages and session info once
+  // Fetch messages and session info once on mount/sessionId change
   useEffect(() => {
     const fetchMessages = async () => {
       try {
@@ -69,13 +69,18 @@ const ChatBox = () => {
           const userIdInSession = session.userId._id.toString();
           const astrologerIdInSession = session.astrologerId._id.toString();
 
-          const otherId =
-            userIdStr === userIdInSession ? astrologerIdInSession : userIdInSession;
+          // Determine the other participant ID (peer)
+          let otherId = null;
+
+          // Defensive check: only set receiverId if both IDs exist
+          if (userIdInSession && astrologerIdInSession) {
+            otherId = userIdStr === userIdInSession ? astrologerIdInSession : userIdInSession;
+          }
 
           setReceiverId(otherId);
 
           if (isNewSession && msgs.length === 0) {
-            // Welcome message from USER side so it appears on right for user
+            // Welcome message from USER side (so appears on right for the user)
             const welcomeMsg = {
               senderId: userIdInSession,
               receiverId: astrologerIdInSession,
@@ -170,9 +175,8 @@ const ChatBox = () => {
     role,
   ]);
 
-  // Send message handler  
+  // Send message handler
   const handleSend = () => {
-    // Allow send when lowBalanceWarning is true; only disable on sessionEnded
     if (input.trim() && receiverId && !sessionEnded) {
       sendMessage({
         sessionId,
@@ -184,7 +188,7 @@ const ChatBox = () => {
     }
   };
 
-  // Handle chat end action
+  // Handle end chat action
   const handleEndChat = () => {
     if (sessionId) {
       emitSessionEnded(sessionId);
@@ -200,80 +204,94 @@ const ChatBox = () => {
 
   return (
     <div
-      className="flex flex-col w-full sm:max-w-2xl max-w-full mx-auto h-[70vh] mt-6 sm:mt-10 border rounded-2xl shadow-lg p-4 bg-white"
+      className="flex flex-col w-full sm:max-w-3xl max-w-full mx-auto h-[70vh] mt-6 sm:mt-10 border rounded-2xl shadow-lg p-6 bg-white relative"
       style={{
         backgroundImage: `url(${assets.GalaxyBackground})`,
         backgroundSize: "cover",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
       }}
+      aria-label="Chat box"
     >
-      <div className="flex justify-between items-center mb-4 border-b pb-2">
-        <h2 className="text-base sm:text-xl font-semibold text-gray-900">Chat Session</h2>
+      {/* Header */}
+      <div className="flex justify-between items-center border-b pb-4 mb-4">
+        <h2 className="text-xl font-semibold text-gray-900">Chat Session</h2>
         <button
           onClick={handleEndChat}
           disabled={sessionEnded}
-          className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
+          className="flex items-center gap-2 text-red-600 hover:text-red-800 disabled:opacity-50"
           aria-label="End Chat"
-          title="End Chat"
-          type="button"
         >
           <LogOut className="w-5 h-5" />
           End Chat
         </button>
       </div>
 
+      {/* Messages Area */}
       <div
-        className="flex-1 overflow-y-auto space-y-3 px-2 sm:px-4 scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-gray-200"
+        className="flex-1 overflow-y-auto p-3 scrollbar scrollbar-thumb-blue-400 scrollbar-track-gray-100 rounded-lg mb-4 bg-white"
         aria-live="polite"
         aria-relevant="additions"
       >
-        {loading ? (
-          <p className="text-center text-gray-500 mt-4">Loading messages...</p>
-        ) : error ? (
-          <p className="text-center text-red-500 mt-4">{error}</p>
-        ) : (
-          messages.map((msg) => {
-            const sender =
-              typeof msg.senderId === "object" && msg.senderId !== null
-                ? msg.senderId._id || msg.senderId
-                : msg.senderId;
-
-            const isMine = sender?.toString?.() === senderId?.toString?.();
-
-            return (
-              <div
-                key={msg._id || Math.random()}
-                className={`flex ${isMine ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`relative px-4 py-2 rounded-2xl shadow-md max-w-xs text-sm transition-opacity duration-300 ${
-                    isMine
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-200 text-gray-900"
-                  }`}
-                  style={{ animation: "fadeIn 0.3s ease forwards" }}
-                >
-                  <div className="break-words">{msg.content}</div>
-                  <div className="text-[10px] mt-1 opacity-70 text-right select-none">
-                    {msg.createdAt &&
-                      new Date(msg.createdAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                  </div>
-                </div>
-              </div>
-            );
-          })
+        {loading && <p className="text-gray-500 text-center">Loading chat...</p>}
+        {error && <p className="text-red-600 text-center">{error}</p>}
+        {!loading && !error && messages.length === 0 && (
+          <p className="text-center text-gray-400 italic">No messages yet</p>
         )}
+        {messages.map((msg) => {
+          const sender =
+            typeof msg.senderId === "object" && msg.senderId !== null ? msg.senderId._id || msg.senderId : msg.senderId;
+          const isMine = sender?.toString() === senderId?.toString();
+          return (
+            <div
+              key={msg._id}
+              className={`max-w-xs px-4 py-2 mb-2 rounded-2xl shadow cursor-default select-text transition-all duration-150 ease-in-out ${
+                isMine ? "self-end bg-blue-600 text-white" : "self-start bg-gray-200 text-gray-900"
+              }`}
+              style={{ animation: "fadeIn 0.3s ease forwards" }}
+              role="article"
+              aria-label={`${isMine ? "Your message" : "Received message"}`}
+            >
+              <p className="whitespace-pre-wrap">{msg.content}</p>
+              <div className="mt-1 text-xs text-right opacity-70 select-none">
+                {msg.createdAt &&
+                  new Date(msg.createdAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+              </div>
+            </div>
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Low balance warning bar */}
+      {/* Input Area */}
+      <div className="flex gap-3 border-t pt-3">
+        <input
+          type="text"
+          value={input}
+          placeholder="Type your message..."
+          disabled={loading || !receiverId || sessionEnded}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          aria-label="Message input"
+          className="flex-1 rounded-full border border-gray-300 px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:cursor-not-allowed disabled:bg-gray-100"
+        />
+        <button
+          onClick={handleSend}
+          disabled={!receiverId || loading || input.trim() === "" || sessionEnded}
+          aria-label="Send message"
+          className="rounded-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors p-2"
+        >
+          <SendHorizonal className="w-5 h-5 text-white" />
+        </button>
+      </div>
+
+      {/* Low Balance Warning bar */}
       {lowBalanceWarning && !sessionEnded && (
         <div
-          className="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-red-600 text-white p-4 rounded-lg shadow-lg z-50 flex items-center justify-between max-w-md w-full gap-4"
+          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center justify-between max-w-md w-full gap-4 z-50"
           role="alert"
           aria-live="assertive"
           aria-atomic="true"
@@ -281,7 +299,7 @@ const ChatBox = () => {
           <span>Your wallet balance is low. Please recharge or end the chat.</span>
           <button
             onClick={handleEndChat}
-            className="bg-white text-red-600 px-4 py-2 rounded-md font-semibold hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400"
+            className="bg-white text-red-600 px-4 py-2 rounded-md font-semibold hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:ring-red-400"
             aria-label="End Chat"
           >
             End Chat
@@ -289,36 +307,12 @@ const ChatBox = () => {
         </div>
       )}
 
-      {/* Overlay when session ended */}
+      {/* Session Ended overlay */}
       {sessionEnded && (
-        <div className="absolute inset-0 bg-gray-100 bg-opacity-70 flex items-center justify-center pointer-events-none">
-          <p className="text-lg font-semibold text-gray-700 select-none">
-            Chat session ended.
-          </p>
+        <div className="absolute inset-0 bg-white bg-opacity-80 flex items-center justify-center pointer-events-none">
+          <p className="text-xl font-semibold text-gray-900 select-none">Chat session ended.</p>
         </div>
       )}
-
-      {/* Input area */}
-      <div className="mt-4 flex items-center gap-2 border-t pt-4">
-        <input
-          type="text"
-          className="flex-1 rounded-full border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 text-gray-900 focus:ring-blue-400 disabled:cursor-not-allowed disabled:bg-gray-100"
-          placeholder="Type a message..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          disabled={loading || !receiverId || sessionEnded}
-          aria-label="Type a message"
-        />
-        <button
-          onClick={handleSend}
-          disabled={!receiverId || loading || input.trim() === "" || sessionEnded}
-          className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label="Send message"
-        >
-          <SendHorizonal className="w-5 h-5" />
-        </button>
-      </div>
     </div>
   );
 };
