@@ -66,24 +66,31 @@ const ChatBox = () => {
 
         if (session?.userId?._id && session?.astrologerId?._id) {
           const userIdStr = userId.toString();
-          const userIdInSession = session.userId._id.toString();
-          const astrologerIdInSession = session.astrologerId._id.toString();
+          const userInSession = session.userId._id.toString();
+          const astrologerInSession = session.astrologerId._id.toString();
 
-          // Determine the other participant ID (peer)
+          // Determine the other participant's ID
           let otherId = null;
 
-          // Defensive check: only set receiverId if both IDs exist
-          if (userIdInSession && astrologerIdInSession) {
-            otherId = userIdStr === userIdInSession ? astrologerIdInSession : userIdInSession;
+          if (userInSession && astrologerInSession) {
+            otherId = userIdStr === userInSession ? astrologerInSession : userInSession;
           }
-
           setReceiverId(otherId);
 
+          // Debug logs to help troubleshooting
+          console.log("ChatBox Debug Info:", {
+            loggedInUserId: userIdStr,
+            userInSession,
+            astrologerInSession,
+            computedReceiverId: otherId,
+            role,
+          });
+
           if (isNewSession && msgs.length === 0) {
-            // Welcome message from USER side (so appears on right for the user)
+            // Welcome message from current user (to appear on right side)
             const welcomeMsg = {
-              senderId: userIdInSession,
-              receiverId: astrologerIdInSession,
+              senderId: role === "user" ? userInSession : astrologerInSession,
+              receiverId: role === "user" ? astrologerInSession : userInSession,
               createdAt: new Date().toISOString(),
               _id: `local-${Date.now()}-auto`,
               content:
@@ -106,21 +113,19 @@ const ChatBox = () => {
     };
 
     fetchMessages();
-  }, [sessionId, token, userId, isNewSession]);
+  }, [sessionId, token, userId, isNewSession, role]);
 
   // Setup socket listeners and join room
   useEffect(() => {
-    if (!sessionId) {
-      console.log(`📡 Joining room: ${sessionId}`);
-      return;
-    }
+    if (!sessionId) return;
 
     joinRoom(sessionId);
 
     const handleMessage = (msg) => {
       setMessages((prev) => {
         const exists = prev.some((m) => m._id === msg._id);
-        return exists ? prev : [...prev, msg];
+        if (exists) return prev;
+        return [...prev, msg];
       });
     };
     onMessage(handleMessage);
@@ -135,15 +140,15 @@ const ChatBox = () => {
         );
         setTimeout(() => {
           navigate(role === "user" ? "/" : "/astrologer-dashboard");
-        }, 2000); // Delay so user sees toast
+        }, 2000);
       }
     };
     onSessionEnded(handleSessionEnded);
 
     const handleLowBalance = ({ sessionId: lowBalanceSid, message }) => {
       if (lowBalanceSid === sessionId) {
-        toast.error(message || "Low wallet balance");
         setLowBalanceWarning(true);
+        toast.error(message || "Low wallet balance");
       }
     };
     useChatStore.getState().socket.on("low-balance", handleLowBalance);
@@ -188,7 +193,7 @@ const ChatBox = () => {
     }
   };
 
-  // Handle end chat action
+  // Handle chat end action
   const handleEndChat = () => {
     if (sessionId) {
       emitSessionEnded(sessionId);
@@ -240,7 +245,9 @@ const ChatBox = () => {
         )}
         {messages.map((msg) => {
           const sender =
-            typeof msg.senderId === "object" && msg.senderId !== null ? msg.senderId._id || msg.senderId : msg.senderId;
+            typeof msg.senderId === "object" && msg.senderId !== null
+              ? msg.senderId._id || msg.senderId
+              : msg.senderId;
           const isMine = sender?.toString() === senderId?.toString();
           return (
             <div
