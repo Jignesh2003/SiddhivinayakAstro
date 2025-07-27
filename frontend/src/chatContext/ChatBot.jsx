@@ -17,6 +17,7 @@ const ChatBox = () => {
 
   const {
     register,
+    join,
     joinRoom,
     leaveRoom,
     sendMessage,
@@ -24,6 +25,7 @@ const ChatBox = () => {
     offMessage,
     onSessionEnded,
     offSessionEnded,
+    emitSession,
     emitSessionEnded,
   } = useChatStore();
 
@@ -45,14 +47,14 @@ const ChatBox = () => {
     }
   }, [userId, register]);
 
-  // Scroll messages to bottom on updates
+  // Auto scroll to bottom on message update
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
 
-  // Fetch messages and session data once per sessionId or relevant params
+  // Fetch messages & session data and set receiverId and welcome message
   useEffect(() => {
     const fetchMessages = async () => {
       try {
@@ -65,19 +67,17 @@ const ChatBox = () => {
         const session = res.data.session;
 
         if (session?.userId?._id && session?.astrologerId?._id) {
-          // Convert all IDs to string for safe consistent comparison
           const userInSession = session.userId._id.toString();
           const astrologerInSession = session.astrologerId._id.toString();
           const userIdStr = userId.toString();
 
-          // Compute the other participant's ID dynamically based on logged user
+          // Compute receiverId (peer id) based on logged in user
           let otherId = null;
           if (userInSession && astrologerInSession) {
             otherId = userIdStr === userInSession ? astrologerInSession : userInSession;
           }
-          setReceiverId(otherId);
 
-          // Debug info to help troubleshoot client state and roles
+          // Debug logs for user & IDs
           console.log("ChatBox Debug Info:", {
             loggedInUserId: userIdStr,
             userInSession,
@@ -86,23 +86,29 @@ const ChatBox = () => {
             role,
           });
 
-          // Defensive fallback to set receiverId if above fails
           if (!otherId) {
+            // Fallback to set receiverId explicitly
             if (role === "user" && astrologerInSession) setReceiverId(astrologerInSession);
             else if (role === "astrologer" && userInSession) setReceiverId(userInSession);
+          } else {
+            setReceiverId(otherId);
           }
 
-          // Show welcome message from logged in user's perspective
+          // Show welcome message only if user and first time opener
           if (isNewSession && msgs.length === 0) {
-            const welcomeMsg = {
-              senderId: role === "user" ? userInSession : astrologerInSession,
-              receiverId: role === "user" ? astrologerInSession : userInSession,
-              createdAt: new Date().toISOString(),
-              _id: `local-${Date.now()}-auto`,
-              content:
-                "Hi, I’ve just connected! Looking forward to guiding you. ✨ Please share your full name and birth details.",
-            };
-            setMessages([welcomeMsg]);
+            if (role === "user") {
+              const welcomeMsg = {
+                senderId: userInSession,
+                receiverId: astrologerInSession,
+                createdAt: new Date().toISOString(),
+                _id: `local-${Date.now()}-auto`,
+                content:
+                  "Hi! I’ve just connected. Please share your full name and birth details to get started.",
+              };
+              setMessages([welcomeMsg]);
+            } else {
+              setMessages([]); // no welcome message for astrologer
+            }
           } else {
             setMessages(msgs);
           }
@@ -110,9 +116,9 @@ const ChatBox = () => {
           setReceiverId(null);
           setMessages(msgs);
         }
-      } catch (err) {
-        console.error("❌ Failed to load chat messages:", err);
-        setError("Could not load chat messages.");
+      } catch (error) {
+        console.error("Failed to load messages:", error);
+        setError("Failed to load chat messages.");
       } finally {
         setLoading(false);
       }
@@ -121,21 +127,17 @@ const ChatBox = () => {
     fetchMessages();
   }, [sessionId, token, userId, isNewSession, role]);
 
-  // Socket listeners for new messages, session end, low balance, user left
+  // Socket event listeners, join rooms
   useEffect(() => {
     if (!sessionId) return;
 
     joinRoom(sessionId);
 
-    const handleMessage = (msg) => {
-      setMessages((prev) => {
-        if (prev.some((m) => m._id === msg._id)) return prev;
-        return [...prev, msg];
-      });
+    const onNewMessage = (msg) => {
+      setMessages((prev) => (prev.some((m) => m._id === msg._id) ? prev : [...prev, msg]));
     };
-    onMessage(handleMessage);
 
-    const handleSessionEnded = ({ sessionId: endedId }) => {
+    const onSessionEnd = ({ sessionId: endedId }) => {
       if (endedId === sessionId) {
         setSessionEnded(true);
         toast.error(
@@ -144,48 +146,40 @@ const ChatBox = () => {
             : "Chat ended by user or system."
         );
         setTimeout(() => {
-          navigate(role === "user" ? "/" : "/astrologer-dashboard");
+          navigate(role === "user" ? "/" : "/dashboard");
         }, 2000);
       }
     };
-    onSessionEnded(handleSessionEnded);
 
-    const handleLowBalance = ({ sessionId: lowBalanceSid, message }) => {
-      if (lowBalanceSid === sessionId) {
+    const onLowBalance = ({ sessionId: sid, message }) => {
+      if (sid === sessionId) {
         setLowBalanceWarning(true);
-        toast.error(message || "Low wallet balance");
+        toast.error(message || "Your balance is low.");
       }
     };
-    useChatStore.getState().socket.on("low-balance", handleLowBalance);
 
-    const handleUserLeft = ({ sessionId: leftId, socketId }) => {
-      if (leftId === sessionId) {
-        toast("The other person has left the room.");
+    const onUserLeft = ({ sessionId: sid }) => {
+      if (sid === sessionId) {
+        toast("The other party has left the chat.");
       }
     };
-    useChatStore.getState().socket.on("user-left", handleUserLeft);
+
+    onMessage(onNewMessage);
+    onSessionEnded(onSessionEnd);
+    useChatStore.getState().socket.on("low-balance", onLowBalance);
+    useChatStore.getState().socket.on("user-left", onUserLeft);
 
     return () => {
       offMessage();
       offSessionEnded();
-      setLowBalanceWarning(false);
-      useChatStore.getState().socket.off("low-balance", handleLowBalance);
-      useChatStore.getState().socket.off("user-left", handleUserLeft);
+      useChatStore.getState().socket.off("low-balance", onLowBalance);
+      useChatStore.getState().socket.off("user-left", onUserLeft);
       leaveRoom(sessionId);
+      setLowBalanceWarning(false);
     };
-  }, [
-    sessionId,
-    joinRoom,
-    leaveRoom,
-    onMessage,
-    offMessage,
-    onSessionEnded,
-    offSessionEnded,
-    navigate,
-    role,
-  ]);
+  }, [sessionId, joinRoom, leaveRoom, onMessage, offMessage, onSessionEnded, offSessionEnded, navigate, role]);
 
-  // Send message - enabled during low balance warning, disabled only after session ended
+  // Send message handler
   const handleSend = () => {
     if (input.trim() && receiverId && !sessionEnded) {
       sendMessage({
@@ -202,127 +196,117 @@ const ChatBox = () => {
   const handleEndChat = () => {
     if (sessionId) {
       emitSessionEnded(sessionId);
-      toast.success("You have ended the chat.");
+      toast.success("You ended the chat.");
       setSessionEnded(true);
     }
     setTimeout(() => {
-      offSessionEnded();
       leaveRoom(sessionId);
-      navigate(role === "user" ? "/" : "/astrologer-dashboard");
+      navigate(role === "user" ? "/" : "/dashboard");
     }, 1000);
   };
 
   return (
     <div
-      className="flex flex-col w-full sm:max-w-3xl max-w-full mx-auto h-[70vh] mt-6 sm:mt-10 border rounded-2xl shadow-lg p-6 bg-white relative select-none"
-      style={{
-        backgroundImage: `url(${assets.GalaxyBackground})`,
-        backgroundSize: "cover",
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "center",
-      }}
+      className="flex flex-col w-full max-w-3xl mx-auto h-[80vh] mt-6 rounded-xl shadow-lg bg-white p-6 relative"
+      style={{ backgroundImage: `url(${assets.GalaxyBackground})`, backgroundSize: "cover" }}
       aria-label="Chat box"
     >
-      {/* Header */}
-      <div className="flex justify-between items-center border-b pb-4 mb-4">
+      <header className="flex justify-between items-center border-b border-gray-300 mb-4 pb-4">
         <h2 className="text-xl font-semibold text-gray-900">Chat Session</h2>
         <button
           onClick={handleEndChat}
           disabled={sessionEnded}
-          className="flex items-center gap-2 text-red-600 hover:text-red-800 disabled:opacity-50"
           aria-label="End Chat"
+          className="flex items-center gap-2 text-red-600 hover:text-red-800 disabled:opacity-50"
         >
-          <LogOut className="w-5 h-5" />
-          End Chat
+          <LogOut className="w-5 h-5" /> End Chat
         </button>
-      </div>
+      </header>
 
-      {/* Messages list */}
-      <div
-        className="flex-1 overflow-y-auto p-3 scrollbar scrollbar-thumb-blue-400 scrollbar-track-gray-100 rounded-lg mb-4 bg-white"
+      <main
+        className="flex-1 overflow-y-auto p-4 rounded-lg bg-white scrollbar-thin scrollbar-thumb-gray-400"
+        role="log"
         aria-live="polite"
-        aria-relevant="additions"
       >
-        {loading && <p className="text-gray-500 text-center">Loading chat...</p>}
-        {error && <p className="text-red-600 text-center">{error}</p>}
+        {loading && <p className="text-center text-gray-500">Loading messages...</p>}
+        {error && <p className="text-center text-red-600">{error}</p>}
         {!loading && !error && messages.length === 0 && (
           <p className="text-center italic text-gray-400">No messages yet</p>
         )}
+
         {messages.map((msg) => {
-          const sender =
+          const senderVal =
             typeof msg.senderId === "object" && msg.senderId !== null
               ? msg.senderId._id || msg.senderId
               : msg.senderId;
-          const isMine = sender?.toString() === senderId?.toString();
+          const isMine = senderVal === userId;
           return (
-            <div
+            <article
               key={msg._id}
-              className={`max-w-xs px-4 py-2 mb-2 rounded-2xl shadow cursor-default select-text transition-all duration-150 ease-in-out ${
-                isMine ? "self-end bg-blue-600 text-white" : "self-start bg-gray-200 text-gray-900"
-              }`}
-              style={{ animation: "fadeIn 0.3s ease forwards" }}
               role="article"
-              aria-label={`${isMine ? "Your message" : "Received message"}`}
+              aria-label={isMine ? "Your message" : "Received message"}
+              className={`max-w-xs p-3 mb-3 rounded-lg shadow-md select-text ${
+                isMine ? "bg-blue-600 text-white self-end" : "bg-gray-200 text-gray-900 self-start"
+              }`}
+              style={{ animation: "fadein 0.3s ease-in" }}
             >
-              <p className="whitespace-pre-wrap">{msg.content}</p>
-              <div className="mt-1 text-xs text-right opacity-70 select-none">
-                {msg.createdAt &&
-                  new Date(msg.createdAt).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-              </div>
-            </div>
+              {msg.content}
+              <time className="block mt-1 text-xs text-right opacity-70 select-none">
+                {msg?.createdAt
+                  ? new Date(msg.createdAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : ""}
+              </time>
+            </article>
           );
         })}
         <div ref={messagesEndRef} />
-      </div>
+      </main>
 
-      {/* Input and Send */}
-      <div className="flex gap-3 border-t pt-3">
+      <footer className="flex gap-3 border-t border-gray-300 pt-4">
         <input
           type="text"
           value={input}
-          placeholder="Type your message..."
-          disabled={loading || !receiverId || sessionEnded}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          placeholder="Type your message..."
+          disabled={loading || !receiverId || sessionEnded}
           aria-label="Message input"
-          className="flex-1 rounded-full border border-gray-300 px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:cursor-not-allowed disabled:bg-gray-100"
+          className="flex-grow py-3 px-4 border rounded-full placeholder-gray-400 text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
         <button
           onClick={handleSend}
-          disabled={!receiverId || loading || input.trim() === "" || sessionEnded}
+          disabled={loading || !receiverId || !input.trim() || sessionEnded}
           aria-label="Send message"
-          className="rounded-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors p-2"
+          className="py-3 px-3 bg-blue-600 rounded-full text-white disabled:bg-blue-400 disabled:cursor-not-allowed hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
         >
-          <SendHorizonal className="w-5 h-5 text-white" />
+          <SendHorizonal />
         </button>
-      </div>
+      </footer>
 
-      {/* Low Balance Warning */}
       {lowBalanceWarning && !sessionEnded && (
-        <div
-          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center justify-between max-w-md w-full gap-4 z-50"
+        <section
+          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg max-w-md w-full flex justify-between items-center gap-4 z-50"
           role="alert"
           aria-live="assertive"
           aria-atomic="true"
         >
-          <span>Your wallet balance is low. Please recharge or end the chat.</span>
+          <p>Your balance is low. Please recharge or end the chat.</p>
           <button
             onClick={handleEndChat}
-            className="bg-white text-red-600 px-4 py-2 rounded-md font-semibold hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:ring-red-400"
+            className="py-2 px-4 bg-white text-red-600 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-400"
             aria-label="End Chat"
           >
             End Chat
           </button>
-        </div>
+        </section>
       )}
 
-      {/* Session Ended Overlay */}
       {sessionEnded && (
         <div className="absolute inset-0 bg-white bg-opacity-80 flex items-center justify-center pointer-events-none">
-          <p className="text-xl font-semibold text-gray-900 select-none">Chat session ended.</p>
+          <p className="text-2xl font-semibold text-gray-900 select-none">Chat ended.</p>
         </div>
       )}
     </div>
