@@ -34,13 +34,18 @@ async function createChatSessionTransaction(session) {
       wallet_id: astrologerWallet.id,
       chat_session_id: _id.toString(),
       direction: 'credit',
-      business_type: 'chat_session_settle',
+      business_type: 'chat_session_settlement',
       amount: astrologerNet,
       status: 'completed',
       from_user_id: userId,                  // Trace source user for audit
       to_user_id: astrologerIdStr,
       description: 'Chat session payout (platform settles with astrologer net after fee)',
       balance_after: astroBalanceAfter,
+      payment_gateway_fee : paymentGatewayFee,
+      gst_amount : gstAmount,
+      platform_fee : platformFee,
+      total_platform_fee:totalPlatformFee,
+      payment_refrence : "WALLET TRANSFER FOR CHAT",
       meta: JSON.stringify({
         gross: amount,
         platformFee,
@@ -51,20 +56,7 @@ async function createChatSessionTransaction(session) {
       created_at: trx.fn.now(),
     });
 
-    // 3. (OPTIONAL) Record platform fee split for analytics/audit
-    // If you don't need this yet, you can comment/remove
-    // await trx('platform_collection').insert({
-    //   chat_session_id: _id.toString(),
-    //   gross_amount: amount,
-    //   platform_commission: platformFee,
-    //   gst_on_commission: gstAmount,
-    //   payment_gateway_fee: paymentGatewayFee,
-    //   total_platform_fee: totalPlatformFee,
-    //   astrologer_payout: astrologerNet,
-    //   created_at: trx.fn.now()
-    // });
-
-    // 4. Update astrologer's wallet balance
+    // 3. Update astrologer's wallet balance
     await trx('wallet')
       .where({ id: astrologerWallet.id })
       .update({ balance: astroBalanceAfter, updated_at: trx.fn.now() });

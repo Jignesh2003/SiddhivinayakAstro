@@ -1,14 +1,16 @@
 import ChatSession from "../models/chatSession.js";
 import Message from "../models/message.js";
 import User from "../models/User.js";
-import createChatSessionTransaction from "./chatEndedMoneyTransferAstro.js"; // your Postgres handler
+import createChatSessionTransaction from "./chatEndedMoneyTransferAstro.js";
+import PostgresDb from '../config/postgresDb.js';
 
 /**
  * Ends a chat session:
  * - Calculates total billable minutes (minutesDebited)
+ * - Pays astrologer net (from platform/company) only if astrologer replied
+ * - Refunds user all pre-debited minutes if astrologer never replied
  * - Updates Mongo session as ended
- * - Pays astrologer net (from platform, not user wallet—user has ALREADY paid)
- * - Emits socket notification (session-ended)
+ * - Emits socket notification (session-ended) for all outcomes
  */
 export const endSession = async (sessionId, io = null) => {
   try {
@@ -19,22 +21,93 @@ export const endSession = async (sessionId, io = null) => {
       return { success: false, message: "Session not found or already ended." };
     }
 
-    // 2. If there are no messages, end session without billing
-    const messageCount = await Message.countDocuments({ chatSessionId: sessionId });
-    if (messageCount === 0) {
+    const userIdStr = session.userId.toString();
+    const astroIdStr = session.astrologerId.toString();
+
+    // 2. Did the astrologer ever reply?
+    const astroMsgCount = await Message.countDocuments({
+      chatSessionId: sessionId,
+      senderId: session.astrologerId
+    });
+
+    if (astroMsgCount === 0) {
+      // Astrologer never replied: refund ALL pre-debited minutes to user
+      let refundError = null;
+      let refundedAmount = 0;
+      let minutesRefunded = 0;
+
+      try {
+        const minutes = session.minutesDebited || 0;
+        if (minutes > 0) {
+          const astrologer = await User.findById(session.astrologerId);
+          if (!astrologer || typeof astrologer.pricePerMinute !== "number") {
+            throw new Error("Astrologer not found or pricePerMinute missing.");
+          }
+          const ratePerMinute = astrologer.pricePerMinute;
+          refundedAmount = minutes * ratePerMinute;
+          minutesRefunded = minutes;
+
+          // Refund user's wallet (Postgres)
+          await PostgresDb.transaction(async trx => {
+            const userWallet = await trx('wallet').where({ user_id: userIdStr }).forUpdate().first();
+            if (!userWallet) throw new Error("User wallet not found for refund");
+            const userBalanceAfter = Number(userWallet.balance) + refundedAmount;
+
+            await trx('wallet_transaction').insert({
+              wallet_id: userWallet.id,
+              chat_session_id: session._id.toString(),
+              direction: 'credit',
+              business_type: 'chat_session_refund',
+              amount: refundedAmount,
+              status: 'completed',
+              from_user_id: null,
+              to_user_id: userIdStr,
+              description: 'Refund for chat: astrologer never responded',
+              balance_after: userBalanceAfter,
+              meta: JSON.stringify({ minutesRefunded, reason: "astro-no-reply/advance-debit-refund" }),
+              created_at: trx.fn.now()
+            });
+
+            await trx('wallet')
+              .where({ id: userWallet.id })
+              .update({ balance: userBalanceAfter, updated_at: trx.fn.now() });
+          });
+
+          console.log(`💸 Refunded ₹${refundedAmount} to user ${userIdStr} for session ${sessionId}, astrologer never replied (${minutes} mins).`);
+        }
+      } catch (refundErr) {
+        refundError = refundErr;
+        console.error(`❌ Failed to process user refund for astro-no-reply session:`, refundErr);
+      }
+
+      // End the session in MongoDB
       session.status = "ended";
       session.endTime = new Date();
       await session.save();
+
       if (io) {
-        const eventPayload = { sessionId, amountCharged: 0, walletError: null, reason: "no-messages" };
+        const eventPayload = {
+          sessionId,
+          amountCharged: 0,
+          refundedAmount,
+          minutesRefunded,
+          walletError: refundError?.message || null,
+          reason: "astro-no-reply-refunded"
+        };
         io.to(sessionId).emit("session-ended", eventPayload);
-        io.to(session.userId.toString()).emit("session-ended", eventPayload);
-        io.to(session.astrologerId.toString()).emit("session-ended", eventPayload);
+        io.to(userIdStr).emit("session-ended", eventPayload);
+        io.to(astroIdStr).emit("session-ended", eventPayload);
       }
-      return { success: false, message: "No messages, session ended without billing." };
+      return {
+        success: false,
+        message: "Astrologer never replied, session ended, user refunded.",
+        refundedAmount,
+        minutesRefunded,
+        refundError: refundError?.message || null
+      };
     }
 
-    // 3. Gather billable minutes and settlement info
+    // 3. Astrologer replied at least once: bill as normal
     const astrologer = await User.findById(session.astrologerId);
     if (!astrologer || typeof astrologer.pricePerMinute !== "number") {
       console.error(`❌ Astrologer not found or pricePerMinute missing for ${session.astrologerId}`);
@@ -44,15 +117,15 @@ export const endSession = async (sessionId, io = null) => {
       if (io) {
         const eventPayload = { sessionId, amountCharged: 0, walletError: "No astro/rate", reason: "metadata-missing" };
         io.to(sessionId).emit("session-ended", eventPayload);
-        io.to(session.userId.toString()).emit("session-ended", eventPayload);
-        io.to(session.astrologerId.toString()).emit("session-ended", eventPayload);
+        io.to(userIdStr).emit("session-ended", eventPayload);
+        io.to(astroIdStr).emit("session-ended", eventPayload);
       }
       return { success: false, message: "Astrologer/rate missing." };
     }
 
     const ratePerMinute = astrologer.pricePerMinute;
     const endTime = new Date();
-    const minutes = session.minutesDebited || 1;  // <-- Only what you debited, NOT duration
+    const minutes = session.minutesDebited || 1;
     const amountCharged = minutes * ratePerMinute;
 
     session.endTime = endTime;
@@ -60,9 +133,9 @@ export const endSession = async (sessionId, io = null) => {
     session.amountCharged = amountCharged;
     await session.save();
 
-    console.log(`💾 Session ${sessionId} marked ended. Minutes debited: ${minutes}. Rate: ₹${ratePerMinute}. Amount: ₹${amountCharged}`);
+    console.log(`💾 Session ${sessionId} ended (astro replied). Minutes: ${minutes}, Rate: ₹${ratePerMinute}, Amount: ₹${amountCharged}`);
 
-    // 4. Wallet settlement: payout only (NET to astrologer & log fee/gst), do NOT debit user again
+    // Astrologer payout
     let walletError = null;
     try {
       await createChatSessionTransaction({
@@ -70,29 +143,27 @@ export const endSession = async (sessionId, io = null) => {
         userId: session.userId,
         astrologerId: session.astrologerId,
         amountCharged,
-        // Optionally: pass minutes, per-minute rate, etc. if your settlement handler uses them
+        minutes,
+        ratePerMinute
       });
       console.log(`💳 Astrologer payout processed for session ${sessionId}`);
     } catch (error) {
       walletError = error;
-      console.error(`❌ Failed to settle astrologer payout:`, error);
-      // Still proceed: never block session-end on payout!
+      console.error(`❌ Astrologer payout error:`, error);
     }
 
-    // 5. Always emit session-ended over socket, even on payout error
     if (io) {
-      const eventPayload = { sessionId, amountCharged, minutes, walletError: walletError?.message || null };
+      const eventPayload = {
+        sessionId, amountCharged, minutes, walletError: walletError?.message || null
+      };
       io.to(sessionId).emit("session-ended", eventPayload);
-      io.to(session.userId.toString()).emit("session-ended", eventPayload);
-      io.to(session.astrologerId.toString()).emit("session-ended", eventPayload);
+      io.to(userIdStr).emit("session-ended", eventPayload);
+      io.to(astroIdStr).emit("session-ended", eventPayload);
     }
     console.log(`✅ Session ${sessionId} fully ended and notified.${walletError ? " (Wallet error included in event)" : ""}`);
 
     return {
-      success: true,
-      sessionId,
-      amountCharged,
-      minutes,
+      success: true, sessionId, amountCharged, minutes,
       walletError: walletError?.message || null
     };
 
