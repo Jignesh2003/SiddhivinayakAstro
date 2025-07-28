@@ -12,7 +12,7 @@ export function initializeMinuteBillingCron(io) {
     try {
       const sessions = await ChatSession.find({
         status: "approved",
-        nextDebitAt: { $lte: new Date(Date.now() + 5000) } // 5 sec grace
+        nextDebitAt: { $lte: new Date(Date.now() + 5000) }
       });
 
       for (const session of sessions) {
@@ -29,8 +29,8 @@ export function initializeMinuteBillingCron(io) {
           continue;
         }
 
-        // Notify low balance *one minute BEFORE* debit if balance after debit would be insufficient
-        if (balance < astro.pricePerMinute * 2) { // If user can pay only next minute or less
+        // Warn before last allowed minute (<= 2x price left)
+        if (balance < astro.pricePerMinute * 2) {
           if (ioInstance) {
             ioInstance.to(userId).emit("low-balance", {
               sessionId: session._id,
@@ -39,20 +39,19 @@ export function initializeMinuteBillingCron(io) {
           }
         }
 
+        // End session if not enough for next debit
         if (balance < astro.pricePerMinute) {
           console.log(`[MinuteBilling] Insufficient balance for user ${userId} in session ${session._id}. Ending session.`);
-
-          // Fully end the session using your robust endSession handler with socket notification
           const result = await endSession(session._id, ioInstance);
           if (!result.success) {
             console.error(`[MinuteBilling] Failed ending session ${session._id}:`, result.message);
           } else {
             console.log(`[MinuteBilling] Session ${session._id} ended cleanly due to low balance.`);
           }
-          continue; // No further debits
+          continue;
         }
 
-        // Debit one minute from wallet
+        // ---- Debit one minute from wallet ----
         const debitResult = await deductFromWallet({
           userId,
           amount: astro.pricePerMinute,
@@ -68,25 +67,12 @@ export function initializeMinuteBillingCron(io) {
           continue;
         }
 
-        // INCREMENT minutesDebited after successful debit!
+        // ---- Increment minutesDebited and set nextDebitAt ----
         session.minutesDebited = (session.minutesDebited || 0) + 1;
         session.nextDebitAt = new Date(Date.now() + 60 * 1000);
         await session.save();
 
         console.log(`[MinuteBilling] Debited ₹${astro.pricePerMinute} for user ${userId} on session ${session._id}. minutesDebited now ${session.minutesDebited}. Next debit at ${session.nextDebitAt.toISOString()}`);
-
-
-        if (!debitResult.success) {
-          console.error(`[MinuteBilling] Debit failed for session ${session._id}:`, debitResult.error);
-          // Optionally pause session or notify user here
-          continue;
-        }
-
-        // Update nextDebitAt to one minute later (schedule next debit)
-        session.nextDebitAt = new Date(Date.now() + 60 * 1000);
-        await session.save();
-
-        console.log(`[MinuteBilling] Debited ₹${astro.pricePerMinute} for user ${userId} on session ${session._id}. Next debit at ${session.nextDebitAt.toISOString()}`);
       }
     } catch (err) {
       console.error("Minute billing cron error:", err);
