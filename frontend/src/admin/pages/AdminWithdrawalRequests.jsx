@@ -1,26 +1,23 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import useAuthStore from "@/store/useAuthStore"; // Or your admin/session auth hook
+import useAuthStore from "@/store/useAuthStore";
 
 function AdminWithdrawalRequests() {
   const [withdrawals, setWithdrawals] = useState([]);
-  const [status, setStatus] = useState(""); // ""=all, "pending", "completed", etc
+  const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(30);
   const [error, setError] = useState("");
+  const [rowActionLoading, setRowActionLoading] = useState({}); // Map: id => bool
 
   const token = useAuthStore((s) => s.token);
 
-  // Fetch withdrawals with filters
   async function fetchWithdrawals() {
     setLoading(true);
     setError("");
     try {
-      const params = {
-        limit,
-        offset: page * limit,
-      };
+      const params = { limit, offset: page * limit };
       if (status) params.status = status;
       const res = await axios.get(
         `${import.meta.env.VITE_PAYMENT_URL}/admin/withdrawals/requests`,
@@ -37,11 +34,32 @@ function AdminWithdrawalRequests() {
     }
   }
 
-  // On status change or paging
   useEffect(() => {
     if (token) fetchWithdrawals();
     // eslint-disable-next-line
   }, [token, page, status]);
+
+  async function updateWithdrawalStatus(id, newStatus) {
+    setRowActionLoading((prev) => ({ ...prev, [id]: true }));
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_PAYMENT_URL}/admin/withdrawals/${id}/update-status`,
+        { status: newStatus }, // can be "completed" or "rejected"
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchWithdrawals();
+      alert(res.data.message || "Status updated!");
+    } catch (err) {
+      alert(
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to update!"
+      );
+    } finally {
+      setRowActionLoading((prev) => ({ ...prev, [id]: false }));
+    }
+  }
 
   return (
     <div className="max-w-4xl mx-auto mt-8 bg-white rounded shadow-xl p-8">
@@ -59,7 +77,8 @@ function AdminWithdrawalRequests() {
           >
             <option value="">All</option>
             <option value="pending">Pending</option>
-            <option value="completed">Completed</option>
+            <option value="completed">Approved</option>
+            <option value="rejected">Rejected</option>
           </select>
           <button
             onClick={fetchWithdrawals}
@@ -84,13 +103,14 @@ function AdminWithdrawalRequests() {
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2">Requested</th>
                 <th className="px-3 py-2">Description</th>
-                <th className="px-3 py-2">Meta (breakdown)</th>
+                <th className="px-3 py-2">Meta</th>
+                <th className="px-3 py-2">Action</th>
               </tr>
             </thead>
             <tbody>
               {withdrawals.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-5 text-gray-400">
+                  <td colSpan={8} className="text-center py-5 text-gray-400">
                     No withdrawal requests found.
                   </td>
                 </tr>
@@ -106,6 +126,8 @@ function AdminWithdrawalRequests() {
                           ? "text-orange-500 font-medium"
                           : wd.status === "completed"
                           ? "text-green-600 font-medium"
+                          : wd.status === "rejected"
+                          ? "text-red-600 font-medium"
                           : "text-gray-700"
                       }>
                         {wd.status}
@@ -122,6 +144,34 @@ function AdminWithdrawalRequests() {
                           {JSON.stringify(wd.meta, null, 2)}
                         </pre>
                       </details>
+                    </td>
+                    <td className="px-3 py-2">
+                      {wd.status === "pending" ? (
+                        <>
+                          <button
+                            className="mr-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-60"
+                            disabled={rowActionLoading[wd.id]}
+                            onClick={() => updateWithdrawalStatus(wd.id, "completed")}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-60"
+                            disabled={rowActionLoading[wd.id]}
+                            onClick={() => {
+                              if (
+                                window.confirm("Are you sure you want to reject and refund this withdrawal?")
+                              ) {
+                                updateWithdrawalStatus(wd.id, "rejected");
+                              }
+                            }}
+                          >
+                            Reject
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-gray-400 text-xs italic">–</span>
+                      )}
                     </td>
                   </tr>
                 ))

@@ -1,7 +1,7 @@
 import express from "express"
 import authMiddleware from "../middlewares/authMiddleware.js"
 import { checkPaymentStatus, createCashfreeOrder } from "../controllers/cashFreeController.js"
-import {  getWithdrawalRequests, initiateWalletTopupOrder, listWalletTransactions, myWallet, withdrawFundsFromWallet } from "../controllers/walletControllers.js";
+import {  getWithdrawalRequests, initiateWalletTopupOrder, listWalletTransactions, myWallet, updateWithdrawalStatus, withdrawFundsFromWallet } from "../controllers/walletControllers.js";
 
 const router = express.Router()
 
@@ -16,6 +16,7 @@ router.get('/wallet/transactions', authMiddleware, listWalletTransactions); // l
 router.post('/wallet/withdraw', authMiddleware, withdrawFundsFromWallet); // withdraw money from wallet
 router.post('/wallet/initiateTopUp', authMiddleware, initiateWalletTopupOrder)
 
+router.post("/admin/withdrawals/:id/update-status",authMiddleware, updateWithdrawalStatus) // admin withdrawl request response update 
 router.get('/admin/withdrawals/requests', authMiddleware, getWithdrawalRequests); // admin list of withdrawls
 
 
