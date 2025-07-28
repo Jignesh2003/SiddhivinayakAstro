@@ -45,7 +45,7 @@ async function createChatSessionTransaction(session) {
       gst_amount : gstAmount,
       platform_fee : platformFee,
       total_platform_fee:totalPlatformFee,
-      payment_refrence : "WALLET TRANSFER FOR CHAT",
+      payment_reference : "WALLET TRANSFER FOR CHAT",
       meta: JSON.stringify({
         gross: amount,
         platformFee,
