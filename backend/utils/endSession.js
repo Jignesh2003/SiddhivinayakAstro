@@ -1,14 +1,14 @@
 import ChatSession from "../models/chatSession.js";
 import Message from "../models/message.js";
 import User from "../models/User.js";
-import createChatSessionTransaction from "./chatEndedMoneyTransferAstro.js"; // PostgreSQL atomic wallet handler
+import createChatSessionTransaction from "./chatEndedMoneyTransferAstro.js"; // your Postgres handler
 
 /**
  * Ends a chat session:
- * - Calculates total minutes/charges
+ * - Calculates total billable minutes (minutesDebited)
  * - Updates Mongo session as ended
- * - Processes wallet settlement (user pays, platform fees/commission, astrologer net)
- * - Emits socket notification (optional)
+ * - Pays astrologer net (from platform, not user wallet—user has ALREADY paid)
+ * - Emits socket notification (session-ended)
  */
 export const endSession = async (sessionId, io = null) => {
   try {
@@ -19,7 +19,7 @@ export const endSession = async (sessionId, io = null) => {
       return { success: false, message: "Session not found or already ended." };
     }
 
-    // 2. No-messages "free" sessions: end & emit (no billing)
+    // 2. If there are no messages, end session without billing
     const messageCount = await Message.countDocuments({ chatSessionId: sessionId });
     if (messageCount === 0) {
       session.status = "ended";
@@ -34,7 +34,7 @@ export const endSession = async (sessionId, io = null) => {
       return { success: false, message: "No messages, session ended without billing." };
     }
 
-    // 3. Calculate rate/duration/billing amount
+    // 3. Gather billable minutes and settlement info
     const astrologer = await User.findById(session.astrologerId);
     if (!astrologer || typeof astrologer.pricePerMinute !== "number") {
       console.error(`❌ Astrologer not found or pricePerMinute missing for ${session.astrologerId}`);
@@ -49,35 +49,37 @@ export const endSession = async (sessionId, io = null) => {
       }
       return { success: false, message: "Astrologer/rate missing." };
     }
-   const ratePerMinute = astrologer.pricePerMinute;
-const endTime = new Date();
-const minutes = session.minutesDebited || 1;
-const amountCharged = minutes * ratePerMinute;
 
-session.endTime = endTime;
-session.status = "ended";
-session.amountCharged = amountCharged;
-await session.save();
+    const ratePerMinute = astrologer.pricePerMinute;
+    const endTime = new Date();
+    const minutes = session.minutesDebited || 1;  // <-- Only what you debited, NOT duration
+    const amountCharged = minutes * ratePerMinute;
 
-console.log(`💾 Session ${sessionId} marked ended. Minutes debited: ${minutes}. Rate: ₹${ratePerMinute}. Amount: ₹${amountCharged}`);
+    session.endTime = endTime;
+    session.status = "ended";
+    session.amountCharged = amountCharged;
+    await session.save();
 
-    // 5. Attempt wallet transaction (NEVER early return on error)
+    console.log(`💾 Session ${sessionId} marked ended. Minutes debited: ${minutes}. Rate: ₹${ratePerMinute}. Amount: ₹${amountCharged}`);
+
+    // 4. Wallet settlement: payout only (NET to astrologer & log fee/gst), do NOT debit user again
     let walletError = null;
     try {
       await createChatSessionTransaction({
         _id: session._id,
         userId: session.userId,
         astrologerId: session.astrologerId,
-        amountCharged
+        amountCharged,
+        // Optionally: pass minutes, per-minute rate, etc. if your settlement handler uses them
       });
-      console.log(`💳 Wallet transaction processed for session ${sessionId}`);
-    } catch (e) {
-      walletError = e;
-      console.error(`❌ Failed to create wallet transaction:`, e);
-      // Don't return/exit: we emit socket event regardless!
+      console.log(`💳 Astrologer payout processed for session ${sessionId}`);
+    } catch (error) {
+      walletError = error;
+      console.error(`❌ Failed to settle astrologer payout:`, error);
+      // Still proceed: never block session-end on payout!
     }
 
-    // 6. ALWAYS emit session-ended over socket, with wallet error if any
+    // 5. Always emit session-ended over socket, even on payout error
     if (io) {
       const eventPayload = { sessionId, amountCharged, minutes, walletError: walletError?.message || null };
       io.to(sessionId).emit("session-ended", eventPayload);
@@ -96,15 +98,8 @@ console.log(`💾 Session ${sessionId} marked ended. Minutes debited: ${minutes}
 
   } catch (err) {
     console.error("❌ Error in endSession:", err);
-    // Optionally emit to guarantee FE session-end even if DB error occurs here
-    /* 
-    if (io) {
-      io.to(sessionId).emit("session-ended", { sessionId, error: err.message, critical: true });
-    }
-    */
     return { success: false, message: "Server error in endSession", error: err.message };
   }
 };
-
 
 export default endSession;
