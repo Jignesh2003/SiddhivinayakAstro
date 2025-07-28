@@ -61,7 +61,6 @@ const AstrologerDashboard = () => {
             <p><strong>Email:</strong> {astroDetails.email}</p>
             <p><strong>Phone:</strong> {astroDetails.phone}</p>
             <p><strong>KYC Status:</strong> {astroDetails.kyc}</p>
-            <p><strong>Wallet Balance:</strong> ₹{astroDetails.walletBalance || 0}</p>
             <p>
               <strong>Status:</strong>{" "}
               {astroDetails.isOnline ? (
