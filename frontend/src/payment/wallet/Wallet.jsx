@@ -20,11 +20,10 @@ function Wallet() {
 
   const [cashfreeInstance, setCashfreeInstance] = useState(null);
 
-  const user = useAuthStore((state) => state.user);
+const role = useAuthStore((state) => state.role);
   const token = useAuthStore((state) => state.token);
   // Adjust logic if your role/isAstrologer indicator is different:
-  const isAstrologer = user?.role === "astrologer" || user?.isAstrologer === true;
-
+const isAstrologer = role === "astrologer";
   // Load Cashfree SDK one time
   useEffect(() => {
     if (window.Cashfree) {

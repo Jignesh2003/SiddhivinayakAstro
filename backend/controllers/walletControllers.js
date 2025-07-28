@@ -76,32 +76,131 @@ export const myWallet = async (req, res) => {
 
 
 // Request withdrawal with tax/fee deduction & parent/child transaction structure
+// export const withdrawFundsFromWallet = async (req, res) => {
+//   const userId = req.user.id;
+//   const { amount, withdrawalDetails } = req.body;
+//   if (!amount || amount < 500) { // Fixed comparison!
+//     return res.status(400).json({ error: "Minimum withdrawal is ₹500" });
+//   }
+//   try {
+//     await PostgresDb.transaction(async trx => {
+//       const wallet = await trx('wallet')
+//         .select('id', 'balance')
+//         .where({ user_id: userId })
+//         .first();
+//       if (!wallet) throw new Error("Wallet not found");
+//       if (Number(wallet.balance) < Number(amount))
+//         throw new Error("Insufficient balance in wallet!");
+
+//       const { tds, payoutFee, payoutFeeGst, netPayout } =
+//         calculateWithdrawDetails(Number(amount));
+//       const balanceAfter = Number(wallet.balance) - Number(amount);
+
+//       let meta = {
+//         tds, payoutFee, payoutFeeGst,
+//         withdrawalDetails, netPayout
+//       };
+
+//       // 3. Parent withdrawal txn
+//       const [withdrawTxn] = await trx('wallet_transaction')
+//         .insert({
+//           wallet_id: wallet.id,
+//           direction: 'debit',
+//           business_type: 'withdrawal_request',
+//           amount,
+//           status: 'pending',
+//           description: `Withdrawal requested: ${JSON.stringify(withdrawalDetails)}`,
+//           from_user_id: userId,
+//           to_user_id: null,
+//           platform_fee: payoutFee,
+//           gst_amount: payoutFeeGst,
+//           meta: JSON.stringify(meta),        // ensure this is a string!
+//           balance_after: balanceAfter
+//         })
+//         .returning('*');
+
+//       // Child transactions
+//       await trx('wallet_transaction').insert([
+//         {
+//           wallet_id: wallet.id,
+//           direction: 'debit',
+//           business_type: 'tds',
+//           amount: tds,
+//           status: 'completed',
+//           description: `TDS deducted on withdrawal`,
+//           from_user_id: userId,
+//           meta: JSON.stringify({ parent: withdrawTxn.id })
+//         },
+//         {
+//           wallet_id: wallet.id,
+//           direction: 'debit',
+//           business_type: 'payout_fee',
+//           amount: payoutFee,
+//           status: 'completed',
+//           description: `Payout fee`,
+//           from_user_id: userId,
+//           meta: JSON.stringify({ parent: withdrawTxn.id })
+//         },
+//         {
+//           wallet_id: wallet.id,
+//           direction: 'debit',
+//           business_type: 'payout_fee_gst',
+//           amount: payoutFeeGst,
+//           status: 'completed',
+//           description: `GST on payout fee`,
+//           from_user_id: userId,
+//           meta: JSON.stringify({ parent: withdrawTxn.id })
+//         }
+//       ]);
+
+//       await trx('wallet')
+//         .where({ id: wallet.id })
+//         .update({ balance: balanceAfter, updated_at: trx.fn.now() });
+
+//       res.json({
+//         success: true,
+//         transactionId: withdrawTxn.id,
+//         message: 'Withdrawal requested',
+//         requestedAmount: amount,
+//         netPayout,
+//         tds,
+//         payoutFee,
+//         payoutFeeGst,
+//         walletBalanceAfter: balanceAfter
+//       });
+//     });
+//   } catch (err) {
+//     console.error('🔥 Withdraw error:', err.message || err);
+//     res.status(500).json({ error: err.message || 'Internal server error' });
+//   }
+// };
+
+
 export const withdrawFundsFromWallet = async (req, res) => {
   const userId = req.user.id;
   const { amount, withdrawalDetails } = req.body;
-  if (!amount || amount < 500) { // Fixed comparison!
+
+  // Enforce minimum withdrawal
+  if (!amount || amount < 500) {
     return res.status(400).json({ error: "Minimum withdrawal is ₹500" });
   }
+
   try {
     await PostgresDb.transaction(async trx => {
+      // 1. Lock wallet row for safe balance deduction
       const wallet = await trx('wallet')
         .select('id', 'balance')
         .where({ user_id: userId })
         .first();
       if (!wallet) throw new Error("Wallet not found");
-      if (Number(wallet.balance) < Number(amount))
-        throw new Error("Insufficient balance in wallet!");
 
-      const { tds, payoutFee, payoutFeeGst, netPayout } =
-        calculateWithdrawDetails(Number(amount));
+      if (Number(wallet.balance) < Number(amount)) {
+        throw new Error("Insufficient balance in wallet!");
+      }
+
       const balanceAfter = Number(wallet.balance) - Number(amount);
 
-      let meta = {
-        tds, payoutFee, payoutFeeGst,
-        withdrawalDetails, netPayout
-      };
-
-      // 3. Parent withdrawal txn
+      // 2. Log parent transaction only (no fees/tds)
       const [withdrawTxn] = await trx('wallet_transaction')
         .insert({
           wallet_id: wallet.id,
@@ -109,50 +208,20 @@ export const withdrawFundsFromWallet = async (req, res) => {
           business_type: 'withdrawal_request',
           amount,
           status: 'pending',
-          description: `Withdrawal requested: ${JSON.stringify(withdrawalDetails)}`,
+          description: withdrawalDetails
+            ? `Withdrawal requested: ${JSON.stringify(withdrawalDetails)}`
+            : `Withdrawal requested`,
           from_user_id: userId,
           to_user_id: null,
-          platform_fee: payoutFee,
-          gst_amount: payoutFeeGst,
-          meta: JSON.stringify(meta),        // ensure this is a string!
-          balance_after: balanceAfter
+          balance_after: balanceAfter,
+          meta: withdrawalDetails
+            ? JSON.stringify({ withdrawalDetails })
+            : JSON.stringify({}),
+          created_at: trx.fn.now()
         })
         .returning('*');
 
-      // Child transactions
-      await trx('wallet_transaction').insert([
-        {
-          wallet_id: wallet.id,
-          direction: 'debit',
-          business_type: 'tds',
-          amount: tds,
-          status: 'completed',
-          description: `TDS deducted on withdrawal`,
-          from_user_id: userId,
-          meta: JSON.stringify({ parent: withdrawTxn.id })
-        },
-        {
-          wallet_id: wallet.id,
-          direction: 'debit',
-          business_type: 'payout_fee',
-          amount: payoutFee,
-          status: 'completed',
-          description: `Payout fee`,
-          from_user_id: userId,
-          meta: JSON.stringify({ parent: withdrawTxn.id })
-        },
-        {
-          wallet_id: wallet.id,
-          direction: 'debit',
-          business_type: 'payout_fee_gst',
-          amount: payoutFeeGst,
-          status: 'completed',
-          description: `GST on payout fee`,
-          from_user_id: userId,
-          meta: JSON.stringify({ parent: withdrawTxn.id })
-        }
-      ]);
-
+      // 3. Deduct from wallet
       await trx('wallet')
         .where({ id: wallet.id })
         .update({ balance: balanceAfter, updated_at: trx.fn.now() });
@@ -162,10 +231,6 @@ export const withdrawFundsFromWallet = async (req, res) => {
         transactionId: withdrawTxn.id,
         message: 'Withdrawal requested',
         requestedAmount: amount,
-        netPayout,
-        tds,
-        payoutFee,
-        payoutFeeGst,
         walletBalanceAfter: balanceAfter
       });
     });
@@ -326,3 +391,65 @@ export const getWithdrawalRequests = async (req, res) => {
   }
 };
 
+// Assumes admin JWT auth middleware is applied
+export const updateWithdrawalStatus = async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body; // "completed" or "rejected"
+  if (!["completed", "rejected"].includes(status)) {
+    return res.status(400).json({ error: "Invalid status" });
+  }
+  try {
+    await PostgresDb.transaction(async trx => {
+      // 1. Find withdrawal txn
+      const wd = await trx('wallet_transaction')
+        .where({ id, business_type: 'withdrawal_request' })
+        .first();
+
+      if (!wd) throw new Error("Withdrawal request not found");
+      if (wd.status !== "pending")
+        throw new Error("This withdrawal is already processed.");
+
+      // 2. If rejected, refund user
+      if (status === "rejected") {
+        // Credit the same amount back as a refund txn
+        await trx('wallet_transaction').insert({
+          wallet_id: wd.wallet_id,
+          direction: 'credit',
+          business_type: 'withdrawal_refund',
+          amount: wd.amount,
+          status: 'completed',
+          description: 'Withdrawal rejected, funds returned',
+          from_user_id: null,
+          to_user_id: wd.from_user_id,
+          meta: JSON.stringify({ refundFor: id }),
+          balance_after: null, // You can update with the actual computed balance if desired
+          created_at: trx.fn.now(),
+        });
+        // Increment balance in wallet table
+        await trx('wallet')
+          .where({ id: wd.wallet_id })
+          .increment('balance', wd.amount)
+          .update({ updated_at: trx.fn.now() });
+      }
+
+      // 3. Update original withdrawal txn status
+      await trx('wallet_transaction')
+        .where({ id })
+        .update({
+          status,
+          updated_at: trx.fn.now()
+        });
+
+      res.json({
+        success: true,
+        newStatus: status,
+        message: status === "completed"
+          ? "Withdrawal marked as successful."
+          : "Withdrawal rejected and funds refunded."
+      });
+    });
+  } catch (err) {
+    console.error("Admin withdrawal status update error:", err);
+    res.status(500).json({ error: err.message || "Failed to update withdrawal" });
+  }
+};

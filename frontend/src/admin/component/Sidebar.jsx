@@ -108,6 +108,12 @@ const Sidebar = () => {
             >
               Verify Astrologers
             </Link>
+               <Link
+              to="/admin/withdrawal-requests"
+              className="block p-2 hover:bg-gray-700 rounded"
+            >
+              Astologer Withdrawal Requests
+            </Link>
           </li>
         </ul>
       </aside>
