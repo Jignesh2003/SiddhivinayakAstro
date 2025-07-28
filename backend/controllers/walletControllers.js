@@ -76,110 +76,105 @@ export const myWallet = async (req, res) => {
 
 
 // Request withdrawal with tax/fee deduction & parent/child transaction structure
-// export const withdrawFundsFromWallet = async (req, res) => {
-//   const userId = req.user.id;
-//   const { amount, withdrawalDetails } = req.body;
+export const withdrawFundsFromWallet = async (req, res) => {
+  const userId = req.user.id;
+  const { amount, withdrawalDetails } = req.body;
+  if (!amount || amount < 500) { // Fixed comparison!
+    return res.status(400).json({ error: "Minimum withdrawal is ₹500" });
+  }
+  try {
+    await PostgresDb.transaction(async trx => {
+      const wallet = await trx('wallet')
+        .select('id', 'balance')
+        .where({ user_id: userId })
+        .first();
+      if (!wallet) throw new Error("Wallet not found");
+      if (Number(wallet.balance) < Number(amount))
+        throw new Error("Insufficient balance in wallet!");
 
-//   if (!amount || amount <= 100) { // Example min withdrawal
-//     return res.status(400).json({ error: "Invalid amount" });
-//   }
-//   try {
-//     await PostgresDb.transaction(async trx => {
-//       const wallet = await trx('wallet')
-//         .select('id', 'balance')
-//         .where({ user_id: userId })
-//         .first();
-//       if (!wallet) throw new Error("Wallet not found");
-//       if (Number(wallet.balance) < Number(amount))
-//         throw new Error("Insufficient balance in wallet!");
+      const { tds, payoutFee, payoutFeeGst, netPayout } =
+        calculateWithdrawDetails(Number(amount));
+      const balanceAfter = Number(wallet.balance) - Number(amount);
 
-//       // 2. Calculate deductions
-//       const { tds, payoutFee, payoutFeeGst, netPayout } = calculateWithdrawDetails(Number(amount));
-//       const balanceAfter = Number(wallet.balance) - Number(amount);
+      let meta = {
+        tds, payoutFee, payoutFeeGst,
+        withdrawalDetails, netPayout
+      };
 
-//       let meta = {
-//         tds, payoutFee, payoutFeeGst,
-//         withdrawalDetails, netPayout
-//       };
+      // 3. Parent withdrawal txn
+      const [withdrawTxn] = await trx('wallet_transaction')
+        .insert({
+          wallet_id: wallet.id,
+          direction: 'debit',
+          business_type: 'withdrawal_request',
+          amount,
+          status: 'pending',
+          description: `Withdrawal requested: ${JSON.stringify(withdrawalDetails)}`,
+          from_user_id: userId,
+          to_user_id: null,
+          platform_fee: payoutFee,
+          gst_amount: payoutFeeGst,
+          meta: JSON.stringify(meta),        // ensure this is a string!
+          balance_after: balanceAfter
+        })
+        .returning('*');
 
-//       // 3. Parent withdrawal txn
-//       const [withdrawTxn] = await trx('wallet_transaction')
-//         .insert({
-//           wallet_id: wallet.id,
-//           direction: 'debit',
-//           business_type: 'withdrawal_request', // or 'withdrawal' if instant
-//           amount,
-//           status: 'pending', // or 'completed'
-//           description: `Withdrawal requested: ${JSON.stringify(withdrawalDetails)}`,
-//           from_user_id: userId,
-//           to_user_id: null,
-//           platform_fee: payoutFee,
-//           gst_amount: payoutFeeGst,
-//           meta,
-//           balance_after: balanceAfter
-//         })
-//         .returning('*');
+      // Child transactions
+      await trx('wallet_transaction').insert([
+        {
+          wallet_id: wallet.id,
+          direction: 'debit',
+          business_type: 'tds',
+          amount: tds,
+          status: 'completed',
+          description: `TDS deducted on withdrawal`,
+          from_user_id: userId,
+          meta: JSON.stringify({ parent: withdrawTxn.id })
+        },
+        {
+          wallet_id: wallet.id,
+          direction: 'debit',
+          business_type: 'payout_fee',
+          amount: payoutFee,
+          status: 'completed',
+          description: `Payout fee`,
+          from_user_id: userId,
+          meta: JSON.stringify({ parent: withdrawTxn.id })
+        },
+        {
+          wallet_id: wallet.id,
+          direction: 'debit',
+          business_type: 'payout_fee_gst',
+          amount: payoutFeeGst,
+          status: 'completed',
+          description: `GST on payout fee`,
+          from_user_id: userId,
+          meta: JSON.stringify({ parent: withdrawTxn.id })
+        }
+      ]);
 
-//       // 4. Fee/tax child transactions for full audit
-//       // TDS debit
-//       await trx('wallet_transaction').insert({
-//         wallet_id: wallet.id,
-//         direction: 'debit',
-//         business_type: 'tds',
-//         amount: tds,
-//         status: 'completed',
-//         description: `TDS deducted on withdrawal`,
-//         from_user_id: userId,
-//         meta: { parent: withdrawTxn.id }
-//       });
+      await trx('wallet')
+        .where({ id: wallet.id })
+        .update({ balance: balanceAfter, updated_at: trx.fn.now() });
 
-//       // Payout fee debit
-//       await trx('wallet_transaction').insert({
-//         wallet_id: wallet.id,
-//         direction: 'debit',
-//         business_type: 'payout_fee',
-//         amount: payoutFee,
-//         status: 'completed',
-//         description: `Payout fee`,
-//         from_user_id: userId,
-//         meta: { parent: withdrawTxn.id }
-//       });
+      res.json({
+        success: true,
+        transactionId: withdrawTxn.id,
+        message: 'Withdrawal requested',
+        requestedAmount: amount,
+        netPayout,
+        tds,
+        payoutFee,
+        payoutFeeGst,
+        walletBalanceAfter: balanceAfter
+      });
+    });
+  } catch (err) {
+    console.error('🔥 Withdraw error:', err.message || err);
+    res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+};
 
-//       // Payout fee GST
-//       await trx('wallet_transaction').insert({
-//         wallet_id: wallet.id,
-//         direction: 'debit',
-//         business_type: 'payout_fee_gst',
-//         amount: payoutFeeGst,
-//         status: 'completed',
-//         description: `GST on payout fee`,
-//         from_user_id: userId,
-//         meta: { parent: withdrawTxn.id }
-//       });
-
-//       // Wallet deduction
-//       await trx('wallet')
-//         .where({ id: wallet.id })
-//         .update({ balance: balanceAfter, updated_at: trx.fn.now() });
-
-//       // (OPTIONAL) Trigger Razorpay payout here if auto, record ref.
-
-//       res.json({
-//         success: true,
-//         message: 'Withdrawal requested',
-//         requestedAmount: amount,
-//         netPayout,
-//         tds,
-//         payoutFee,
-//         payoutFeeGst,
-//         walletBalanceAfter: balanceAfter
-//       });
-//     });
-//   } catch (err) {
-//     console.error('🔥 Withdraw error:', err.message || err);
-//     res.status(500).json({ error: err.message || 'Internal server error' });
-//   }
-// };
 
 
 // Initiate Wallet Top-up Order (Cashfree, Razorpay, etc.)
@@ -294,6 +289,40 @@ export const listWalletTransactions = async (req, res) => {
   } catch (error) {
     console.error('🔥 Transaction list error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * List wallet withdrawal requests for admin, newest first.
+ * GET params: ?status=pending|completed (optional), ?limit=50, ?offset=0
+ */
+export const getWithdrawalRequests = async (req, res) => {
+  const { status, limit = 50, offset = 0 } = req.query;
+  try {
+    let query = PostgresDb('wallet_transaction')
+      .where('business_type', 'withdrawal_request')
+      .orderBy('created_at', 'desc')
+      .limit(limit)
+      .offset(offset);
+
+    if (status) {
+      query = query.andWhere('status', status);
+    }
+
+    // Optionally join for user info:
+    // .leftJoin('user', 'wallet_transaction.from_user_id', 'user.id')
+    // .select('wallet_transaction.*', 'user.name', 'user.email')
+
+    const requests = await query.select();
+
+    res.json({
+      success: true,
+      count: requests.length,
+      withdrawals: requests
+    });
+  } catch (err) {
+    console.error('🔥 Admin getWithdrawals error:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 

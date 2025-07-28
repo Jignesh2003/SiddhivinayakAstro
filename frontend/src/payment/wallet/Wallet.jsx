@@ -8,17 +8,24 @@ function Wallet() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // modal state for Add Money
+  // Add money
   const [showAddModal, setShowAddModal] = useState(false);
   const [addAmount, setAddAmount] = useState("");
   const [addLoading, setAddLoading] = useState(false);
 
-  // Cashfree SDK
+  // Withdraw money (astro only)
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
+
   const [cashfreeInstance, setCashfreeInstance] = useState(null);
 
+  const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
+  // Adjust logic if your role/isAstrologer indicator is different:
+  const isAstrologer = user?.role === "astrologer" || user?.isAstrologer === true;
 
-  // Load Cashfree SDK (ONE TIME)
+  // Load Cashfree SDK one time
   useEffect(() => {
     if (window.Cashfree) {
       setCashfreeInstance(window.Cashfree({ mode: "sandbox" }));
@@ -36,7 +43,7 @@ function Wallet() {
     document.body.appendChild(script);
   }, []);
 
-  // Fetch wallet & txns
+  // Load wallet and transactions
   async function fetchWalletData() {
     setLoading(true);
     try {
@@ -63,13 +70,12 @@ function Wallet() {
     if (token) fetchWalletData();
   }, [token]);
 
-  // Add money UI
+  // Add Money
   const handleOpenAddModal = () => {
     setAddAmount("");
     setShowAddModal(true);
   };
 
-  // Add money flow
   const handleSubmitAddMoney = async (e) => {
     e.preventDefault();
     const amount = Number(addAmount);
@@ -79,7 +85,6 @@ function Wallet() {
     }
     setAddLoading(true);
     try {
-      // Backend starts top-up order and returns payment session ID
       const res = await axios.post(
         `${import.meta.env.VITE_PAYMENT_URL}/wallet/initiateTopUp`,
         { amount },
@@ -90,25 +95,63 @@ function Wallet() {
 
       if (!payment_session_id || !cashfreeInstance) throw new Error("Payment environment not ready");
 
-      // Start Cashfree checkout
       cashfreeInstance.checkout({
         paymentSessionId: payment_session_id,
         redirectTarget: "_self",
-        onSuccess: () => {
-          fetchWalletData(); // reload after payment
-        },
-        onFailure: () => {
-          alert("Payment cancelled or failed.");
-        }
+        onSuccess: () => fetchWalletData(),
+        onFailure: () => alert("Payment cancelled or failed."),
       });
 
-      setTimeout(fetchWalletData, 7000); // poll for payment after user returns
-
+      setTimeout(fetchWalletData, 7000); // after user returns from Cashfree
     } catch (err) {
       alert(err.response?.data?.message || "Failed to initiate top-up");
       console.error("Add money error:", err);
     } finally {
       setAddLoading(false);
+    }
+  };
+
+  // Withdraw (astro only)
+  const handleOpenWithdrawModal = () => {
+    setWithdrawAmount("");
+    setShowWithdrawModal(true);
+  };
+
+  const handleSubmitWithdraw = async (e) => {
+    e.preventDefault();
+    const amount = Number(withdrawAmount);
+    if (!amount || amount < 500) {
+      alert("Minimum withdrawal is ₹500");
+      return;
+    }
+    if (amount > balance) {
+      alert("Cannot withdraw more than available balance");
+      return;
+    }
+    setWithdrawLoading(true);
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_PAYMENT_URL}/wallet/withdraw`,
+        { amount },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data?.success) {
+        setShowWithdrawModal(false);
+        setWithdrawAmount("");
+        alert("Withdrawal request submitted!");
+        fetchWalletData();
+      } else {
+        throw new Error(res.data?.message || "Withdrawal request failed");
+      }
+    } catch (err) {
+      alert(
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to process withdrawal"
+      );
+      console.error("Withdraw error:", err);
+    } finally {
+      setWithdrawLoading(false);
     }
   };
 
@@ -140,14 +183,25 @@ function Wallet() {
             {currency} {Number(balance).toFixed(2)}
           </div>
           <div className="text-sm text-gray-500">Available Balance</div>
+          {isAstrologer && (
+            <div className="text-xs text-gray-400 mt-1">(Min. withdrawal is ₹500)</div>
+          )}
         </div>
-        <div>
+        <div className="space-x-3 flex">
           <button
             onClick={handleOpenAddModal}
             className="px-4 py-2 rounded bg-green-500 text-white font-medium hover:bg-green-600 transition"
           >
             Add Money
           </button>
+          {isAstrologer && (
+            <button
+              onClick={handleOpenWithdrawModal}
+              className="px-4 py-2 rounded bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
+            >
+              Withdraw Money
+            </button>
+          )}
         </div>
       </div>
 
@@ -184,6 +238,47 @@ function Wallet() {
                   disabled={addLoading}
                 >
                   {addLoading ? "Processing..." : "Proceed"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Withdraw Money Modal (Astrologer Only) */}
+      {showWithdrawModal && isAstrologer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+          <div className="bg-white rounded shadow-lg p-6 min-w-[300px]">
+            <h4 className="text-lg font-bold mb-2">Withdraw Money</h4>
+            <form onSubmit={handleSubmitWithdraw}>
+              <label className="block mb-2">Withdrawal Amount (INR)</label>
+              <input
+                type="number"
+                min="500"
+                step="1"
+                max={Math.floor(balance)}
+                className="border rounded px-3 py-2 w-full mb-4"
+                value={withdrawAmount}
+                onChange={e => setWithdrawAmount(e.target.value)}
+                required
+                disabled={withdrawLoading}
+                placeholder="Minimum ₹500"
+              />
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowWithdrawModal(false)}
+                  className="px-4 py-2 text-gray-700 border rounded hover:bg-gray-50"
+                  disabled={withdrawLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  disabled={withdrawLoading}
+                >
+                  {withdrawLoading ? "Processing..." : "Withdraw"}
                 </button>
               </div>
             </form>

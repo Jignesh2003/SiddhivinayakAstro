@@ -18,4 +18,5 @@ router.post(
 
 router.get("/astrologer-details",authMiddleware,getAstrologerDetails)
 
+
 export default router;
