@@ -24,6 +24,11 @@ const AstrologerSidebar = () => {
       icon: <User className="w-5 h-5" />,
       path: "/astrologer-profile",
     },
+        {
+      label: "Wallet",
+      icon: <User className="w-5 h-5" />,
+      path: "/wallet",
+    },
   ];
 
   return (

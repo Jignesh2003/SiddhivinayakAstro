@@ -6,9 +6,9 @@ import PostgresDb from '../config/postgresDb.js';
 
 /**
  * Ends a chat session:
- * - Calculates total billable minutes (minutesDebited)
- * - Pays astrologer net (from platform/company) only if astrologer replied
- * - Refunds user all pre-debited minutes if astrologer never replied
+ * - Calculates billable minutes
+ * - Bills only if astrologer replied at least once; else refunds user
+ * - Payouts astrologer net from platform (never user double-debit)
  * - Updates Mongo session as ended
  * - Emits socket notification (session-ended) for all outcomes
  */
@@ -30,12 +30,11 @@ export const endSession = async (sessionId, io = null) => {
       senderId: session.astrologerId
     });
 
+    // If astrologer never replied, refund user and end (NO payout to astro)
     if (astroMsgCount === 0) {
-      // Astrologer never replied: refund ALL pre-debited minutes to user
       let refundError = null;
       let refundedAmount = 0;
       let minutesRefunded = 0;
-
       try {
         const minutes = session.minutesDebited || 0;
         if (minutes > 0) {
@@ -47,7 +46,6 @@ export const endSession = async (sessionId, io = null) => {
           refundedAmount = minutes * ratePerMinute;
           minutesRefunded = minutes;
 
-          // Refund user's wallet (Postgres)
           await PostgresDb.transaction(async trx => {
             const userWallet = await trx('wallet').where({ user_id: userIdStr }).forUpdate().first();
             if (!userWallet) throw new Error("User wallet not found for refund");
@@ -62,9 +60,15 @@ export const endSession = async (sessionId, io = null) => {
               status: 'completed',
               from_user_id: null,
               to_user_id: userIdStr,
-              description: 'Refund for chat: astrologer never responded',
+              description: 'Refund: astrologer never replied (auto unavailability refund)',
               balance_after: userBalanceAfter,
-              meta: JSON.stringify({ minutesRefunded, reason: "astro-no-reply/advance-debit-refund" }),
+              meta: JSON.stringify({
+                refundedAmount,
+                minutesRefunded,
+                reason: "astrologer-no-reply/auto_refund",
+                sessionId,
+                auto: true
+              }),
               created_at: trx.fn.now()
             });
 
@@ -73,7 +77,7 @@ export const endSession = async (sessionId, io = null) => {
               .update({ balance: userBalanceAfter, updated_at: trx.fn.now() });
           });
 
-          console.log(`💸 Refunded ₹${refundedAmount} to user ${userIdStr} for session ${sessionId}, astrologer never replied (${minutes} mins).`);
+          console.log(`💸 Refunded ₹${refundedAmount} to user ${userIdStr} (updated wallet) for session ${sessionId}, astrologer never replied.`);
         }
       } catch (refundErr) {
         refundError = refundErr;
@@ -107,7 +111,7 @@ export const endSession = async (sessionId, io = null) => {
       };
     }
 
-    // 3. Astrologer replied at least once: bill as normal
+    // Astro replied at least once: payout as usual
     const astrologer = await User.findById(session.astrologerId);
     if (!astrologer || typeof astrologer.pricePerMinute !== "number") {
       console.error(`❌ Astrologer not found or pricePerMinute missing for ${session.astrologerId}`);
