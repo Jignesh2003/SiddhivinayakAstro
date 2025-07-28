@@ -60,6 +60,14 @@ const Sidebar = () => {
           >
             Verify Astrologers
           </Link>
+          <Link
+            to="/admin/withdrawal-requests"
+            className="block p-2 hover:bg-gray-700 rounded"
+            onClick={handleLinkClick}
+          >
+            Astologer Withdrawal Requests
+          </Link>
+          
         </nav>
       )}
 

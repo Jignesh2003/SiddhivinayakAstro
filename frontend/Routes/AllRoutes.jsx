@@ -55,6 +55,7 @@ import CancellationRefundPolicy from "@/pages/CancellationRefundPolicy";
 import ShippingDeliveryPolicy from "@/pages/ShippingDeliveryPolicy";
 import CodOrderConfirmation from "../src/pages/CodOrderConfirmation";
 import Wallet from "@/payment/wallet/Wallet";
+import AdminWithdrawalRequests from '../src/admin/pages/AdminWithdrawalRequests'
 
 const AppRoutes = () => {
   return (
@@ -133,6 +134,8 @@ const AppRoutes = () => {
             <Route path="add-product" element={<AddProduct />} />
             <Route path="manage-products" element={<ManageProducts />} />
             <Route path="orders" element={<AdminOrders />} />
+            <Route path="withdrawal-requests" element={<AdminWithdrawalRequests />} />
+
 
           </Route>
         </Route>
