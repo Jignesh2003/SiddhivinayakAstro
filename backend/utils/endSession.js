@@ -1,5 +1,5 @@
-import ChatSession from "../models/ChatSession.js";
-import Message from "../models/Message.js";
+import ChatSession from "../models/chatSession.js";
+import Message from "../models/message.js";
 import User from "../models/User.js";
 import createTransaction from "./chatEndedMoneyTransferAstro.js"; // your payout handler
 import PostgresDb from "../config/postgresDb.js";
