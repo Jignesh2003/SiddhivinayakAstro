@@ -163,6 +163,7 @@ export const respondToRequest = async (req, res) => {
       session.status = "approved";
       session.startTime = now;
       session.approvedAt = now;
+      session.minutesDebited = 1; // <------ add 1 
       session.nextDebitAt = new Date(now.getTime() + 60000); // for per-minute billing
       await session.save();
 
