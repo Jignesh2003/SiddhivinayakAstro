@@ -38,8 +38,10 @@ export const generateKundaliPDF = async (req, res) => {
     const html = ejs.render(templateHtml, templateData);
 
     const browser = await puppeteer.launch({
+      executablePath: '/snap/bin/chromium',
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
+    
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
 
