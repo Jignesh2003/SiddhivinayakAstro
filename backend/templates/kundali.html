@@ -1,45 +1,77 @@
 <!DOCTYPE html>
 <html>
-
 <head>
   <meta charset="UTF-8" />
   <title>Kundali PDF</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     @import url('https://fonts.googleapis.com/css?family=Montserrat:700,400&display=swap');
+    @page { size: A4; margin: 0; }
+    html, body { margin: 0; padding: 0; box-sizing: border-box; min-height: 100vh; }
 
-    @page {
-      size: A4;
-      margin: 0;
-    }
-
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      width: 210mm;
-      height: auto;
-    }
-
-    .cover-img {
-      display: block;
-      width: 210mm;
+    /* PDF Cover: Gold radial background, circular logo, branding */
+    .astro-logo-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 297mm;
       height: 297mm;
-      object-fit: cover;
+      width: 100vw;
+      background: radial-gradient(circle at 50% 46%, #eee2b2 40%, #a38e45 130%);
       page-break-after: always;
-      margin: 0;
-      padding: 0;
-      border: none;
     }
 
-    @media print {
-      .cover-img {
-        width: 210mm !important;
-        height: 297mm !important;
-        object-fit: cover;
-        page-break-after: always;
-      }
+    .astro-logo-circle {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(rgba(255,215,90,0.13) 65%, rgba(178,138,38,0.13) 100%);
+      border: 8px solid #d1b655;
+      box-shadow: 0 0 32px 4px rgba(160,133,64,0.18), 0 0 5px 2px #efd175 inset;
+      overflow: hidden;
+      margin: auto;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .astro-logo-circle img {
+      position: absolute;
+      width: 164px;
+      height: 164px;
+      left: 50%;
+      top: 48%;
+      object-fit: contain;
+      transform: translate(-50%, -50%);
+      z-index: 2;
+      border-radius: 50%;
+      background: #fffbea;
+      box-shadow: 0 0 24px 0 rgba(170, 140, 20, 0.09);
+    }
+
+    .astro-logo-overlay {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 58px;
+      background: linear-gradient(0deg, rgba(38,29,5,0.22) 0%, rgba(0,0,0,0.0) 100%);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      border-bottom-left-radius: 150px;
+      border-bottom-right-radius: 150px;
+      z-index: 3;
+    }
+
+    .astro-logo-title {
+      color: #ffe08c;
+      font-weight: 700;
+      font-size: 1.23rem;
+      text-shadow: 0 2px 8px #523e11, 0 0 2px #ffe08c;
+      letter-spacing: 1px;
+      padding: 8px 22px 9px 22px;
+      font-family: 'Montserrat', serif;
+      border-radius: 14px;
+      margin-bottom: 4px;
+      background: rgba(44,31,6,0.13);
     }
 
     body {
@@ -52,19 +84,14 @@
       font-size: 18px;
       position: relative;
     }
-
     body::before {
       content: "";
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(24, 22, 11, 0.55);
       z-index: 0;
       pointer-events: none;
     }
-
     .content-container {
       max-width: 700px;
       margin: 0 auto;
@@ -74,9 +101,7 @@
       width: 100%;
       box-sizing: border-box;
     }
-
-    .header,
-    .footer {
+    .header, .footer {
       position: relative;
       text-align: center;
       padding: 20px 10px;
@@ -84,144 +109,80 @@
       min-height: 80px;
       border-radius: 12px;
       margin-bottom: 20px;
-      background: rgba(37, 30, 10, 0.75);
-      box-shadow: 0 2px 8px rgba(44, 36, 10, 0.18);
+      background: rgba(37,30,10,0.75);
+      box-shadow: 0 2px 8px rgba(44, 36, 10,0.18);
       letter-spacing: 2px;
     }
-
-    .header h1 {
-      font-size: 1.7rem;
-      font-weight: bold;
-      font-variant: small-caps;
-      margin: 0;
-    }
-
-    .footer {
-      margin-top: 32px;
-      font-size: 1rem;
-    }
-
-    .footer blockquote {
-      color: #ffd65a;
-      font-size: 1rem;
-    }
-
+    .header h1 { font-size: 1.7rem; font-weight: bold; font-variant: small-caps; margin: 0; }
+    .footer { margin-top: 32px; font-size: 1rem; }
+    .footer blockquote { color: #ffd65a; font-size: 1rem; }
     .astro-box {
       border: 2px solid #ffe08c;
       background: rgba(252, 243, 214, 0.72);
-      box-shadow: 0 3px 8px rgba(74, 58, 13, 0.04);
+      box-shadow: 0 3px 8px rgba(74,58,13,0.04);
       padding: 1.2em;
       border-radius: 12px;
       margin-bottom: 18px;
       color: #392900;
       font-weight: 500;
-      word-break: break-word;
+      word-break:break-word;
     }
-
-    .astro-box h2 {
-      color: #ab872f;
-      margin-bottom: 10px;
-      font-size: 1.1em;
-    }
-
-    .astro-box h3 {
-      color: #856404;
-      margin-top: 12px;
-      margin-bottom: 6px;
-      font-size: 1em;
-    }
-
+    .astro-box h2 { color: #ab872f; margin-bottom: 10px; font-size: 1.1em;}
+    .astro-box h3 { color: #856404; margin-top: 12px; margin-bottom: 6px; font-size: 1em; }
     table {
       width: 100%;
       border-collapse: collapse;
       margin-bottom: 10px;
-      background: rgba(255, 255, 255, 0.70);
+      background: rgba(255,255,255,0.70);
       color: #392900;
       word-break: break-all;
     }
-
-    th,
-    td {
+    th, td {
       border: 1px solid #e8cd72;
       padding: 6px;
       text-align: left;
       font-size: 0.98em;
     }
-
-    th {
-      background-color: #fffbe7;
-      color: #ab872f;
-    }
-
-    ul {
-      margin: 0;
-      padding-left: 18px;
-    }
-
-    strong {
-      color: #a38e45;
-    }
-
-    h2,
-    h3,
-    th,
-    .footer,
-    .header {
-      text-shadow: 1px 2px 6px rgba(0, 0, 0, 0.08);
-    }
-
+    th { background-color: #fffbe7; color: #ab872f; }
+    ul { margin: 0; padding-left: 18px; }
+    strong { color: #a38e45; }
+    h2, h3, th, .footer, .header { text-shadow: 1px 2px 6px rgba(0,0,0,0.08); }
     @media (max-width: 768px) {
-      .content-container {
-        padding: 12px;
-      }
-
-      .header h1 {
-        font-size: 1.1rem;
-      }
-
-      table,
-      th,
-      td {
-        font-size: 0.9em;
-      }
+      .content-container { padding: 12px; }
+      .header h1 { font-size: 1.1rem;}
+      table, th, td { font-size: 0.9em;}
     }
-
     @media (max-width: 500px) {
-      .content-container {
-        padding: 3vw;
-      }
-
-      .astro-box,
-      .header,
-      .footer {
-        padding: 7vw 3vw;
-      }
-
-      .header h1 {
-        font-size: 1rem;
-      }
+      .content-container { padding: 3vw; }
+      .astro-box, .header, .footer { padding: 7vw 3vw; }
+      .header h1 { font-size: 1rem;}
     }
   </style>
 </head>
-
 <body>
-  <img src="file:///home/ubuntu/SiddhivinayakAstro/backend/static/KundliFront.jpeg" alt="Kundali Cover" class="cover-img" />
+  <!-- PDF Cover: Circular logo, golden-glow branding, page-break -->
+  <div class="astro-logo-wrap">
+    <div class="astro-logo-circle">
+      <img src="file:///home/ubuntu/SiddhivinayakAstro/backend/static/Logo.jpeg" alt="Siddhi Vinayak Logo" />
+      <div class="astro-logo-overlay">
+        <span class="astro-logo-title">Siddhi Vinayak Astro</span>
+      </div>
+    </div>
+  </div>
 
+  <!-- ===== Main PDF Content Starts Here ===== -->
   <div class="content-container">
     <div class="header">
       <h1>SIDDHIVAK ASTRO - Kundali Report</h1>
     </div>
 
-    <!-- All dynamic content remains unchanged -->
     <!-- Personal Info -->
     <div class="astro-box">
-      <p><strong>Date of Birth:</strong>
-        <%= dob || 'N/A' %>
-      </p>
+      <p><strong>Date of Birth:</strong> <%= dob || 'N/A' %></p>
     </div>
 
     <!-- Nakshatra Details -->
-    <% if (typeof nakshatra_details !=='undefined' && nakshatra_details) { %>
+    <% if (typeof nakshatra_details !== 'undefined' && nakshatra_details) { %>
       <div class="astro-box">
         <h2>Nakshatra Details</h2>
         <table>
@@ -235,17 +196,17 @@
           </tr>
           <% if (nakshatra_details.additional_info) {
             Object.entries(nakshatra_details.additional_info).forEach(([k, v]) => { %>
-            <tr>
-              <td><strong><%= k.replace(/_/g, ' ') %>:</strong></td>
-              <td><%= v %></td>
-            </tr>
-          <% }) } %>
+              <tr>
+                <td><strong><%= k.replace(/_/g, ' ') %>:</strong></td>
+                <td><%= v %></td>
+              </tr>
+            <% }) } %>
         </table>
       </div>
     <% } %>
 
     <!-- Mangal Dosha -->
-    <% if (typeof mangal_dosha !=='undefined' && mangal_dosha) { %>
+    <% if (typeof mangal_dosha !== 'undefined' && mangal_dosha) { %>
       <div class="astro-box">
         <h2>Mangal Dosha</h2>
         <p><%= mangal_dosha.description || 'No details available' %></p>
@@ -301,8 +262,8 @@
       </div>
     <% } %>
 
-    <!-- Dasha & Anthardashas -->
-    <% if (typeof dasha_balance !=='undefined' && dasha_balance) { %>
+    <!-- Dasha & Anthardashas as Table -->
+    <% if (typeof dasha_balance !== 'undefined' && dasha_balance) { %>
       <div class="astro-box">
         <h2>Dasha & Anthardashas</h2>
         <p><strong>Balance:</strong> <%= dasha_balance.description || 'N/A' %></p>
@@ -334,7 +295,7 @@
       </div>
     <% } %>
 
-    <!-- Footer Quote -->
+    <!-- Bottom Quote -->
     <div class="footer">
       <blockquote>
         <p class="mt-2 font-semibold">English:</p>
