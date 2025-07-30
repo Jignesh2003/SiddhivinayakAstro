@@ -19,7 +19,7 @@ export const generateKundaliPDF = async (req, res) => {
     const kundaliData = JSON.parse(cachedDataString);
     const kundaliInfo = kundaliData.data || {};  // Extract nested data
 
-const rawDob = kundaliInfo.dob || '';
+const rawDob = kundaliInfo.dob || datetime || '';
 
 let formattedDob = rawDob;
 if (rawDob) {
