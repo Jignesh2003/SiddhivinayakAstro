@@ -28,7 +28,7 @@
       position: relative;
       page-break-after: always;
       text-align: center;
-      padding: 2rem;
+      padding: 2rem 1rem;
       font-family: 'Montserrat', serif;
     }
     .pdf-cover-wrap h1.domain {
@@ -43,6 +43,7 @@
       margin-bottom: 2.2rem;
       margin-top: 0;
       user-select: none;
+      word-break:break-all;
     }
     .logo-circle {
       background: radial-gradient(circle at center, #fff9f0 70%, #f9e88b 100%);
@@ -109,7 +110,7 @@
       .cover-h3, .cover-h4 {font-size:.9rem;}
     }
 
-    /* === Main PDF content (from previous design) === */
+    /* === Main PDF content styles === */
     body {
       font-family: 'Montserrat', serif;
       color: #fff;
@@ -196,7 +197,7 @@
   </style>
 </head>
 <body>
-  <!-- First page cover -->
+  <!-- First page (cover) -->
   <div class="pdf-cover-wrap">
     <h1 class="domain">www.siddhivinayaskastroworld.com</h1>
     <div class="logo-circle">
@@ -293,7 +294,7 @@
         </table>
       </div>
     <% } %>
-    <!-- Dasha & Anthardashas -->
+    <!-- Dasha & Anthardashas as Table -->
     <% if (typeof dasha_balance !== 'undefined' && dasha_balance) { %>
       <div class="astro-box">
         <h2>Dasha & Anthardashas</h2>
