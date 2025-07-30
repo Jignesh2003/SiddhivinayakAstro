@@ -19,19 +19,20 @@ export const generateKundaliPDF = async (req, res) => {
       return res.status(404).json({ error: 'Kundali data not found in cache, please generate again' });
     }
     const kundaliData = JSON.parse(cachedDataString);
+    const kundaliInfo = kundaliData.data || {};  // Extract nested data
     console.log('Parsed Kundali Data:', JSON.stringify(kundaliData, null, 2));
     const templateData = {
-      name: kundaliData.name || 'Unknown',
-      dob: kundaliData.dob || '',
-      nakshatra_details: kundaliData.nakshatra_details || null,
-      mangal_dosha: kundaliData.mangal_dosha || null,
-      yoga_details: kundaliData.yoga_details || [],
-      kundli: kundaliData.kundli || [],
-      dasha_balance: kundaliData.dasha_balance || null,
-      dasha_periods: kundaliData.dasha_periods || [],
-      kundali_chart_url: kundaliData.chart_url || '',
-      other_sections_html: kundaliData.html_section || '',
-    };
+  name: kundaliInfo.name || 'Unknown',
+  dob: kundaliInfo.dob || '',
+  nakshatra_details: kundaliInfo.nakshatra_details || null,
+  mangal_dosha: kundaliInfo.mangal_dosha || null,
+  yoga_details: kundaliInfo.yoga_details || [],
+  kundli: kundaliInfo.kundli || [],
+  dasha_balance: kundaliInfo.dasha_balance || null,
+  dasha_periods: kundaliInfo.dasha_periods || [],
+  kundali_chart_url: kundaliInfo.chart_url || '',
+  other_sections_html: kundaliInfo.html_section || '',
+};
 
     const templatePath = path.join(process.cwd(), 'templates', 'kundali.html');
     const templateHtml = fs.readFileSync(templatePath, 'utf8');
