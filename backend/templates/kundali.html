@@ -8,7 +8,6 @@
     @import url('https://fonts.googleapis.com/css?family=Montserrat:700,400&display=swap');
 
     body {
-      /* background: #fffbe7 url('https://yourdomain.com/static/bg.png') no-repeat center center; */
       font-family: 'Montserrat', serif;
       margin: 20px;
       color: #333;
@@ -29,6 +28,28 @@
       border-radius: 12px;
       margin-bottom: 20px;
     }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+    }
+
+    th, td {
+      border: 1px solid #e8cd72;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f2e9a4;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
   </style>
 </head>
 
@@ -37,33 +58,43 @@
     <div class="header">SIDDHIVAK ASTRO - Kundali Report</div>
 
     <div class="astro-box">
-      <p><b>Name:</b> <%= name %></p>
-      <p><b>Date of Birth:</b> <%= dob %></p>
+      <p><strong>Name:</strong> <%= name || 'Unknown' %></p>
+      <p><strong>Date of Birth:</strong> <%= dob || 'N/A' %></p>
     </div>
 
-    <% if (nakshatra_details) { %>
+    <% if (typeof nakshatra_details !== 'undefined' && nakshatra_details) { %>
       <div class="astro-box">
         <h2>Nakshatra Details</h2>
-        <table style="width:100%;margin-bottom:10px;">
-          <tr><td><b>Nakshatra:</b></td><td><%= nakshatra_details.nakshatra.name %></td></tr>
-          <tr><td><b>Pad:</b></td><td><%= nakshatra_details.nakshatra.pada %></td></tr>
-          <% Object.entries(nakshatra_details.additional_info || {}).forEach(([k,v])=> { %>
-          <tr><td><b><%= k.replace(/_/g," ") %>:</b></td><td><%= v %></td></tr>
-          <% }) %>
+        <table>
+          <tr>
+            <td><strong>Nakshatra:</strong></td>
+            <td><%= nakshatra_details.nakshatra?.name || 'N/A' %></td>
+          </tr>
+          <tr>
+            <td><strong>Pad:</strong></td>
+            <td><%= nakshatra_details.nakshatra?.pada || 'N/A' %></td>
+          </tr>
+          <% if (nakshatra_details.additional_info) { 
+            Object.entries(nakshatra_details.additional_info).forEach(([k, v]) => { %>
+            <tr>
+              <td><strong><%= k.replace(/_/g, ' ') %>:</strong></td>
+              <td><%= v %></td>
+            </tr>
+          <% }) } %>
         </table>
       </div>
     <% } %>
 
-    <% if (mangal_dosha) { %>
+    <% if (typeof mangal_dosha !== 'undefined' && mangal_dosha) { %>
       <div class="astro-box">
         <h2>Mangal Dosha</h2>
-        <p><%= mangal_dosha.description %></p>
-        <% if(mangal_dosha.exceptions && mangal_dosha.exceptions.length > 0) { %>
-        <ul>
-          <% mangal_dosha.exceptions.forEach(function(exc){ %>
-            <li><%= exc %></li>
-          <% }) %>
-        </ul>
+        <p><%= mangal_dosha.description || 'No details available' %></p>
+        <% if (Array.isArray(mangal_dosha.exceptions) && mangal_dosha.exceptions.length > 0) { %>
+          <ul>
+            <% mangal_dosha.exceptions.forEach(function (exc) { %>
+              <li><%= exc %></li>
+            <% }) %>
+          </ul>
         <% } %>
       </div>
     <% } %>
@@ -71,15 +102,15 @@
     <% if (Array.isArray(yoga_details) && yoga_details.length > 0) { %>
       <div class="astro-box">
         <h2>Yoga Details</h2>
-        <% yoga_details.forEach(function(group){ %>
-          <div style="margin-bottom:10px;">
-            <p><b><%= group.name %>:</b> <%= group.description %></p>
-            <% if (group.yoga_list && group.yoga_list.length > 0) { %>
-            <ul>
-              <% group.yoga_list.forEach(function(yoga){ %>
-              <li><b><%= yoga.name %></b>: <%= yoga.description %></li>
-              <% }) %>
-            </ul>
+        <% yoga_details.forEach(function (group) { %>
+          <div style="margin-bottom: 10px;">
+            <p><strong><%= group.name %>:</strong> <%= group.description %></p>
+            <% if (Array.isArray(group.yoga_list) && group.yoga_list.length > 0) { %>
+              <ul>
+                <% group.yoga_list.forEach(function (yoga) { %>
+                  <li><strong><%= yoga.name %></strong>: <%= yoga.description %></li>
+                <% }) %>
+              </ul>
             <% } %>
           </div>
         <% }) %>
@@ -89,28 +120,32 @@
     <% if (Array.isArray(kundli) && kundli.length > 0) { %>
       <div class="astro-box">
         <h2>Planets & Houses</h2>
-        <table style="width:100%;">
-          <tr><th>Planet</th><th>House</th></tr>
-          <% kundli.forEach(function(p){ %>
-            <tr>
-              <td><%= p.name %></td>
-              <td><%= p.house_number %></td>
-            </tr>
-          <% }) %>
+        <table>
+          <thead>
+            <tr><th>Planet</th><th>House</th></tr>
+          </thead>
+          <tbody>
+            <% kundli.forEach(function (p) { %>
+              <tr>
+                <td><%= p.name %></td>
+                <td><%= p.house_number %></td>
+              </tr>
+            <% }) %>
+          </tbody>
         </table>
       </div>
     <% } %>
 
-    <% if (dasha_balance) { %>
+    <% if (typeof dasha_balance !== 'undefined' && dasha_balance) { %>
       <div class="astro-box">
         <h2>Dasha & Anthardashas</h2>
-        <p><b>Balance:</b> <%= dasha_balance.description %></p>
-        <% (dasha_periods || []).forEach(function(mah, idx){ %>
-          <div style="margin-top:10px;">
-            <b>Mahadasha <%= idx+1 %>: <%= mah.name %></b>
-            <% (mah.antardasha || []).forEach(function(ant){ %>
-              <div style="margin-left:15px;">
-                <span><b><%= ant.name %></b>: <%= ant.start %> → <%= ant.end %></span>
+        <p><strong>Balance:</strong> <%= dasha_balance.description || 'N/A' %></p>
+        <% (dasha_periods || []).forEach(function (mah, idx) { %>
+          <div style="margin-top: 10px;">
+            <strong>Mahadasha <%= idx + 1 %>: <%= mah.name || 'N/A' %></strong>
+            <% (mah.antardasha || []).forEach(function (ant) { %>
+              <div style="margin-left: 15px;">
+                <span><strong><%= ant.name %></strong>: <%= ant.start %> → <%= ant.end %></span>
               </div>
             <% }) %>
           </div>
@@ -120,6 +155,5 @@
 
   </div>
 </body>
-
 
 </html>
