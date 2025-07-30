@@ -38,7 +38,7 @@ export const generateKundaliPDF = async (req, res) => {
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=kundali.pdf`);
-    wkhtmltopdf(html, {
+    wkhtmltopdf(html, { 'enable-local-file-access': true,
       // You can add options here, such as page size or margins
       pageSize: 'A4',
       marginTop: '10mm',
