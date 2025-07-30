@@ -17,7 +17,7 @@ export const generateKundaliPDF = async (req, res) => {
       return res.status(404).json({ error: 'Kundali data not found in cache, please generate again' });
     }
     const kundaliData = JSON.parse(cachedDataString);
-    const kundaliInfo = kundaliData.data || {};  // Extract nested data
+    const rawDob = kundaliData.data || {};  // Extract nested data
 
 let formattedDob = rawDob;
 if (rawDob) {
