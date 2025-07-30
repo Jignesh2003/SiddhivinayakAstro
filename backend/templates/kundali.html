@@ -13,12 +13,37 @@
       color: #333;
     }
 
-    .header {
-      color: #a38e45;
+    .header, .footer {
+      position: relative;
       text-align: center;
-      font-size: 28px;
-      font-weight: bold;
-      margin-bottom: 18px;
+      padding: 30px 20px;
+      color: #fff;
+      min-height: 120px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      /* Background image from static folder (update path below as needed) */
+      background-image: url('file:///home/ubuntu/SiddhivinayakAstro/backend/static/HeroSectionBackground.jpg');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      overflow: hidden;
+    }
+
+    .header::before, .footer::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 0;
+    }
+    .header h1, .footer blockquote { position: relative; z-index: 1; }
+    .header h1 { font-size: 28px; font-weight: bold; letter-spacing: 2px; font-variant: small-caps; margin: 0; }
+    .footer { margin-top: 32px; color: #eee; font-size: 16px; }
+    .footer blockquote { color: #eee; font-size: 15px; }
+
+    .content-container {
+      max-width: 700px;
+      margin: auto;
     }
 
     .astro-box {
@@ -41,27 +66,30 @@
       text-align: left;
     }
 
-    th {
-      background-color: #f2e9a4;
-    }
+    th { background-color: #f2e9a4; }
 
-    ul {
-      margin: 0;
-      padding-left: 20px;
-    }
+    ul { margin: 0; padding-left: 20px; }
 
+    h2 { color: #ab872f; margin-bottom: 12px; }
+    h3 { color: #856404; margin-top: 15px; margin-bottom: 6px; font-size: 17px; }
   </style>
 </head>
 
 <body>
-  <div style="max-width:700px;margin:auto;">
-    <div class="header">SIDDHIVAK ASTRO - Kundali Report</div>
+  <div class="content-container">
 
+    <!-- Header with background image -->
+    <div class="header">
+      <h1>SIDDHIVAK ASTRO - Kundali Report</h1>
+    </div>
+
+    <!-- Personal Info -->
     <div class="astro-box">
       <p><strong>Name:</strong> <%= name || 'Unknown' %></p>
       <p><strong>Date of Birth:</strong> <%= dob || 'N/A' %></p>
     </div>
 
+    <!-- Nakshatra Details -->
     <% if (typeof nakshatra_details !== 'undefined' && nakshatra_details) { %>
       <div class="astro-box">
         <h2>Nakshatra Details</h2>
@@ -74,17 +102,18 @@
             <td><strong>Pad:</strong></td>
             <td><%= nakshatra_details.nakshatra?.pada || 'N/A' %></td>
           </tr>
-          <% if (nakshatra_details.additional_info) { 
+          <% if (nakshatra_details.additional_info) {
             Object.entries(nakshatra_details.additional_info).forEach(([k, v]) => { %>
-            <tr>
-              <td><strong><%= k.replace(/_/g, ' ') %>:</strong></td>
-              <td><%= v %></td>
-            </tr>
-          <% }) } %>
+              <tr>
+                <td><strong><%= k.replace(/_/g, ' ') %>:</strong></td>
+                <td><%= v %></td>
+              </tr>
+            <% }) } %>
         </table>
       </div>
     <% } %>
 
+    <!-- Mangal Dosha -->
     <% if (typeof mangal_dosha !== 'undefined' && mangal_dosha) { %>
       <div class="astro-box">
         <h2>Mangal Dosha</h2>
@@ -99,6 +128,7 @@
       </div>
     <% } %>
 
+    <!-- Yoga Details -->
     <% if (Array.isArray(yoga_details) && yoga_details.length > 0) { %>
       <div class="astro-box">
         <h2>Yoga Details</h2>
@@ -117,12 +147,16 @@
       </div>
     <% } %>
 
+    <!-- Planets & Houses -->
     <% if (Array.isArray(kundli) && kundli.length > 0) { %>
       <div class="astro-box">
         <h2>Planets & Houses</h2>
         <table>
           <thead>
-            <tr><th>Planet</th><th>House</th></tr>
+            <tr>
+              <th>Planet</th>
+              <th>House</th>
+            </tr>
           </thead>
           <tbody>
             <% kundli.forEach(function (p) { %>
@@ -136,24 +170,52 @@
       </div>
     <% } %>
 
+    <!-- Dasha & Anthardashas as Table -->
     <% if (typeof dasha_balance !== 'undefined' && dasha_balance) { %>
       <div class="astro-box">
         <h2>Dasha & Anthardashas</h2>
         <p><strong>Balance:</strong> <%= dasha_balance.description || 'N/A' %></p>
         <% (dasha_periods || []).forEach(function (mah, idx) { %>
-          <div style="margin-top: 10px;">
-            <strong>Mahadasha <%= idx + 1 %>: <%= mah.name || 'N/A' %></strong>
-            <% (mah.antardasha || []).forEach(function (ant) { %>
-              <div style="margin-left: 15px;">
-                <span><strong><%= ant.name %></strong>: <%= ant.start %> → <%= ant.end %></span>
-              </div>
-            <% }) %>
-          </div>
+          <h3>Mahadasha <%= idx + 1 %>: <%= mah.name || 'N/A' %></h3>
+          <% if (Array.isArray(mah.antardasha) && mah.antardasha.length > 0) { %>
+            <table>
+              <thead>
+                <tr>
+                  <th>Antardasha Name</th>
+                  <th>Start Date</th>
+                  <th>End Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% mah.antardasha.forEach(function (ant) { %>
+                  <tr>
+                    <td><%= ant.name %></td>
+                    <td><%= ant.start.split('T')[0] %></td>
+                    <td><%= ant.end.split('T')[0] %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          <% } else { %>
+            <p style="font-style: italic; color: #666;">No Anthardashas available</p>
+          <% } %>
         <% }) %>
       </div>
     <% } %>
 
+    <!-- Bottom Quote with background image -->
+    <div class="footer">
+      <blockquote>
+        <p class="font-semibold">संस्कृत:</p>
+        <p>“सर्वधर्मान्परित्यज्य मामेकं शरणं व्रज ।</p>
+        <p>अहं त्वां सर्वपापेभ्यो मोक्षयिष्यामि मा शुचः ॥”</p>
+        <p class="mt-2 font-semibold">हिन्दी:</p>
+        <p>“सभी धर्मों को त्यागकर केवल मेरी शरण में आओ, मैं तुम्हें सभी पापों से मुक्त कर दूँगा।”</p>
+        <p class="mt-2 font-semibold">English:</p>
+        <p>“Abandon all varieties of dharma and just surrender unto Me. I shall free you from all sinful reactions.”</p>
+      </blockquote>
+    </div>
+
   </div>
 </body>
-
 </html>

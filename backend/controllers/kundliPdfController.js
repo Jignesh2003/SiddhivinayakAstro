@@ -13,8 +13,6 @@ export const generateKundaliPDF = async (req, res) => {
 
     const cacheKey = `kundli:${coordinates}:${datetime}:${ayanamsa}:${la}`;
     const cachedDataString = await redis.get(cacheKey);
-    console.log(`PDF CacheKey: ${cacheKey}`);
-    console.log('Raw Cached Data:', cachedDataString);
     if (!cachedDataString) {
       return res.status(404).json({ error: 'Kundali data not found in cache, please generate again' });
     }
