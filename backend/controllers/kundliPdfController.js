@@ -19,7 +19,7 @@ export const generateKundaliPDF = async (req, res) => {
     const kundaliData = JSON.parse(cachedDataString);
     const kundaliInfo = kundaliData.data || {};  // Extract nested data
 const rawDob = kundaliInfo.dob || datetime || '';
-
+    
 let formattedDob = rawDob;
 if (rawDob) {
   const dateObj = new Date(rawDob);
@@ -61,10 +61,10 @@ if (rawDob) {
       'enable-local-file-access': true,
       // You can add options here, such as page size or margins
       pageSize: 'A4',
-      marginTop: '0mm',
-      marginBottom: '0mm',
-      marginLeft: '0mm',
-      marginRight: '0mm',
+      marginTop: '10mm',
+      marginBottom: '10mm',
+      marginLeft: '10mm',
+      marginRight: '10mm',
       // For custom fonts/images, you may need special options
       // To enable local file access for images/CSS, you may add:
       // 'enable-local-file-access': true
