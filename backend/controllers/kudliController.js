@@ -17,6 +17,7 @@ export const detailedKundli = async (req, res) => {
 
     // Check Redis cache
     const cached = await redis.get(cacheKey)
+    console.log('Frontend Redis key:', cacheKey);
     if (cached) {
       console.log('🔁 Returning cached kundli data')
       return res.json(JSON.parse(cached))
