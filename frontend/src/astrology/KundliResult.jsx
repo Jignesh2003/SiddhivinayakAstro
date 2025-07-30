@@ -13,7 +13,6 @@ import {
   MapPin,
   Download,
 } from 'lucide-react';
-import jsPDF from 'jspdf';
 import useAuthStore from '@/store/useAuthStore';
 
 export default function KundliResult() {
@@ -27,6 +26,8 @@ export default function KundliResult() {
   const q = new URLSearchParams(search);
   const datetime = q.get('datetime');
   const coordinates = q.get('coordinates');
+  const ayanamsa = q.get('ayanamsa') || '';
+  const la = q.get('la') || 'en';
 
   useEffect(() => {
     if (!datetime || !coordinates) {
@@ -51,101 +52,41 @@ export default function KundliResult() {
     })();
   }, [search, datetime, coordinates, navigate, token]);
 
-  const downloadPDF = () => {
-    if (!data) return;
-    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-    const margin = 40;
-    const lineHeight = 16;
-    const pageHeight = doc.internal.pageSize.getHeight();
-    let cursorY = margin;
-    const writeLine = (text, opts = {}) => {
-      const { x = margin, size = 12 } = opts;
-      doc.setFontSize(size);
-      doc.text(text, x, cursorY);
-      cursorY += lineHeight;
-      if (cursorY + margin > pageHeight) {
-        doc.addPage();
-        cursorY = margin;
+  // THE *ONLY* CHANGE: Use server-side PDF endpoint for rich PDF
+const downloadPDF = async () => {
+  try {
+    const params = new URLSearchParams({
+      coordinates,
+      datetime,
+      ayanamsa,
+      la,
+    }).toString();
+
+    // Important: Use "responseType: blob"!
+    const response = await axios.post(
+      `${import.meta.env.VITE_KUNDLIPDF_URL}/pdf?${params}`,
+      {},   // <- body, empty object for POST
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob", // <-- KEY CHANGE for binary data
       }
-    };
+    );
 
-    // // Top quote: Gita 2.47
-    writeLine('English: “Your right is to perform your duty only, never to its fruits.”',
-      { size: 12 });
-    writeLine('');
+    // Now response.data is a Blob!
+    const url = window.URL.createObjectURL(response.data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Siddhivinayak_Kundali_${datetime || "kundli"}.pdf`;
+    document.body.appendChild(link); // ensures click works in FF
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
 
-    // Main content...
-    writeLine('🪐 Kundli Details', { size: 16 });
-    writeLine('');
-    writeLine(`Location: ${coordinates}`);
-    writeLine(`Date & Time: ${new Date(datetime).toLocaleString()}`);
-    writeLine('');
+  } catch (err) {
+    toast.error('PDF Download failed. ' + (err.message || ''));
+  }
+};
 
-    if (data.nakshatra_details) {
-      const nd = data.nakshatra_details;
-      writeLine('Nakshatra Details:', { size: 14 });
-      writeLine(`• Nakshatra: ${nd.nakshatra.name}`);
-      writeLine(`• Pada: ${nd.nakshatra.pada}`);
-      writeLine(`• Lord: ${nd.nakshatra.lord.name} (${nd.nakshatra.lord.vedic_name})`);
-      writeLine(`• Chandra Rasi: ${nd.chandra_rasi.name}`);
-      writeLine(`• Zodiac: ${nd.zodiac.name}`);
-      Object.entries(nd.additional_info).forEach(([k, v]) =>
-        writeLine(`• ${k.replace(/_/g, ' ')}: ${v}`)
-      );
-      writeLine('');
-    }
-
-    if (data.mangal_dosha) {
-      writeLine('Mangal Dosha:', { size: 14 });
-      writeLine(`• ${data.mangal_dosha.description}`);
-      (data.mangal_dosha.exceptions || []).forEach(exc =>
-        writeLine(`  – ${exc}`)
-      );
-      writeLine('');
-    }
-
-if (Array.isArray(data.yoga_details)) {
-  writeLine('Yoga Details:', { size: 14 });
-  data.yoga_details.forEach(group => {
-    writeLine(`• ${group.name}: ${group.description}`, { size: 12 });
-    if (Array.isArray(group.yoga_list)) {
-      group.yoga_list.forEach(yoga => {
-        writeLine(`   → ${yoga.name}: ${yoga.description}`, { size: 11 });
-      });
-    }
-    writeLine('');
-  });
-}
-
-
-    if (Array.isArray(data.kundli)) {
-      writeLine('Planets & Houses:', { size: 14 });
-      data.kundli.forEach(p =>
-        writeLine(`• ${p.name} → House ${p.house_number}`)
-      );
-      writeLine('');
-    }
-
-    if (data.dasha_balance) {
-      writeLine('Dasha & Anthardashas:', { size: 14 });
-      writeLine(`• Balance: ${data.dasha_balance.description}`);
-      writeLine('');
-      data.dasha_periods.forEach((mah, mi) => {
-        writeLine(`Mahadasha ${mi + 1}: ${mah.name}`, { size: 13 });
-        mah.antardasha.forEach((ant) => {
-          writeLine(`• ${ant.name} (${ant.start.split('T')[0]} → ${ant.end.split('T')[0]})`);
-        });
-        writeLine('');
-      });
-    }
-
-    // // Bottom quote: Gita 18.66
-  
-    writeLine('Quote: “Abandon all varieties of dharma and just surrender unto Me. I shall free you from all sinful reactions, do not fear.”',
-      { size: 12 });
-
-    doc.save('kundli.pdf');
-  };
 
   if (loading) {
     return (
@@ -165,14 +106,12 @@ if (Array.isArray(data.yoga_details)) {
     kundli,
   } = data;
 
-console.log(nakshatra_details);
-
   return (
     <div ref={containerRef} className="bg-black text-white min-h-screen px-6 py-8 max-w-5xl mx-auto space-y-8">
       <Toaster />
 
       {/* Top Quote */}
-   <blockquote className="border-l-4 border-yellow-400 pl-4 italic text-sm text-gray-300">
+      <blockquote className="border-l-4 border-yellow-400 pl-4 italic text-sm text-gray-300">
         <p className="font-semibold">संस्कृत:</p>
         <p>“कर्मण्येवाधिकारस्ते मा फलेषु कदाचन ।</p>
         <p>मा कर्मफलहेतुर्भूर्मा ते सङ्गोऽस्त्वकर्मणि ॥”</p>
@@ -182,7 +121,6 @@ console.log(nakshatra_details);
         <p className="mt-2 font-semibold">English:</p>
         <p>“Your right is to perform your duty, never to its fruits.”</p>
       </blockquote>
-
 
       {/* Header */}
       <header className="flex items-center justify-between">
@@ -207,33 +145,30 @@ console.log(nakshatra_details);
             <div><b>Nakshatra:</b> {nakshatra_details.nakshatra.name}</div>
             <div><b>Nakshatra Pada:</b> {nakshatra_details.nakshatra.pada}</div>
             <div>
-              <b>Lord:</b> {nakshatra_details.nakshatra.lord.name}<br/>
+              <b>Lord:</b> {nakshatra_details.nakshatra.lord.name}<br />
               <small className="text-gray-400">({nakshatra_details.nakshatra.lord.vedic_name})</small>
             </div>
             <div><b>Chandra Rasi:</b> {nakshatra_details.chandra_rasi.name}</div>
             <div>
-              <b>Chandra Lord:</b> {nakshatra_details.chandra_rasi.lord.name}<br/>
+              <b>Chandra Lord:</b> {nakshatra_details.chandra_rasi.lord.name}<br />
               <small className="text-gray-400">({nakshatra_details.chandra_rasi.lord.vedic_name})</small>
             </div>
             <div><b>Soorya Rasi:</b> {nakshatra_details.soorya_rasi.name}</div>
             <div>
-              <b>Soorya Lord:</b> {nakshatra_details.soorya_rasi.lord.name}<br/>
+              <b>Soorya Lord:</b> {nakshatra_details.soorya_rasi.lord.name}<br />
               <small className="text-gray-400">({nakshatra_details.soorya_rasi.lord.vedic_name})</small>
             </div>
             <div><b>Zodiac:</b> {nakshatra_details.zodiac.name}</div>
- {Object.entries(nakshatra_details.additional_info)
-  .filter(([k]) => k !== 'gender')
-  .map(([k, v]) => {
-    const label = k
-      .replace(/_/g, ' ')                // Replace underscores with spaces
-      .replace(/^\w/, c => c.toUpperCase()); // Capitalize first letter
-    return (
-      <div key={k}>
-        <b>{label}:</b> {v}
-      </div>
-    );
-  })}
-
+            {Object.entries(nakshatra_details.additional_info)
+              .filter(([k]) => k !== 'gender')
+              .map(([k, v]) => {
+                const label = k.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+                return (
+                  <div key={k}>
+                    <b>{label}:</b> {v}
+                  </div>
+                );
+              })}
           </div>
         </section>
       )}
@@ -257,7 +192,7 @@ console.log(nakshatra_details);
       {Array.isArray(yoga_details) && yoga_details.length > 0 && (
         <section className="bg-gray-900 p-6 rounded border border-gray-700">
           <h2 className="flex items-center space-x-2 mb-4 text-xl font-semibold text-green-400">
-            <Star className="h-5 w-5"/><span>Yoga Details</span>
+            <Star className="h-5 w-5" /><span>Yoga Details</span>
           </h2>
           {yoga_details.map((group, i) => (
             <div key={i} className="mb-4">
@@ -282,12 +217,12 @@ console.log(nakshatra_details);
       {Array.isArray(kundli) && kundli.length > 0 && (
         <section className="bg-gray-900 p-6 rounded border border-gray-700">
           <h2 className="flex items-center space-x-2 mb-4 text-xl font-semibold text-indigo-400">
-            <Home className="h-5 w-5"/><span>Planets & Houses</span>
+            <Home className="h-5 w-5" /><span>Planets & Houses</span>
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             {kundli.map((p, i) => (
               <div key={i} className="flex items-start space-x-2">
-                <Globe className="h-4 w-4 text-yellow-300 mt-1"/>
+                <Globe className="h-4 w-4 text-yellow-300 mt-1" />
                 <div>
                   <p className="font-medium">{p.name}</p>
                   <p>House {p.house_number}</p>
@@ -302,7 +237,7 @@ console.log(nakshatra_details);
       {dasha_balance && (
         <section className="bg-gray-900 p-6 rounded border border-gray-700 space-y-6">
           <h2 className="flex items-center space-x-2 text-xl font-semibold text-blue-400">
-            <Clock className="h-5 w-5"/><span>Dasha & Anthardashas</span>
+            <Clock className="h-5 w-5" /><span>Dasha & Anthardashas</span>
           </h2>
           <p>
             <b>Balance:</b> {dasha_balance.description}
@@ -334,7 +269,7 @@ console.log(nakshatra_details);
                         </tr>
                       </thead>
                       <tbody>
-                        {ant.pratyantardasha.map((p, pi) => (
+                        {ant.pratyantardasha?.map((p, pi) => (
                           <tr key={pi} className={pi % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}>
                             <td className="px-4 py-2">{pi + 1}</td>
                             <td className="px-4 py-2">{p.name}</td>
@@ -353,7 +288,7 @@ console.log(nakshatra_details);
       )}
 
       {/* Bottom Quote */}
-       <blockquote className="border-l-4 border-yellow-400 pl-4 italic text-sm text-gray-300">
+      <blockquote className="border-l-4 border-yellow-400 pl-4 italic text-sm text-gray-300">
         <p className="font-semibold">संस्कृत:</p>
         <p>“सर्वधर्मान्परित्यज्य मामेकं शरणं व्रज ।</p>
         <p>अहं त्वां सर्वपापेभ्यो मोक्षयिष्यामि मा शुचः ॥”</p>
