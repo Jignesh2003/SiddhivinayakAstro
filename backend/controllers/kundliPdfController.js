@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import ejs from 'ejs';
 import redis from '../utils/redisClient.js';
-import puppeteer from "puppeteer-core"
+import puppeteer from 'puppeteer-core';
 
 export const generateKundaliPDF = async (req, res) => {
   try {
@@ -19,13 +19,18 @@ export const generateKundaliPDF = async (req, res) => {
 
     const kundaliData = JSON.parse(cachedDataString);
 
-    // Prepare data keys for EJS template; adapt as needed
+    // EXPLICITLY define all variables used in your EJS template
     const templateData = {
       name: kundaliData.name || 'Unknown',
       dob: kundaliData.dob || '',
-      kundali_chart_url: kundaliData.chart_url || '', // ensure URL accessible by Puppeteer
-      other_sections_html: kundaliData.html_section || '', // if you have ready HTML snippets
-      ...kundaliData, // pass full data if needed for template
+      nakshatra_details: kundaliData.nakshatra_details || null,
+      mangal_dosha: kundaliData.mangal_dosha || null,
+      yoga_details: kundaliData.yoga_details || [],
+      kundli: kundaliData.kundli || [],
+      dasha_balance: kundaliData.dasha_balance || null,
+      dasha_periods: kundaliData.dasha_periods || [],
+      kundali_chart_url: kundaliData.chart_url || '',
+      other_sections_html: kundaliData.html_section || ''
     };
 
     const templatePath = path.join(process.cwd(), 'templates', 'kundali.html');
@@ -33,10 +38,9 @@ export const generateKundaliPDF = async (req, res) => {
     const html = ejs.render(templateHtml, templateData);
 
     const browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'], // important for Linux servers
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
     const page = await browser.newPage();
-
     await page.setContent(html, { waitUntil: 'networkidle0' });
 
     const pdfBuffer = await page.pdf({
