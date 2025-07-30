@@ -19,23 +19,23 @@ export const generateKundaliPDF = async (req, res) => {
     const kundaliData = JSON.parse(cachedDataString);
     const kundaliInfo = kundaliData.data || {};  // Extract nested data
 
-    const rawDob = kundaliInfo.dob || datetime || '';
+let formattedDob = rawDob;
+if (rawDob) {
+  const dateObj = new Date(rawDob);
+  if (!isNaN(dateObj)) {
+    formattedDob = dateObj.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',   // <-- force IST
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZoneName: 'short'       // shows "IST"
+    });
+  }
+}
 
-    let formattedDob = rawDob;
-    if (rawDob) {
-      const dateObj = new Date(rawDob);
-      if (!isNaN(dateObj)) {
-        formattedDob = dateObj.toLocaleString('en-IN', {
-          year: 'numeric',
-          month: 'short',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true,
-          timeZoneName: 'short'
-        });
-      }
-    }
 
     const templateData = {
       name: kundaliInfo.name || 'Unknown',

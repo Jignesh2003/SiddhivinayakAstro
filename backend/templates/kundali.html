@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-
 <head>
   <meta charset="UTF-8" />
   <title>Kundali PDF</title>
@@ -10,75 +9,81 @@
     body {
       font-family: 'Montserrat', serif;
       margin: 20px;
-      color: #333;
-    }
-
-    .header, .footer {
-      position: relative;
-      text-align: center;
-      padding: 30px 20px;
       color: #fff;
-      min-height: 120px;
-      border-radius: 12px;
-      margin-bottom: 24px;
-      /* Background image from static folder (update path below as needed) */
       background-image: url('file:///home/ubuntu/SiddhivinayakAstro/backend/static/HeroSectionBackground.jpg');
       background-size: cover;
       background-repeat: no-repeat;
       background-position: center;
-      overflow: hidden;
+      min-height: 100vh;
+      position: relative;
     }
-
-    .header::before, .footer::before {
+    /* Overlay for darkening background and improving contrast */
+    body::before {
       content: "";
-      position: absolute;
+      position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.45);
+      background: rgba(24, 22, 11, 0.55); /* deep golden-black */
       z-index: 0;
+      pointer-events: none;
     }
-    .header h1, .footer blockquote { position: relative; z-index: 1; }
-    .header h1 { font-size: 28px; font-weight: bold; letter-spacing: 2px; font-variant: small-caps; margin: 0; }
-    .footer { margin-top: 32px; color: #eee; font-size: 16px; }
-    .footer blockquote { color: #eee; font-size: 15px; }
-
     .content-container {
       max-width: 700px;
       margin: auto;
+      position: relative;
+      z-index: 1;
     }
+    .header, .footer {
+      position: relative;
+      text-align: center;
+      padding: 30px 20px;
+      color: #ffd65a;
+      min-height: 120px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      background: rgba(37,30,10,0.75);
+      box-shadow: 0 4px 12px rgba(44, 36, 10,0.2);
+      letter-spacing: 2px;
+    }
+    .header h1 { font-size: 28px; font-weight: bold; font-variant: small-caps; margin: 0; }
+    .footer { margin-top: 32px; font-size: 16px; }
+    .footer blockquote { color: #ffd65a; font-size: 15px; }
 
     .astro-box {
-      border: 2px solid #e8cd72;
-      background: #fcf3d6;
+      border: 2px solid #ffe08c;
+      background: rgba(252, 243, 214, 0.72); /* Semi-transparent gold glass */
+      box-shadow: 0 4px 14px rgba(74,58,13,0.07);
       padding: 16px;
       border-radius: 12px;
       margin-bottom: 20px;
+      color: #392900; /* Deep golden text for contrast */
+      font-weight: 500;
     }
-
+    .astro-box h2 { color: #ab872f; margin-bottom: 12px; }
+    .astro-box h3 { color: #856404; margin-top: 15px; margin-bottom: 6px; font-size: 17px; }
     table {
       width: 100%;
       border-collapse: collapse;
       margin-bottom: 10px;
+      background: rgba(255,255,255,0.70);
+      color: #392900;
     }
-
     th, td {
       border: 1px solid #e8cd72;
       padding: 8px;
       text-align: left;
     }
-
-    th { background-color: #f2e9a4; }
-
+    th { background-color: #fffbe7; color: #ab872f; }
     ul { margin: 0; padding-left: 20px; }
-
-    h2 { color: #ab872f; margin-bottom: 12px; }
-    h3 { color: #856404; margin-top: 15px; margin-bottom: 6px; font-size: 17px; }
+    strong { color: #a38e45; }
+    h2, h3, th, .footer, .header { text-shadow: 1px 2px 6px rgba(0,0,0,0.08); }
+    @media print {
+      body::before { /* ensure overlay prints */ }
+    }
   </style>
 </head>
-
 <body>
   <div class="content-container">
-
-    <!-- Header with background image -->
+    <!-- Header -->
     <div class="header">
       <h1>SIDDHIVAK ASTRO - Kundali Report</h1>
     </div>
@@ -210,7 +215,6 @@
         <p>“Abandon all varieties of dharma and just surrender unto Me. I shall free you from all sinful reactions.”</p>
       </blockquote>
     </div>
-
   </div>
 </body>
 </html>
