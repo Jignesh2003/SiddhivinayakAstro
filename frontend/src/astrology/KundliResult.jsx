@@ -20,6 +20,7 @@ export default function KundliResult() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
   const { token } = useAuthStore.getState();
   const containerRef = useRef(null);
 
@@ -52,41 +53,39 @@ export default function KundliResult() {
     })();
   }, [search, datetime, coordinates, navigate, token]);
 
-  // THE *ONLY* CHANGE: Use server-side PDF endpoint for rich PDF
-const downloadPDF = async () => {
-  try {
-    const params = new URLSearchParams({
-      coordinates,
-      datetime,
-      ayanamsa,
-      la,
-    }).toString();
+  const downloadPDF = async () => {
+    try {
+      setIsDownloading(true);
+      const params = new URLSearchParams({
+        coordinates,
+        datetime,
+        ayanamsa,
+        la,
+      }).toString();
 
-    // Important: Use "responseType: blob"!
-    const response = await axios.post(
-      `${import.meta.env.VITE_KUNDLIPDF_URL}/pdf?${params}`,
-      {},   // <- body, empty object for POST
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: "blob", // <-- KEY CHANGE for binary data
-      }
-    );
+      const response = await axios.post(
+        `${import.meta.env.VITE_KUNDLIPDF_URL}/pdf?${params}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob",
+        }
+      );
 
-    // Now response.data is a Blob!
-    const url = window.URL.createObjectURL(response.data);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Siddhivinayak_Kundali_${datetime || "kundli"}.pdf`;
-    document.body.appendChild(link); // ensures click works in FF
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-
-  } catch (err) {
-    toast.error('PDF Download failed. ' + (err.message || ''));
-  }
-};
-
+      const url = window.URL.createObjectURL(response.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Siddhivinayak_Kundali_${datetime || "kundli"}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error('PDF Download failed. ' + (err.message || ''));
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -109,6 +108,23 @@ const downloadPDF = async () => {
   return (
     <div ref={containerRef} className="bg-black text-white min-h-screen px-6 py-8 max-w-5xl mx-auto space-y-8">
       <Toaster />
+
+      {/* Download Button at Top */}
+      <div className="flex justify-center">
+        <button
+          type="button"
+          onClick={downloadPDF}
+          disabled={isDownloading}
+          className={`flex items-center space-x-1 px-6 py-2 rounded ${
+            isDownloading
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700'
+          }`}
+        >
+          <Download className="h-5 w-5" />
+          <span>{isDownloading ? 'Downloading...' : 'Download PDF'}</span>
+        </button>
+      </div>
 
       {/* Top Quote */}
       <blockquote className="border-l-4 border-yellow-400 pl-4 italic text-sm text-gray-300">
@@ -303,10 +319,15 @@ const downloadPDF = async () => {
         <button
           type="button"
           onClick={downloadPDF}
-          className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded"
+          disabled={isDownloading}
+          className={`flex items-center space-x-1 px-6 py-2 rounded ${
+            isDownloading
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700'
+          }`}
         >
           <Download className="h-5 w-5" />
-          <span>Download PDF</span>
+          <span>{isDownloading ? 'Downloading...' : 'Download PDF'}</span>
         </button>
       </div>
     </div>
