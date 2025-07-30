@@ -19,32 +19,36 @@ export const generateKundaliPDF = async (req, res) => {
     const kundaliData = JSON.parse(cachedDataString);
     const kundaliInfo = kundaliData.data || {};  // Extract nested data
 
-const rawDob = kundaliInfo.dob || datetime || '';
+    const rawDob = kundaliInfo.dob || datetime || '';
 
-let formattedDob = rawDob;
-if (rawDob) {
-  const dateObj = new Date(rawDob);
-  if (!isNaN(dateObj)) {
-    // Format to a readable string, e.g. "July 9, 1997, 10:10 AM IST"
-    formattedDob = dateObj.toLocaleString('en-IN', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-      timeZoneName: 'short',
-    });
-  }
-}
+    let formattedDob = rawDob;
+    if (rawDob) {
+      const dateObj = new Date(rawDob);
+      if (!isNaN(dateObj)) {
+        formattedDob = dateObj.toLocaleString('en-IN', {
+          year: 'numeric',
+          month: 'short',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+          timeZoneName: 'short'
+        });
+      }
+    }
+
     const templateData = {
-  name: kundaliInfo.name || 'Unknown',
-  dob: formattedDob || '',
-  nakshatra_details: kundaliInfo.nakshatra_details || null,
-  mangal_dosha: kundaliInfo.mangal_dosha || null,
-  yoga_details: kundaliInfo.yoga_details || [],
-  kundli: kundaliInfo.kundli || [],
-  dasha_balance: kundaliInfo.dasha_balance || null,
-  dasha_periods: kundaliInfo.dasha_periods || [],
-  kundali_chart_url: kundaliInfo.chart_url || '',
-  other_sections_html: kundaliInfo.html_section || '',
-};
+      name: kundaliInfo.name || 'Unknown',
+      dob: formattedDob || '',
+      nakshatra_details: kundaliInfo.nakshatra_details || null,
+      mangal_dosha: kundaliInfo.mangal_dosha || null,
+      yoga_details: kundaliInfo.yoga_details || [],
+      kundli: kundaliInfo.kundli || [],
+      dasha_balance: kundaliInfo.dasha_balance || null,
+      dasha_periods: kundaliInfo.dasha_periods || [],
+      kundali_chart_url: kundaliInfo.chart_url || '',
+      other_sections_html: kundaliInfo.html_section || '',
+    };
 
     const templatePath = path.join(process.cwd(), 'templates', 'kundali.html');
     const templateHtml = fs.readFileSync(templatePath, 'utf8');
@@ -52,7 +56,8 @@ if (rawDob) {
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=kundali.pdf`);
-    wkhtmltopdf(html, { 'enable-local-file-access': true,
+    wkhtmltopdf(html, {
+      'enable-local-file-access': true,
       // You can add options here, such as page size or margins
       pageSize: 'A4',
       marginTop: '10mm',
