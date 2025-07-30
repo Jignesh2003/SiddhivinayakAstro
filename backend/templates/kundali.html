@@ -33,92 +33,93 @@
 </head>
 
 <body>
-  <div class="header">SIDDHIVAK ASTRO - Kundali Report</div>
+  <div style="max-width:700px;margin:auto;">
+    <div class="header">SIDDHIVAK ASTRO - Kundali Report</div>
 
-  <div class="astro-box">
-    <p><strong>Name:</strong>
-      <%= name %>
-    </p>
-    <p><strong>Date of Birth:</strong>
-      <%= dob %>
-    </p>
-    <!-- Nakshatra details -->
+    <div class="astro-box">
+      <p><b>Name:</b> <%= name %></p>
+      <p><b>Date of Birth:</b> <%= dob %></p>
+    </div>
+
     <% if (nakshatra_details) { %>
       <div class="astro-box">
         <h2>Nakshatra Details</h2>
-        <p><b>Nakshatra:</b>
-          <%= nakshatra_details.nakshatra.name %>
-        </p>
-        <p><b>Pad:</b>
-          <%= nakshatra_details.nakshatra.pada %>
-        </p>
-        <!-- Loop for more info -->
-        <% Object.entries(nakshatra_details.additional_info || {}).forEach(([k,v])=> { %>
-          <p><b>
-              <%= k.replace(/_/g," ") %>:</b> <%= v %></p>
-    <% }) %>
-  </div>
-<% } %>
-<% if (mangal_dosha) { %>
-  <div class=" astro-box">
-                <h2>Mangal Dosha</h2>
-                <p>
-                  <%= mangal_dosha.description %>
-                </p>
-                <% (mangal_dosha.exceptions || []).forEach(function(exc){ %>
-                  <p style="margin-left:20px">- <%= exc %>
-                  </p>
-                  <% }) %>
+        <table style="width:100%;margin-bottom:10px;">
+          <tr><td><b>Nakshatra:</b></td><td><%= nakshatra_details.nakshatra.name %></td></tr>
+          <tr><td><b>Pad:</b></td><td><%= nakshatra_details.nakshatra.pada %></td></tr>
+          <% Object.entries(nakshatra_details.additional_info || {}).forEach(([k,v])=> { %>
+          <tr><td><b><%= k.replace(/_/g," ") %>:</b></td><td><%= v %></td></tr>
+          <% }) %>
+        </table>
       </div>
-      <% } %>
+    <% } %>
 
-        <% if (Array.isArray(yoga_details)) { %>
-          <div class="astro-box">
-            <h2>Yoga Details</h2>
-            <% yoga_details.forEach(function(group){ %>
-              <p><b>
-                  <%= group.name %>:
-                </b>
-                <%= group.description %>
-              </p>
-              <% (group.yoga_list || []).forEach(function(yoga){ %>
-                <p style="margin-left:20px">→ <%= yoga.name %>: <%= yoga.description %>
-                </p>
-                <% }) %>
-                  <% }) %>
+    <% if (mangal_dosha) { %>
+      <div class="astro-box">
+        <h2>Mangal Dosha</h2>
+        <p><%= mangal_dosha.description %></p>
+        <% if(mangal_dosha.exceptions && mangal_dosha.exceptions.length > 0) { %>
+        <ul>
+          <% mangal_dosha.exceptions.forEach(function(exc){ %>
+            <li><%= exc %></li>
+          <% }) %>
+        </ul>
+        <% } %>
+      </div>
+    <% } %>
+
+    <% if (Array.isArray(yoga_details) && yoga_details.length > 0) { %>
+      <div class="astro-box">
+        <h2>Yoga Details</h2>
+        <% yoga_details.forEach(function(group){ %>
+          <div style="margin-bottom:10px;">
+            <p><b><%= group.name %>:</b> <%= group.description %></p>
+            <% if (group.yoga_list && group.yoga_list.length > 0) { %>
+            <ul>
+              <% group.yoga_list.forEach(function(yoga){ %>
+              <li><b><%= yoga.name %></b>: <%= yoga.description %></li>
+              <% }) %>
+            </ul>
+            <% } %>
           </div>
-          <% } %>
+        <% }) %>
+      </div>
+    <% } %>
 
-            <% if (Array.isArray(kundli)) { %>
-              <div class="astro-box">
-                <h2>Planets & Houses</h2>
-                <% kundli.forEach(function(p){ %>
-                  <p>• <b>
-                      <%= p.name %>
-                    </b> → House <%= p.house_number %>
-                  </p>
-                  <% }) %>
+    <% if (Array.isArray(kundli) && kundli.length > 0) { %>
+      <div class="astro-box">
+        <h2>Planets & Houses</h2>
+        <table style="width:100%;">
+          <tr><th>Planet</th><th>House</th></tr>
+          <% kundli.forEach(function(p){ %>
+            <tr>
+              <td><%= p.name %></td>
+              <td><%= p.house_number %></td>
+            </tr>
+          <% }) %>
+        </table>
+      </div>
+    <% } %>
+
+    <% if (dasha_balance) { %>
+      <div class="astro-box">
+        <h2>Dasha & Anthardashas</h2>
+        <p><b>Balance:</b> <%= dasha_balance.description %></p>
+        <% (dasha_periods || []).forEach(function(mah, idx){ %>
+          <div style="margin-top:10px;">
+            <b>Mahadasha <%= idx+1 %>: <%= mah.name %></b>
+            <% (mah.antardasha || []).forEach(function(ant){ %>
+              <div style="margin-left:15px;">
+                <span><b><%= ant.name %></b>: <%= ant.start %> → <%= ant.end %></span>
               </div>
-              <% } %>
+            <% }) %>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
 
-                <% if (dasha_balance) { %>
-                  <div class="astro-box">
-                    <h2>Dasha & Anthardashas</h2>
-                    <p><b>Balance:</b>
-                      <%= dasha_balance.description %>
-                    </p>
-                    <% (dasha_periods || []).forEach(function(mah, idx){ %>
-                      <div style="margin-top:10px;">
-                        <b>Mahadasha <%= idx+1 %>: <%= mah.name %></b><br />
-                        <% (mah.antardasha || []).forEach(function(ant){ %>
-                          <span>• <%= ant.name %> (<%= ant.start %> → <%= ant.end %>)<br /></span>
-                          <% }) %>
-                      </div>
-                      <% }) %>
-                  </div>
-                  <% } %>
   </div>
-
 </body>
+
 
 </html>
