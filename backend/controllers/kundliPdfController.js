@@ -18,10 +18,24 @@ export const generateKundaliPDF = async (req, res) => {
     }
     const kundaliData = JSON.parse(cachedDataString);
     const kundaliInfo = kundaliData.data || {};  // Extract nested data
-    console.log('Parsed Kundali Data:', JSON.stringify(kundaliData, null, 2));
+
+const rawDob = kundaliInfo.dob || '';
+
+let formattedDob = rawDob;
+if (rawDob) {
+  const dateObj = new Date(rawDob);
+  if (!isNaN(dateObj)) {
+    // Format to a readable string, e.g. "July 9, 1997, 10:10 AM IST"
+    formattedDob = dateObj.toLocaleString('en-IN', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZoneName: 'short',
+    });
+  }
+}
     const templateData = {
   name: kundaliInfo.name || 'Unknown',
-  dob: kundaliInfo.dob || '',
+  dob: formattedDob || '',
   nakshatra_details: kundaliInfo.nakshatra_details || null,
   mangal_dosha: kundaliInfo.mangal_dosha || null,
   yoga_details: kundaliInfo.yoga_details || [],
