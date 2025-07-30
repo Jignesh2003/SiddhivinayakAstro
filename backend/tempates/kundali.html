@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Kundali PDF</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css?family=Montserrat:700,400&display=swap');
+
+    body {
+      /* background: #fffbe7 url('https://yourdomain.com/static/bg.png') no-repeat center center; */
+      font-family: 'Montserrat', serif;
+      margin: 20px;
+      color: #333;
+    }
+
+    .header {
+      color: #a38e45;
+      text-align: center;
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 18px;
+    }
+
+    .astro-box {
+      border: 2px solid #e8cd72;
+      background: #fcf3d6;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">SIDDHIVAK ASTRO - Kundali Report</div>
+
+  <div class="astro-box">
+    <p><strong>Name:</strong>
+      <%= name %>
+    </p>
+    <p><strong>Date of Birth:</strong>
+      <%= dob %>
+    </p>
+    <!-- Nakshatra details -->
+    <% if (nakshatra_details) { %>
+      <div class="astro-box">
+        <h2>Nakshatra Details</h2>
+        <p><b>Nakshatra:</b>
+          <%= nakshatra_details.nakshatra.name %>
+        </p>
+        <p><b>Pad:</b>
+          <%= nakshatra_details.nakshatra.pada %>
+        </p>
+        <!-- Loop for more info -->
+        <% Object.entries(nakshatra_details.additional_info || {}).forEach(([k,v])=> { %>
+          <p><b>
+              <%= k.replace(/_/g," ") %>:</b> <%= v %></p>
+    <% }) %>
+  </div>
+<% } %>
+<% if (mangal_dosha) { %>
+  <div class=" astro-box">
+                <h2>Mangal Dosha</h2>
+                <p>
+                  <%= mangal_dosha.description %>
+                </p>
+                <% (mangal_dosha.exceptions || []).forEach(function(exc){ %>
+                  <p style="margin-left:20px">- <%= exc %>
+                  </p>
+                  <% }) %>
+      </div>
+      <% } %>
+
+        <% if (Array.isArray(yoga_details)) { %>
+          <div class="astro-box">
+            <h2>Yoga Details</h2>
+            <% yoga_details.forEach(function(group){ %>
+              <p><b>
+                  <%= group.name %>:
+                </b>
+                <%= group.description %>
+              </p>
+              <% (group.yoga_list || []).forEach(function(yoga){ %>
+                <p style="margin-left:20px">→ <%= yoga.name %>: <%= yoga.description %>
+                </p>
+                <% }) %>
+                  <% }) %>
+          </div>
+          <% } %>
+
+            <% if (Array.isArray(kundli)) { %>
+              <div class="astro-box">
+                <h2>Planets & Houses</h2>
+                <% kundli.forEach(function(p){ %>
+                  <p>• <b>
+                      <%= p.name %>
+                    </b> → House <%= p.house_number %>
+                  </p>
+                  <% }) %>
+              </div>
+              <% } %>
+
+                <% if (dasha_balance) { %>
+                  <div class="astro-box">
+                    <h2>Dasha & Anthardashas</h2>
+                    <p><b>Balance:</b>
+                      <%= dasha_balance.description %>
+                    </p>
+                    <% (dasha_periods || []).forEach(function(mah, idx){ %>
+                      <div style="margin-top:10px;">
+                        <b>Mahadasha <%= idx+1 %>: <%= mah.name %></b><br />
+                        <% (mah.antardasha || []).forEach(function(ant){ %>
+                          <span>• <%= ant.name %> (<%= ant.start %> → <%= ant.end %>)<br /></span>
+                          <% }) %>
+                      </div>
+                      <% }) %>
+                  </div>
+                  <% } %>
+  </div>
+
+</body>
+
+</html>

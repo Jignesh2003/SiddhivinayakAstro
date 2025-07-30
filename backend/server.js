@@ -3,8 +3,8 @@ import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-import cookieParser from "cookie-parser";
 import http from "http";
+import path from 'path';
 import { Server } from "socket.io";
 import connectDB from "./config/db.js";
 import chatRoutes from "./routes/chatRoute.js";
@@ -18,6 +18,7 @@ import astrologyRoutes from './routes/astrologyRoutes.js'
 import paymentRoutes from "./routes/paymentRoutes.js"
 import webhookRoutes from "./routes/webhookRoutes.js"
 import { initializeMinuteBillingCron } from "./jobs/minuteBilling.js";
+import kundaliPdfRoutes from "./routes/kundaliPdfRoutes.js"
 
 dotenv.config();
 const app = express();
@@ -28,7 +29,7 @@ app.use("/api/webhook", webhookRoutes);
 
 // Middleware
 app.use(express.json());
-app.use(cookieParser());
+app.use('/static', express.static(path.join(process.cwd(), 'static')));
 app.use(cors({
   origin: [
     "https://siddhivinayak-astro.vercel.app",
@@ -48,6 +49,7 @@ app.use("/api/chat", chatRoutes);
 app.use('/api/horoscope', horoscopeRoutes);
 app.use('/api/astrology',astrologyRoutes)
 app.use("/api/payment", paymentRoutes);// orders
+app.use('/api/kundali', kundaliPdfRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({ message: "Route not found" });
