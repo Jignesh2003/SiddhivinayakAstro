@@ -267,6 +267,10 @@ export const detailedPanchang = async (req, res) => {
 };
 
 
+// Import or require knex instance; adjust import path as per your project setup
+// import knex from '../db/knex'; // for ESModules
+// const knex = require('../db/knex'); // for CommonJS
+
 export const checkPaymentOfKundli = async (req, res) => {
   const userId = req.user?.id;
   if (!userId) {
@@ -279,29 +283,27 @@ export const checkPaymentOfKundli = async (req, res) => {
   }
 
   try {
-    // Query payment info by order_id from your 'payments' table
-    const result = await postgresDb.query(
-      `SELECT order_id, status, amount, updated_at 
-       FROM payments 
-       WHERE order_id = $1 AND user_id = $2`,
-      [orderId, userId]
-    );
+    // Using knex to select payment record for orderId and userId
+    const result = await postgresDb('premium-services_payment')
+      .select('order_id', 'status', 'amount', 'updated_at')
+      .where({ order_id: orderId, user_id: userId })
+      .first(); // fetch single record
 
-    if (result.rows.length === 0) {
+    if (!result) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    const payment = result.rows[0];
-
-    // Optional: Only return minimal data for frontend check
+    // Respond with the payment info
     return res.json({
-      orderId: payment.order_id,
-      status: payment.status,
-      amount: payment.amount,
-      updatedAt: payment.updated_at,
+      orderId: result.order_id,
+      status: result.status,
+      amount: result.amount,
+      updatedAt: result.updated_at,
     });
+
   } catch (error) {
     console.error("Payment status check error", error);
     return res.status(500).json({ message: "Server error" });
   }
 };
+

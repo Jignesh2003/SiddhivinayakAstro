@@ -133,14 +133,6 @@ export const verifyPayment = async (req, res) => {
 
 
     try {
-  //      let paymentDate = new Date();
-  // if (eventTime) {
-  //   const numericEventTime = Number(eventTime);
-  //   if (!isNaN(numericEventTime) && numericEventTime > 0) {
-  //     paymentDate = new Date(numericEventTime * 1000);
-  //   }
-  // }
-
   await PostgresDb.transaction(async (trx) => {
     const updatedRows = await trx("productorders_transactions")
       .where({ order_id: orderId })
@@ -226,13 +218,6 @@ export const verifyPayment = async (req, res) => {
     }
     if (orderId.startsWith("PRE_KUNDLI_") || orderId.startsWith("PREMIUM_")) {
       try {
-  //              let paymentDate = new Date();
-  // if (eventTime) {
-  //   const numericEventTime = Number(eventTime);
-  //   if (!isNaN(numericEventTime) && numericEventTime > 0) {
-  //     paymentDate = new Date(numericEventTime * 1000);
-  //   }
-  // }
         await PostgresDb.transaction(async trx => {
           // Insert payment event into premium_services_payment table
           await trx("premium_services_payment").insert({
