@@ -50,29 +50,35 @@ export const detailedKundli = async (req, res) => {
 }
 
 export const premiumKundliOrder = async (req, res) => {
-
-  const {q} = req.body
+  const {
+    datetime,
+    coordinates,
+    location,
+    ayanamsa,
+    la,
+    year_length,
+    amount,
+    customerName,
+    customerEmail,
+  } = req.body;
   const userId = req.user.id;
 
-  console.log(q);
-  
+  // Build the 'q' object for params you want to pass
+  const q = { datetime, coordinates, location, ayanamsa, la, year_length };
 
-  const user = await User.findOne({ _id: userId })
+  const user = await User.findOne({ _id: userId });
   if (!user) {
     return res.status(404).json({ message: "User not found" });
   }
 
-  const { amount, customerName, customerEmail } = req.body;
-
   if (!amount || !customerName || !customerEmail) {
-    return res.status(400).json({ message: "INAVLID DATA !!" })
+    return res.status(400).json({ message: "INVALID DATA !!" });
   }
 
   if (amount < 599) {
-    return res.status(400).json({ message: "INVALID AMOUNT !" })
+    return res.status(400).json({ message: "INVALID AMOUNT !" });
   }
 
-  // build unique orderId. Use UUID or custom logic in production
   const orderId = `PRE_KUNDLI_${user._id}_${Date.now()}`;
 
   const clientId = process.env.CASHFREE_CLIENT_ID;
@@ -81,7 +87,8 @@ export const premiumKundliOrder = async (req, res) => {
     return res.status(500).json({ message: "Cashfree credentials missing" });
   }
 
-  const CASHFREE_API_URL = "https://sandbox.cashfree.com/pg/orders"
+  const CASHFREE_API_URL = "https://sandbox.cashfree.com/pg/orders";
+
   try {
     const response = await axios.post(
       CASHFREE_API_URL,
@@ -90,7 +97,7 @@ export const premiumKundliOrder = async (req, res) => {
         order_amount: Number(amount),
         order_currency: "INR",
         customer_details: {
-          customer_id: String(userId),              // or a user id from your DB
+          customer_id: String(userId),
           customer_name: customerName,
           customer_email: customerEmail,
           customer_phone: user.phone,
@@ -98,11 +105,12 @@ export const premiumKundliOrder = async (req, res) => {
         order_note: "Kundli order",
         order_meta: {
           notify_url: process.env.CASHFREE_WEBHOOK_URL || "",
-          return_url: `${process.env.CLIENT_URL}/kundli-result?order_id=${orderId}&data=${q}`,
+          // Serialize and encode the 'q' object for safe URL transfer
+          return_url: `${process.env.CLIENT_URL}/kundli-result?order_id=${orderId}&data=${encodeURIComponent(
+            JSON.stringify(q)
+          )}`,
         },
-        // Optionally add notify_url here for webhook
       },
-
       {
         headers: {
           "Content-Type": "application/json",
@@ -110,15 +118,13 @@ export const premiumKundliOrder = async (req, res) => {
           "x-client-id": clientId,
           "x-client-secret": clientSecret,
           "x-request-id": uuidv4(),
-
         },
       }
     );
 
-    // Response contains 'order_id', 'payment_session_id', etc.
     res.json({
       orderId: response.data.order_id,
-      token: response.data.payment_session_id,   // aka paymentSessionId
+      token: response.data.payment_session_id,
     });
   } catch (err) {
     res.status(500).json({
@@ -126,9 +132,9 @@ export const premiumKundliOrder = async (req, res) => {
       details: err?.response?.data || {},
     });
     console.log(err);
-
   }
 };
+
 
 
 export const detailedKundliMatching = async (req, res) => {
@@ -263,8 +269,8 @@ export const detailedPanchang = async (req, res) => {
 
 export const checkPaymentOfKundli = async (req, res) => {
   const userId = req.user.id;
-  if(!userId){
-    return res.status(401).json({message:"Auth failed"})
+  if (!userId) {
+    return res.status(401).json({ message: "Auth failed" })
   }
   const { orderId } = req.params;
 

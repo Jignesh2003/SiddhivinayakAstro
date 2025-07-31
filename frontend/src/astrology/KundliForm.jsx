@@ -120,7 +120,7 @@ export default function KundliForm() {
           amount: 599,
           customerName: fullName,
           customerEmail: email,
-          q,
+          ...q,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
