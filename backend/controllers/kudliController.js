@@ -268,25 +268,40 @@ export const detailedPanchang = async (req, res) => {
 
 
 export const checkPaymentOfKundli = async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user?.id;
   if (!userId) {
-    return res.status(401).json({ message: "Auth failed" })
+    return res.status(401).json({ message: "Authentication failed" });
   }
+
   const { orderId } = req.params;
+  if (!orderId) {
+    return res.status(400).json({ message: "Missing orderId parameter" });
+  }
 
   try {
+    // Query payment info by order_id from your 'payments' table
     const result = await postgresDb.query(
-      'SELECT order_id, status, amount, updated_at FROM payments WHERE order_id=$1',
-      [orderId]
+      `SELECT order_id, status, amount, updated_at 
+       FROM payments 
+       WHERE order_id = $1 AND user_id = $2`,
+      [orderId, userId]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Order not found' });
+      return res.status(404).json({ message: "Order not found" });
     }
 
-    res.json(result.rows[0]);
+    const payment = result.rows[0];
+
+    // Optional: Only return minimal data for frontend check
+    return res.json({
+      orderId: payment.order_id,
+      status: payment.status,
+      amount: payment.amount,
+      updatedAt: payment.updated_at,
+    });
   } catch (error) {
-    console.error('Payment status check error', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Payment status check error", error);
+    return res.status(500).json({ message: "Server error" });
   }
-}
+};
