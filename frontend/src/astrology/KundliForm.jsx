@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Country, State, City } from "country-state-city";
 import axios from "axios";
+import useAuthStore from "@/store/useAuthStore";
 
 export default function KundliForm() {
   const [day, setDay] = useState("");
@@ -20,6 +21,7 @@ export default function KundliForm() {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(false);
+  const {token} = useAuthStore.getState()
 
   // New fields
   const [fullName, setFullName] = useState("");
@@ -73,11 +75,11 @@ export default function KundliForm() {
       setLoading(true);
 
       // Step 1: create Cashfree order on your server using user name/email
-      const response = await axios.post(`${import.meta.env.VITE_PAYMENT_URL}/`, {
-        amount: 100, // Set your amount
+      const response = await axios.post(`${import.meta.env.VITE_PAYMENT_URL}/premium/kundli`, {
+        amount: 599, // Set your amount
         customerName: fullName,
         customerEmail: email,
-      });
+      },{headers:{Authorization:`Bearer ${token}`}});
       const data = response.data;
 
       // Step 2: Launch Cashfree payment popup
