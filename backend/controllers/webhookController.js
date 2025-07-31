@@ -131,7 +131,16 @@ export const verifyPayment = async (req, res) => {
         return res.status(500).send("Order/stock update failed.");
       }
 
+
     try {
+       let paymentDate = new Date();
+  if (eventTime) {
+    const numericEventTime = Number(eventTime);
+    if (!isNaN(numericEventTime) && numericEventTime > 0) {
+      paymentDate = new Date(numericEventTime * 1000);
+    }
+  }
+
   await PostgresDb.transaction(async (trx) => {
     const updatedRows = await trx("productorders_transactions")
       .where({ order_id: orderId })
@@ -142,7 +151,7 @@ export const verifyPayment = async (req, res) => {
         amount: paymentAmount,
         currency: paymentCurrency,
         payment_method: JSON.stringify(paymentMethod || {}),
-        payment_time: new Date(eventTime * 1000),  // Convert epoch to JS Date
+        payment_time: paymentDate,  // Convert epoch to JS Date
         email: customerEmail,
         phone: customerPhone,
         signature: incomingSignature,
