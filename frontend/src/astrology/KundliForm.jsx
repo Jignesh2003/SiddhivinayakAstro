@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
-import { toast } from "react-hot-toast";
+import { Toaster, toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Country, State, City } from "country-state-city";
@@ -23,15 +22,14 @@ export default function KundliForm() {
   const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [cashfreeInstance, setCashfreeInstance] = useState(null);
-  const { token } = useAuthStore();
+  const { token } = useAuthStore.getState();
 
-  // User info fields
+  // New fields
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
 
   const navigate = useNavigate();
-
-  const pad2 = (n) => n.toString().padStart(2, "0");
+  const pad2 = (s) => s.toString().padStart(2, "0");
 
   const buildDatetime = () => {
     if (!day || !month || !year || !time) return "";
@@ -44,7 +42,7 @@ export default function KundliForm() {
     return cityName && state && country ? `${cityName}, ${state}, ${country}` : "";
   };
 
-  // Load states when country changes
+  // Load states & cities
   useEffect(() => {
     if (!countryCode) return;
     setStates(State.getStatesOfCountry(countryCode));
@@ -54,7 +52,6 @@ export default function KundliForm() {
     setCoordinates("");
   }, [countryCode]);
 
-  // Load cities when state changes
   useEffect(() => {
     if (!stateCode) return;
     setCities(City.getCitiesOfState(countryCode, stateCode));
@@ -62,76 +59,43 @@ export default function KundliForm() {
     setCoordinates("");
   }, [stateCode]);
 
-  // Update coordinates when city changes
   useEffect(() => {
     if (!cityName) return;
-    const selectedCity = cities.find((c) => c.name === cityName);
-    if (selectedCity) setCoordinates(`${selectedCity.latitude},${selectedCity.longitude}`);
+    const sel = cities.find((c) => c.name === cityName);
+    if (sel) setCoordinates(`${sel.latitude},${sel.longitude}`);
   }, [cityName, cities]);
 
-  // Load Cashfree SDK on component mount
+  // Load Cashfree SDK
   useEffect(() => {
-    if (window.cashfree) {
-      setCashfreeInstance(window.cashfree);  // SDK available globally
+    if (window.Cashfree) {
+      setCashfreeInstance(window.Cashfree({ mode: "sandbox" }));
       return;
     }
-
     const script = document.createElement("script");
-    // Use sandbox or production URL as needed
-    script.src = "https://sdk.cashfree.com/js/cashfree.browser.production.min.js";
+    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
     script.async = true;
-
     script.onload = () => {
-      if (window.cashfree) {
-        setCashfreeInstance(window.cashfree);
+      if (window.Cashfree) {
+        setCashfreeInstance(window.Cashfree({ mode: "sandbox" }));
       } else {
-        toast.error("Failed to initialize Cashfree payment SDK.");
+        toast.error("❌ Failed to initialize payment SDK");
       }
     };
-
-    script.onerror = () => {
-      toast.error("Failed to load Cashfree payment SDK.");
-    };
-
+    script.onerror = () => toast.error("❌ Failed to load Cashfree SDK");
     document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
+    return () => document.body.removeChild(script);
   }, []);
-
-  // Handle input changes for shipping info and others
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    if (name === "cityName") {
-      setCoordinates("");
-    }
-    if (name === "fullName") setFullName(value);
-    else if (name === "email") setEmail(value);
-    else if (name === "day") setDay(value);
-    else if (name === "month") setMonth(value);
-    else if (name === "year") setYear(value);
-    else if (name === "time") setTime(value);
-    else if (name === "countryCode") setCountryCode(value);
-    else if (name === "stateCode") setStateCode(value);
-    else if (name === "cityName") setCityName(value);
-    else if (name === "ayanamsa") setAyanamsa(value);
-    else if (name === "language") setLanguage(value);
-  };
 
   const handleSubmit = async () => {
     const datetime = buildDatetime();
     const location = buildLocation();
-
     if (!datetime || !coordinates || !location || !fullName.trim() || !email.trim()) {
-      toast.error("Please fill all required fields.");
+      toast.error("Please fill all fields");
       return;
     }
 
-    // Optionally validate email format here
-
-    if (!cashfreeInstance || !cashfreeInstance.payment) {
-      toast.error("Payment environment is not ready. Please try again later.");
+    if (!cashfreeInstance) {
+      toast.error("Payment environment not ready. Please wait a moment and try again.");
       return;
     }
 
@@ -139,31 +103,20 @@ export default function KundliForm() {
 
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_PAYMENT_URL}/premium/ kundli`,
+        `${import.meta.env.VITE_PAYMENT_URL}/premium/kundli`,
         {
           amount: 599,
           customerName: fullName,
           customerEmail: email,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       const data = response.data;
 
-      // Launch payment popup
-      cashfreeInstance.payment.launchPopup({
-        orderId: data.orderId,
-        orderAmount: "599",
-        customerName: fullName,
-        customerEmail: email,
-        token: data.token,
-        tokenType: "TXN_TOKEN",
-        stage: "PROD",
-        onSuccess: () => {
+      cashfreeInstance.checkout({
+        paymentSessionId: data.token, // or data.payment_session_id if named so
+        redirectTarget: "_self",
+        onSuccess: function () {
           toast.success("Payment successful! Redirecting...");
           setTimeout(() => {
             setLoading(false);
@@ -178,13 +131,13 @@ export default function KundliForm() {
             navigate(`/kundli-result?${q}`);
           }, 1000);
         },
-        onFailure: () => {
-          toast.error("Payment failed. Please try again.");
+        onFailure: function () {
           setLoading(false);
+          toast.error("Payment failed, please try again.");
         },
-        onDismiss: () => {
-          toast("Payment cancelled.");
+        onDismiss: function () {
           setLoading(false);
+          toast("Payment cancelled");
         },
       });
     } catch (error) {
@@ -198,150 +151,114 @@ export default function KundliForm() {
     }
   };
 
-  // Date arrays for dropdowns
-  const days = Array.from({ length: 31 }, (_, i) => i + 1);
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  // date arrays
+  const days = [...Array(31)].map((_, i) => i + 1);
+  const months = [...Array(12)].map((_, i) => i + 1);
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 120 }, (_, i) => currentYear - i);
+  const years = [...Array(120)].map((_, i) => currentYear - i);
 
   return (
-    <div className="min-h-screen bg-black text-white py-10">
+    <div className="min-h-screen bg-black text-white py-10 px-4">
       <Toaster position="top-center" />
-      <div className="max-w-3xl mx-auto px-4 space-y-6">
-        <h1 className="text-3xl font-bold text-center text-yellow-400">
-          Detailed Kundli Generator
-        </h1>
-
-        {/* Ayanamsa info */}
-        <div className="bg-gray-800 p-4 rounded text-sm space-y-1">
-          <p>
-            <strong>Ayanamsa</strong> sets the zodiac offset:
-          </p>
+      <div className="max-w-3xl mx-auto space-y-6">
+        <h1 className="text-3xl font-bold text-yellow-400 text-center">Detailed Kundli Generator</h1>
+        {/* Ayanamsa Info */}
+        <div className="bg-gray-800 p-4 rounded space-y-1 text-sm">
+          <p><strong>Ayanamsa</strong> sets the zodiac offset:</p>
           <ul className="list-disc list-inside">
-            <li>Lahiri – Official Indian standard</li>
-            <li>Raman – G.K. Ojha’s method</li>
-            <li>KP – Krishnamurti Paddhati</li>
+            <li><strong>Lahiri</strong> – Official Indian standard</li>
+            <li><strong>Raman</strong> – G.K. Ojha’s method</li>
+            <li><strong>KP</strong> – Krishnamurti Paddhati</li>
           </ul>
         </div>
-
-        {/* User info */}
+        {/* Full Name & Email */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <input
-            name="fullName"
             type="text"
-            placeholder="Full Name"
             value={fullName}
-            onChange={handleChange}
-            className="bg-gray-800 rounded p-2"
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Full Name"
+            className="bg-gray-800 p-2 rounded"
             autoComplete="name"
           />
           <input
-            name="email"
             type="email"
-            placeholder="Email"
             value={email}
-            onChange={handleChange}
-            className="bg-gray-800 rounded p-2"
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            className="bg-gray-800 p-2 rounded"
             autoComplete="email"
           />
         </div>
-
-        {/* Date selectors */}
+        {/* Date & Time */}
         <div className="grid grid-cols-3 gap-4">
-          <select name="day" value={day} onChange={handleChange} className="bg-gray-800 rounded p-2">
+          <select value={day} onChange={(e) => setDay(e.target.value)} className="bg-gray-800 p-2 rounded">
             <option value="">Day</option>
             {days.map((d) => (
-              <option key={d} value={pad2(d)}>
-                {pad2(d)}
-              </option>
+              <option key={d} value={pad2(d)}>{pad2(d)}</option>
             ))}
           </select>
-          <select name="month" value={month} onChange={handleChange} className="bg-gray-800 rounded p-2">
+          <select value={month} onChange={(e) => setMonth(e.target.value)} className="bg-gray-800 p-2 rounded">
             <option value="">Month</option>
             {months.map((m) => (
-              <option key={m} value={pad2(m)}>
-                {pad2(m)}
-              </option>
+              <option key={m} value={pad2(m)}>{pad2(m)}</option>
             ))}
           </select>
-          <select name="year" value={year} onChange={handleChange} className="bg-gray-800 rounded p-2">
+          <select value={year} onChange={(e) => setYear(e.target.value)} className="bg-gray-800 p-2 rounded">
             <option value="">Year</option>
             {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
+              <option key={y} value={y}>{y}</option>
             ))}
           </select>
         </div>
-
-        {/* Time */}
         <input
-          name="time"
           type="time"
           value={time}
-          onChange={handleChange}
-          className="bg-gray-800 rounded p-2 w-full"
+          onChange={(e) => setTime(e.target.value)}
+          className="w-full bg-gray-800 p-2 rounded"
         />
 
-        {/* Location selectors */}
+        {/* Location */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <select name="countryCode" value={countryCode} onChange={handleChange} className="bg-gray-800 rounded p-2">
+          <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="bg-gray-800 p-2 rounded">
             <option value="">Country</option>
             {Country.getAllCountries().map((c) => (
               <option key={c.isoCode} value={c.isoCode}>{c.name}</option>
             ))}
           </select>
-          <select name="stateCode" value={stateCode} onChange={handleChange} disabled={!states.length} className="bg-gray-800 rounded p-2">
+          <select value={stateCode} onChange={(e) => setStateCode(e.target.value)} disabled={!states.length} className="bg-gray-800 p-2 rounded">
             <option value="">State</option>
             {states.map((s) => (
               <option key={s.isoCode} value={s.isoCode}>{s.name}</option>
             ))}
           </select>
-          <select name="cityName" value={cityName} onChange={handleChange} disabled={!cities.length} className="bg-gray-800 rounded p-2">
+          <select value={cityName} onChange={(e) => setCityName(e.target.value)} disabled={!cities.length} className="bg-gray-800 p-2 rounded">
             <option value="">City</option>
             {cities.map((c) => (
               <option key={c.name} value={c.name}>{c.name}</option>
             ))}
           </select>
         </div>
-
-        {/* Coordinates (read-only) */}
         <input
-          name="coordinates"
           type="text"
           value={coordinates}
           readOnly
           placeholder="Latitude,Longitude"
-          className="bg-gray-800 rounded p-2 w-full"
+          className="w-full bg-gray-800 p-2 rounded"
         />
 
-        {/* Ayanamsa and language */}
-        <div className="grid grid-cols-2 gap-4 mt-4">
-          <select name="ayanamsa" value={ayanamsa} onChange={handleChange} className="bg-gray-800 rounded p-2">
-            <option value="1">Lahiri</option>
-            <option value="3">Raman</option>
-            <option value="5">KP</option>
-          </select>
-          <select name="language" value={language} onChange={handleChange} className="bg-gray-800 rounded p-2">
-            <option value="en">English</option>
-            <option value="hi">Hindi</option>
-          </select>
-        </div>
-
-        {/* Submit button */}
-        <Button
-          onClick={handleSubmit}
-          disabled={loading}
-          className={`w-full mt-6 ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            "Generate"
-          )}
+        {/* Ayanamsa & Language */}
+        <select value={ayanamsa} onChange={(e) => setAyanamsa(e.target.value)} className="bg-gray-800 p-2 rounded">
+          <option value="1">Lahiri</option>
+          <option value="3">Raman</option>
+          <option value="5">KP</option>
+        </select>
+        <select value={language} onChange={(e) => setLanguage(e.target.value)} className="bg-gray-800 p-2 rounded">
+          <option value="en">English</option>
+          <option value="hi">Hindi</option>
+        </select>
+        <Button onClick={handleSubmit} disabled={loading} className="bg-yellow-500 hover:bg-yellow-600 text-black w-full font-bold">
+          {loading && <Loader2 className="animate-spin mr-2" />} Generate Kundli
         </Button>
       </div>
     </div>
