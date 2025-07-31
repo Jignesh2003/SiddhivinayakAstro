@@ -3,6 +3,7 @@ import { getProkeralaToken } from '../utils/prokerelaClient.js'
 import redis from '../utils/redisClient.js'
 import { v4 as uuidv4 } from "uuid";
 import User from '../models/User.js';
+import postgresDb from "../config/postgresDb.js"
 
 
 export const detailedKundli = async (req, res) => {
@@ -49,9 +50,14 @@ export const detailedKundli = async (req, res) => {
 }
 
 export const premiumKundliOrder = async (req, res) => {
+
+  const {q} = req.body
   const userId = req.user.id;
 
-  const user = await User.findOne({_id :userId})
+  console.log(q);
+  
+
+  const user = await User.findOne({ _id: userId })
   if (!user) {
     return res.status(404).json({ message: "User not found" });
   }
@@ -92,6 +98,7 @@ export const premiumKundliOrder = async (req, res) => {
         order_note: "Kundli order",
         order_meta: {
           notify_url: process.env.CASHFREE_WEBHOOK_URL || "",
+          return_url: `${process.env.CLIENT_URL}/kundli-result?order_id=${orderId}&data=${q}`,
         },
         // Optionally add notify_url here for webhook
       },
@@ -254,3 +261,26 @@ export const detailedPanchang = async (req, res) => {
 };
 
 
+export const checkPaymentOfKundli = async (req, res) => {
+  const userId = req.user.id;
+  if(!userId){
+    return res.status(401).json({message:"Auth failed"})
+  }
+  const { orderId } = req.params;
+
+  try {
+    const result = await postgresDb.query(
+      'SELECT order_id, status, amount, updated_at FROM payments WHERE order_id=$1',
+      [orderId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Payment status check error', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+}

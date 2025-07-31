@@ -37,7 +37,8 @@ export default function KundliForm() {
   };
 
   const buildLocation = () => {
-    const country = Country.getAllCountries().find((c) => c.isoCode === countryCode)?.name;
+    const country = Country.getAllCountries().find((c) => c.isoCode === countryCode)
+      ?.name;
     const state = states.find((s) => s.isoCode === stateCode)?.name;
     return cityName && state && country ? `${cityName}, ${state}, ${country}` : "";
   };
@@ -102,12 +103,24 @@ export default function KundliForm() {
     setLoading(true);
 
     try {
+      // Build query parameters object
+      const q = {
+        datetime,
+        coordinates,
+        location,
+        ayanamsa,
+        la: language,
+        year_length: "1",
+      };
+
+      // Send query params along with payment details in the POST body
       const response = await axios.post(
         `${import.meta.env.VITE_PAYMENT_URL}/premium/kundli`,
         {
           amount: 599,
           customerName: fullName,
           customerEmail: email,
+          q,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -120,15 +133,7 @@ export default function KundliForm() {
           toast.success("Payment successful! Redirecting...");
           setTimeout(() => {
             setLoading(false);
-            const q = new URLSearchParams({
-              datetime,
-              coordinates,
-              location,
-              ayanamsa,
-              la: language,
-              year_length: "1",
-            }).toString();
-            navigate(`/kundli-result?${q}`);
+            navigate(`/kundli-result?${new URLSearchParams(q).toString()}`);
           }, 1000);
         },
         onFailure: function () {
@@ -161,14 +166,24 @@ export default function KundliForm() {
     <div className="min-h-screen bg-black text-white py-10 px-4">
       <Toaster position="top-center" />
       <div className="max-w-3xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold text-yellow-400 text-center">Detailed Kundli Generator</h1>
+        <h1 className="text-3xl font-bold text-yellow-400 text-center">
+          Detailed Kundli Generator
+        </h1>
         {/* Ayanamsa Info */}
         <div className="bg-gray-800 p-4 rounded space-y-1 text-sm">
-          <p><strong>Ayanamsa</strong> sets the zodiac offset:</p>
+          <p>
+            <strong>Ayanamsa</strong> sets the zodiac offset:
+          </p>
           <ul className="list-disc list-inside">
-            <li><strong>Lahiri</strong> – Official Indian standard</li>
-            <li><strong>Raman</strong> – G.K. Ojha’s method</li>
-            <li><strong>KP</strong> – Krishnamurti Paddhati</li>
+            <li>
+              <strong>Lahiri</strong> – Official Indian standard
+            </li>
+            <li>
+              <strong>Raman</strong> – G.K. Ojha’s method
+            </li>
+            <li>
+              <strong>KP</strong> – Krishnamurti Paddhati
+            </li>
           </ul>
         </div>
         {/* Full Name & Email */}
@@ -192,22 +207,40 @@ export default function KundliForm() {
         </div>
         {/* Date & Time */}
         <div className="grid grid-cols-3 gap-4">
-          <select value={day} onChange={(e) => setDay(e.target.value)} className="bg-gray-800 p-2 rounded">
+          <select
+            value={day}
+            onChange={(e) => setDay(e.target.value)}
+            className="bg-gray-800 p-2 rounded"
+          >
             <option value="">Day</option>
             {days.map((d) => (
-              <option key={d} value={pad2(d)}>{pad2(d)}</option>
+              <option key={d} value={pad2(d)}>
+                {pad2(d)}
+              </option>
             ))}
           </select>
-          <select value={month} onChange={(e) => setMonth(e.target.value)} className="bg-gray-800 p-2 rounded">
+          <select
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="bg-gray-800 p-2 rounded"
+          >
             <option value="">Month</option>
             {months.map((m) => (
-              <option key={m} value={pad2(m)}>{pad2(m)}</option>
+              <option key={m} value={pad2(m)}>
+                {pad2(m)}
+              </option>
             ))}
           </select>
-          <select value={year} onChange={(e) => setYear(e.target.value)} className="bg-gray-800 p-2 rounded">
+          <select
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            className="bg-gray-800 p-2 rounded"
+          >
             <option value="">Year</option>
             {years.map((y) => (
-              <option key={y} value={y}>{y}</option>
+              <option key={y} value={y}>
+                {y}
+              </option>
             ))}
           </select>
         </div>
@@ -220,22 +253,42 @@ export default function KundliForm() {
 
         {/* Location */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="bg-gray-800 p-2 rounded">
+          <select
+            value={countryCode}
+            onChange={(e) => setCountryCode(e.target.value)}
+            className="bg-gray-800 p-2 rounded"
+          >
             <option value="">Country</option>
             {Country.getAllCountries().map((c) => (
-              <option key={c.isoCode} value={c.isoCode}>{c.name}</option>
+              <option key={c.isoCode} value={c.isoCode}>
+                {c.name}
+              </option>
             ))}
           </select>
-          <select value={stateCode} onChange={(e) => setStateCode(e.target.value)} disabled={!states.length} className="bg-gray-800 p-2 rounded">
+          <select
+            value={stateCode}
+            onChange={(e) => setStateCode(e.target.value)}
+            disabled={!states.length}
+            className="bg-gray-800 p-2 rounded"
+          >
             <option value="">State</option>
             {states.map((s) => (
-              <option key={s.isoCode} value={s.isoCode}>{s.name}</option>
+              <option key={s.isoCode} value={s.isoCode}>
+                {s.name}
+              </option>
             ))}
           </select>
-          <select value={cityName} onChange={(e) => setCityName(e.target.value)} disabled={!cities.length} className="bg-gray-800 p-2 rounded">
+          <select
+            value={cityName}
+            onChange={(e) => setCityName(e.target.value)}
+            disabled={!cities.length}
+            className="bg-gray-800 p-2 rounded"
+          >
             <option value="">City</option>
             {cities.map((c) => (
-              <option key={c.name} value={c.name}>{c.name}</option>
+              <option key={c.name} value={c.name}>
+                {c.name}
+              </option>
             ))}
           </select>
         </div>
@@ -248,16 +301,28 @@ export default function KundliForm() {
         />
 
         {/* Ayanamsa & Language */}
-        <select value={ayanamsa} onChange={(e) => setAyanamsa(e.target.value)} className="bg-gray-800 p-2 rounded">
+        <select
+          value={ayanamsa}
+          onChange={(e) => setAyanamsa(e.target.value)}
+          className="bg-gray-800 p-2 rounded"
+        >
           <option value="1">Lahiri</option>
           <option value="3">Raman</option>
           <option value="5">KP</option>
         </select>
-        <select value={language} onChange={(e) => setLanguage(e.target.value)} className="bg-gray-800 p-2 rounded">
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          className="bg-gray-800 p-2 rounded"
+        >
           <option value="en">English</option>
           <option value="hi">Hindi</option>
         </select>
-        <Button onClick={handleSubmit} disabled={loading} className="bg-yellow-500 hover:bg-yellow-600 text-black w-full font-bold">
+        <Button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="bg-yellow-500 hover:bg-yellow-600 text-black w-full font-bold"
+        >
           {loading && <Loader2 className="animate-spin mr-2" />} Generate Kundli
         </Button>
       </div>
