@@ -285,7 +285,7 @@ export const checkPaymentOfKundli = async (req, res) => {
   try {
     // Using knex to select payment record for orderId and userId
     const result = await postgresDb('premium_services_payment')
-      .select('order_id', 'status', 'amount', 'updated_at')
+      .select('order_id', 'status', 'amount')
       .where({ order_id: orderId})
       .first(); // fetch single record
 
