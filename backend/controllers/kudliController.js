@@ -1,10 +1,12 @@
 import axios from 'axios'
 import { getProkeralaToken } from '../utils/prokerelaClient.js'
 import redis from '../utils/redisClient.js'
+import { v4 as uuidv4 } from "uuid";
+
 
 export const detailedKundli = async (req, res) => {
   try {
-    let { ayanamsa , coordinates, datetime, la , year_length = '1' } = req.query
+    let { ayanamsa, coordinates, datetime, la, year_length = '1' } = req.query
 
     if (!coordinates || !datetime) {
       return res.status(400).json({
@@ -45,8 +47,74 @@ export const detailedKundli = async (req, res) => {
   }
 }
 
-export const detailedKundliMatching = async (req,res)=>{
-   try {
+export const premiumKundliOrder = async (req, res) => {
+  const { amount, customerName, customerEmail } = req.body;
+
+  if (!amount || !customerName || !customerEmail) {
+    return res.status(400).json({ message: "INAVLID DATA !!" })
+  }
+
+  if (amount < 599){
+    return res.status(400).json({message:"INVALID AMOUNT !"})
+  }
+
+  // build unique orderId. Use UUID or custom logic in production
+  const orderId = "PREMIUM_KUNDLI_" + Date.now();
+
+  const clientId = process.env.CASHFREE_CLIENT_ID;
+  const clientSecret = process.env.CASHFREE_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    return res.status(500).json({ message: "Cashfree credentials missing" });
+  }
+
+  const CASHFREE_API_URL = "https://sandbox.cashfree.com/pg/orders"
+  try {
+    const response = await axios.post(
+      CASHFREE_API_URL,
+      {
+        order_id: orderId,
+        order_amount: amount,
+        order_currency: "INR",
+        customer_details: {
+          customer_id: customerEmail,              // or a user id from your DB
+          customer_name: customerName,
+          customer_email: customerEmail,
+        },
+        order_note: "Kundli order",
+           order_meta: {
+        notify_url: process.env.CASHFREE_WEBHOOK_URL || "",
+      },
+        // Optionally add notify_url here for webhook
+      },
+      
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-version": "2022-09-01",
+          "x-client-id": clientId,
+          "x-client-secret": clientSecret,
+          "x-request-id": uuidv4(),
+
+        },
+      }
+    );
+
+    // Response contains 'order_id', 'payment_session_id', etc.
+    res.json({
+      orderId: response.data.order_id,
+      token: response.data.payment_session_id,   // aka paymentSessionId
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err?.response?.data?.message || "Cashfree order creation failed",
+      details: err?.response?.data || {},
+    });
+  }
+};
+
+
+export const detailedKundliMatching = async (req, res) => {
+  try {
     const {
       ayanamsa,
       girl_coordinates,
@@ -83,7 +151,7 @@ export const detailedKundliMatching = async (req,res)=>{
 
     // Try Redis first
     const cached = await redis.get(cacheKey);
-    if (cached) { 
+    if (cached) {
       console.log('🔁 Returning cached compatibility data');
       return res.json(JSON.parse(cached));
     }
@@ -173,4 +241,5 @@ export const detailedPanchang = async (req, res) => {
     });
   }
 };
+
 

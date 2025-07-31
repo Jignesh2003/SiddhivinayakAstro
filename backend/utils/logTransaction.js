@@ -23,7 +23,7 @@ import PostgresDb from '../config/postgresDb.js';
 
   try {
     // Knex insert with conflict/ignore
-    const res = await trx('productorders_transactions')
+    const res = await trx('audit_transactions')
       .insert({
         order_id,
         cf_order_id: cf_order_id || null,

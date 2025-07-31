@@ -185,7 +185,32 @@ export const verifyPayment = async (req, res) => {
         return res.status(500).send("Wallet credit failed.");
       }
     }
-
+else if (orderId.startsWith("PREMIUM_KUNDLI_") || orderId.startsWith("PREMIUM_")) {
+  try {
+    await PostgresDb.transaction(async trx => {
+      // Insert payment event into premium_services_payment table
+      await trx("premium_services_payment").insert({
+        order_id: orderId,
+        cf_order_id: cfOrderId || null,
+        cf_payment_id: cfPaymentId,
+        status: paymentStatus,
+        amount: paymentAmount,
+        currency: paymentCurrency,
+        payment_method: JSON.stringify(paymentMethod || {}),
+        payment_time: new Date(eventTime * 1000),  // convert epoch seconds to JS Date
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
+        signature: incomingSignature,
+        extra_payload: JSON.stringify(payload),
+        audit_logged_at: trx.fn.now(),
+      });
+    });
+    logWithTS(`[${requestId}] 📝 PG audit log: premium services payment event for ${orderId}`);
+  } catch (pgErr) {
+    logWithTS(`[${requestId}] ❌ PG audit log failed for premium services:`, pgErr.message || pgErr);
+    return res.status(500).send("Postgres insert failed.");
+  }
+}
     // --- Audit payment event in Postgres ---
     try {
       await PostgresDb.transaction(async trx => {

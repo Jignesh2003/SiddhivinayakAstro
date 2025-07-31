@@ -6,8 +6,11 @@ import {  getWithdrawalRequests, initiateWalletTopupOrder, listWalletTransaction
 const router = express.Router()
 
 //orders related
-router.post("/cashfree/create-order", authMiddleware, createCashfreeOrder);
-router.get("/cashfree/check-status", authMiddleware, checkPaymentStatus)
+router.post("/cashfree/create-order", authMiddleware, createCashfreeOrder);// Placing product orders
+router.get("/cashfree/check-status", authMiddleware, checkPaymentStatus) // cecking cashfree status 
+
+//Premium services Cashfree order
+router.post("/premium/kundli" , authMiddleware, premiumKundliOrder)
 
 //wallet related
 router.get('/wallet/me', authMiddleware, myWallet)  //check wallet balance    
