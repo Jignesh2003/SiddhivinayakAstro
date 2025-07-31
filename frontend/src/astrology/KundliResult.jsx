@@ -31,6 +31,7 @@ export default function KundliResult() {
   let coordinates = q.get('coordinates');
   let ayanamsa = q.get('ayanamsa') || '';
   let la = q.get('la') || 'en';
+  const orderId = q.get('order_id');
 
   // Attempt to parse packed data param if needed
   if (!datetime || !coordinates) {
@@ -49,33 +50,57 @@ export default function KundliResult() {
   }
 
   useEffect(() => {
-    if (!datetime || !coordinates) {
-      toast.error('Missing params, redirecting…');
+    if (!orderId) {
+      toast.error('Missing order ID, redirecting…');
       navigate('/');
       return;
     }
+    if (!datetime || !coordinates) {
+      toast.error('Missing parameters, redirecting…');
+      navigate('/');
+      return;
+    }
+
     (async () => {
       setLoading(true);
+
       try {
+        // 1. Verify payment status
+        const statusRes = await axios.get(
+          `${import.meta.env.VITE_PAYMENT_URL}/status/${orderId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        console.log("RESPONSE statusRes:",statusRes);
+        
+        if (statusRes.data.status !== 'SUCCESS') {
+          toast.error('Payment not successful. Redirecting...');
+          navigate('/');
+          return;
+        }
+
+        // 2. Fetch kundli details only if payment success
         const apiParams = new URLSearchParams({
           datetime,
           coordinates,
           ayanamsa,
           la,
         });
-        const res = await axios.get(
+
+        const kundliRes = await axios.get(
           `${import.meta.env.VITE_ASTROLOGY_URL}/kundli/detailed?${apiParams.toString()}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        setData(res.data.data);
+
+        setData(kundliRes.data.data);
       } catch (err) {
         console.error(err);
-        toast.error('Failed to load Kundli');
+        toast.error('Error verifying payment or loading Kundli');
+        navigate('/');
       } finally {
         setLoading(false);
       }
     })();
-  }, [datetime, coordinates, ayanamsa, la, navigate, token]);
+  }, [orderId, datetime, coordinates, ayanamsa, la, navigate, token]);
 
   const downloadPDF = async () => {
     try {
