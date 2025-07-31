@@ -48,6 +48,8 @@ export const detailedKundli = async (req, res) => {
 }
 
 export const premiumKundliOrder = async (req, res) => {
+    const userId = req.user.id;
+
   const { amount, customerName, customerEmail } = req.body;
 
   if (!amount || !customerName || !customerEmail) {
@@ -76,7 +78,7 @@ export const premiumKundliOrder = async (req, res) => {
         order_amount: amount,
         order_currency: "INR",
         customer_details: {
-          customer_id: customerEmail,              // or a user id from your DB
+          customer_id: userId,              // or a user id from your DB
           customer_name: customerName,
           customer_email: customerEmail,
         },

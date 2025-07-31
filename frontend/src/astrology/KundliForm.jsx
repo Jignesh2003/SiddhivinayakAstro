@@ -86,7 +86,7 @@ export default function KundliForm() {
       // Make sure Cashfree SDK is loaded on your page!
       window.cashfree.payment.launchPopup({
         orderId: data.orderId,
-        orderAmount: "100",
+        orderAmount: "599",
         customerName: fullName,
         customerEmail: email,
         token: data.token,
