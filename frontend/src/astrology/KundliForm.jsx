@@ -124,8 +124,12 @@ export default function KundliForm() {
       setLoading(false);
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);
+        console.log(error);
+        
       } else {
         toast.error(error.message || "Something went wrong");
+        console.log(error);
+        
       }
     }
   };
