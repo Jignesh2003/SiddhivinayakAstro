@@ -109,6 +109,8 @@ export const premiumKundliOrder = async (req, res) => {
       message: err?.response?.data?.message || "Cashfree order creation failed",
       details: err?.response?.data || {},
     });
+    console.log(err);
+    
   }
 };
 
