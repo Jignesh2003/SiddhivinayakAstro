@@ -21,7 +21,7 @@ export default function KundliForm() {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(false);
-  const {token} = useAuthStore.getState()
+  const { token } = useAuthStore.getState();
 
   // New fields
   const [fullName, setFullName] = useState("");
@@ -40,7 +40,7 @@ export default function KundliForm() {
     return cityName && state && country ? `${cityName}, ${state}, ${country}` : "";
   };
 
-  // load states & cities
+  // Load states & cities
   useEffect(() => {
     if (!countryCode) return;
     setStates(State.getStatesOfCountry(countryCode));
@@ -71,22 +71,26 @@ export default function KundliForm() {
       return;
     }
 
-    try {
-      setLoading(true);
+    setLoading(true);  // Disable button immediately
 
+    try {
       // Step 1: create Cashfree order on your server using user name/email
-      const response = await axios.post(`${import.meta.env.VITE_PAYMENT_URL}/premium/kundli`, {
-        amount: 599, // Set your amount
-        customerName: fullName,
-        customerEmail: email,
-      },{headers:{Authorization:`Bearer ${token}`}});
+      const response = await axios.post(
+        `${import.meta.env.VITE_PAYMENT_URL}/premium/kundli`,
+        {
+          amount: 599, // Set your amount
+          customerName: fullName,
+          customerEmail: email,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       const data = response.data;
 
       // Step 2: Launch Cashfree payment popup
       // Make sure Cashfree SDK is loaded on your page!
       window.cashfree.payment.launchPopup({
         orderId: data.orderId,
-        orderAmount: "599",
+        orderAmount: "599", // Use correct amount here
         customerName: fullName,
         customerEmail: email,
         token: data.token,
@@ -251,8 +255,7 @@ export default function KundliForm() {
         <select value={language} onChange={(e) => setLanguage(e.target.value)} className="bg-gray-800 p-2 rounded">
           <option value="en">English</option>
           <option value="hi">Hindi</option>
-              </select>
-
+        </select>
         <Button onClick={handleSubmit} disabled={loading} className="bg-yellow-500 hover:bg-yellow-600 text-black w-full font-bold">
           {loading && <Loader2 className="animate-spin mr-2" />} Generate Kundli
         </Button>
