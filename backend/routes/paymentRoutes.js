@@ -12,7 +12,7 @@ router.get("/cashfree/check-status", authMiddleware, checkPaymentStatus) // ceck
 
 //Premium services Cashfree order
 router.post("/premium/kundli" , authMiddleware, premiumKundliOrder)
-app.get('/status/:orderId', authMiddleware, checkPaymentOfKundli);
+router.get('/status/:orderId', authMiddleware, checkPaymentOfKundli);
 
 //wallet related
 router.get('/wallet/me', authMiddleware, myWallet)  //check wallet balance    
