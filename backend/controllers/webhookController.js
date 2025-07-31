@@ -146,7 +146,6 @@ export const verifyPayment = async (req, res) => {
         email: customerEmail,
         phone: customerPhone,
         signature: incomingSignature,
-        updated_at: trx.fn.now(),              // Assuming you have this column for tracking updates
       });
 
     if (updatedRows === 0) {
