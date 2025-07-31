@@ -67,7 +67,7 @@ export const premiumKundliOrder = async (req, res) => {
   }
 
   // build unique orderId. Use UUID or custom logic in production
-  const orderId = `PREMIUM_KUNDLI_${user._id}_${Date.now()}`;
+  const orderId = `PRE_KUNDLI_${user._id}_${Date.now()}`;
 
   const clientId = process.env.CASHFREE_CLIENT_ID;
   const clientSecret = process.env.CASHFREE_CLIENT_SECRET;
