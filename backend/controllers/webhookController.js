@@ -133,13 +133,13 @@ export const verifyPayment = async (req, res) => {
 
 
     try {
-       let paymentDate = new Date();
-  if (eventTime) {
-    const numericEventTime = Number(eventTime);
-    if (!isNaN(numericEventTime) && numericEventTime > 0) {
-      paymentDate = new Date(numericEventTime * 1000);
-    }
-  }
+  //      let paymentDate = new Date();
+  // if (eventTime) {
+  //   const numericEventTime = Number(eventTime);
+  //   if (!isNaN(numericEventTime) && numericEventTime > 0) {
+  //     paymentDate = new Date(numericEventTime * 1000);
+  //   }
+  // }
 
   await PostgresDb.transaction(async (trx) => {
     const updatedRows = await trx("productorders_transactions")
@@ -151,7 +151,7 @@ export const verifyPayment = async (req, res) => {
         amount: paymentAmount,
         currency: paymentCurrency,
         payment_method: JSON.stringify(paymentMethod || {}),
-        payment_time: paymentDate,  // Convert epoch to JS Date
+        payment_time: eventTime,  // Convert epoch to JS Date
         email: customerEmail,
         phone: customerPhone,
         signature: incomingSignature,
@@ -226,6 +226,13 @@ export const verifyPayment = async (req, res) => {
     }
     if (orderId.startsWith("PRE_KUNDLI_") || orderId.startsWith("PREMIUM_")) {
       try {
+  //              let paymentDate = new Date();
+  // if (eventTime) {
+  //   const numericEventTime = Number(eventTime);
+  //   if (!isNaN(numericEventTime) && numericEventTime > 0) {
+  //     paymentDate = new Date(numericEventTime * 1000);
+  //   }
+  // }
         await PostgresDb.transaction(async trx => {
           // Insert payment event into premium_services_payment table
           await trx("premium_services_payment").insert({
@@ -236,7 +243,7 @@ export const verifyPayment = async (req, res) => {
             amount: paymentAmount,
             currency: paymentCurrency,
             payment_method: JSON.stringify(paymentMethod || {}),
-            payment_time: new Date(eventTime * 1000),  // convert epoch seconds to JS Date
+            payment_time: eventTime,  // convert epoch seconds to JS Date
             customer_email: customerEmail,
             customer_phone: customerPhone,
             signature: incomingSignature,
