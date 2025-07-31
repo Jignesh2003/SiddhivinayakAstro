@@ -2,6 +2,7 @@ import axios from 'axios'
 import { getProkeralaToken } from '../utils/prokerelaClient.js'
 import redis from '../utils/redisClient.js'
 import { v4 as uuidv4 } from "uuid";
+import User from '../models/User.js';
 
 
 export const detailedKundli = async (req, res) => {
@@ -48,7 +49,12 @@ export const detailedKundli = async (req, res) => {
 }
 
 export const premiumKundliOrder = async (req, res) => {
-    const userId = req.user.id;
+  const userId = req.user.id;
+
+  const user = await User.findOne(userId)
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
 
   const { amount, customerName, customerEmail } = req.body;
 
@@ -56,12 +62,12 @@ export const premiumKundliOrder = async (req, res) => {
     return res.status(400).json({ message: "INAVLID DATA !!" })
   }
 
-  if (amount < 599){
-    return res.status(400).json({message:"INVALID AMOUNT !"})
+  if (amount < 599) {
+    return res.status(400).json({ message: "INVALID AMOUNT !" })
   }
 
   // build unique orderId. Use UUID or custom logic in production
-  const orderId = "PREMIUM_KUNDLI_" + Date.now();
+  const orderId = "PREMIUM_KUNDLI_" + user._id;
 
   const clientId = process.env.CASHFREE_CLIENT_ID;
   const clientSecret = process.env.CASHFREE_CLIENT_SECRET;
@@ -75,20 +81,21 @@ export const premiumKundliOrder = async (req, res) => {
       CASHFREE_API_URL,
       {
         order_id: orderId,
-        order_amount: amount,
+        order_amount: Number(amount),
         order_currency: "INR",
         customer_details: {
-          customer_id: userId,              // or a user id from your DB
+          customer_id: String(userId),              // or a user id from your DB
           customer_name: customerName,
           customer_email: customerEmail,
+          customer_phone: user.phone,
         },
         order_note: "Kundli order",
-           order_meta: {
-        notify_url: process.env.CASHFREE_WEBHOOK_URL || "",
-      },
+        order_meta: {
+          notify_url: process.env.CASHFREE_WEBHOOK_URL || "",
+        },
         // Optionally add notify_url here for webhook
       },
-      
+
       {
         headers: {
           "Content-Type": "application/json",
@@ -112,7 +119,7 @@ export const premiumKundliOrder = async (req, res) => {
       details: err?.response?.data || {},
     });
     console.log(err);
-    
+
   }
 };
 
