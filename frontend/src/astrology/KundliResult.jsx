@@ -25,10 +25,28 @@ export default function KundliResult() {
   const containerRef = useRef(null);
 
   const q = new URLSearchParams(search);
-  const datetime = q.get('datetime');
-  const coordinates = q.get('coordinates');
-  const ayanamsa = q.get('ayanamsa') || '';
-  const la = q.get('la') || 'en';
+
+  // Extract params either from direct params or from packed JSON in 'data'
+  let datetime = q.get('datetime');
+  let coordinates = q.get('coordinates');
+  let ayanamsa = q.get('ayanamsa') || '';
+  let la = q.get('la') || 'en';
+
+  // Attempt to parse packed data param if needed
+  if (!datetime || !coordinates) {
+    const dataStr = q.get('data');
+    if (dataStr) {
+      try {
+        const parsedData = JSON.parse(decodeURIComponent(dataStr));
+        datetime = datetime || parsedData.datetime;
+        coordinates = coordinates || parsedData.coordinates;
+        ayanamsa = ayanamsa || parsedData.ayanamsa || '';
+        la = la || parsedData.la || 'en';
+      } catch (err) {
+        console.error('Failed to parse kundli data from URL:', err);
+      }
+    }
+  }
 
   useEffect(() => {
     if (!datetime || !coordinates) {
@@ -39,8 +57,14 @@ export default function KundliResult() {
     (async () => {
       setLoading(true);
       try {
+        const apiParams = new URLSearchParams({
+          datetime,
+          coordinates,
+          ayanamsa,
+          la,
+        });
         const res = await axios.get(
-          `${import.meta.env.VITE_ASTROLOGY_URL}/kundli/detailed${search}`,
+          `${import.meta.env.VITE_ASTROLOGY_URL}/kundli/detailed?${apiParams.toString()}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setData(res.data.data);
@@ -51,7 +75,7 @@ export default function KundliResult() {
         setLoading(false);
       }
     })();
-  }, [search, datetime, coordinates, navigate, token]);
+  }, [datetime, coordinates, ayanamsa, la, navigate, token]);
 
   const downloadPDF = async () => {
     try {
@@ -68,14 +92,14 @@ export default function KundliResult() {
         {},
         {
           headers: { Authorization: `Bearer ${token}` },
-          responseType: "blob",
+          responseType: 'blob',
         }
       );
 
       const url = window.URL.createObjectURL(response.data);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Siddhivinayak_Kundali_${datetime || "kundli"}.pdf`;
+      link.download = `Siddhivinayak_Kundali_${datetime || 'kundli'}.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -106,7 +130,10 @@ export default function KundliResult() {
   } = data;
 
   return (
-    <div ref={containerRef} className="bg-black text-white min-h-screen px-6 py-8 max-w-5xl mx-auto space-y-8">
+    <div
+      ref={containerRef}
+      className="bg-black text-white min-h-screen px-6 py-8 max-w-5xl mx-auto space-y-8"
+    >
       <Toaster />
 
       {/* Download Button at Top */}
@@ -132,7 +159,9 @@ export default function KundliResult() {
         <p>“कर्मण्येवाधिकारस्ते मा फलेषु कदाचन ।</p>
         <p>मा कर्मफलहेतुर्भूर्मा ते सङ्गोऽस्त्वकर्मणि ॥”</p>
         <p className="mt-2 font-semibold">हिन्दी:</p>
-        <p>“कर्म करने का अधिकार तुम्हें है, फल में नहीं; कर्म में लीन रहो,</p>
+        <p>
+          “कर्म करने का अधिकार तुम्हें है, फल में नहीं; कर्म में लीन रहो,
+        </p>
         <p>परिणाम में आसक्त न हो।”</p>
         <p className="mt-2 font-semibold">English:</p>
         <p>“Your right is to perform your duty, never to its fruits.”</p>
@@ -155,30 +184,52 @@ export default function KundliResult() {
       {nakshatra_details && (
         <section className="bg-gray-900 p-6 rounded border border-gray-700">
           <h2 className="flex items-center space-x-2 mb-4 text-xl font-semibold text-blue-300">
-            <Sun className="h-5 w-5" /><span>Nakshatra Details</span>
+            <Sun className="h-5 w-5" />
+            <span>Nakshatra Details</span>
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-            <div><b>Nakshatra:</b> {nakshatra_details.nakshatra.name}</div>
-            <div><b>Nakshatra Pada:</b> {nakshatra_details.nakshatra.pada}</div>
             <div>
-              <b>Lord:</b> {nakshatra_details.nakshatra.lord.name}<br />
-              <small className="text-gray-400">({nakshatra_details.nakshatra.lord.vedic_name})</small>
+              <b>Nakshatra:</b> {nakshatra_details.nakshatra.name}
             </div>
-            <div><b>Chandra Rasi:</b> {nakshatra_details.chandra_rasi.name}</div>
             <div>
-              <b>Chandra Lord:</b> {nakshatra_details.chandra_rasi.lord.name}<br />
-              <small className="text-gray-400">({nakshatra_details.chandra_rasi.lord.vedic_name})</small>
+              <b>Nakshatra Pada:</b> {nakshatra_details.nakshatra.pada}
             </div>
-            <div><b>Soorya Rasi:</b> {nakshatra_details.soorya_rasi.name}</div>
             <div>
-              <b>Soorya Lord:</b> {nakshatra_details.soorya_rasi.lord.name}<br />
-              <small className="text-gray-400">({nakshatra_details.soorya_rasi.lord.vedic_name})</small>
+              <b>Lord:</b> {nakshatra_details.nakshatra.lord.name}
+              <br />
+              <small className="text-gray-400">
+                ({nakshatra_details.nakshatra.lord.vedic_name})
+              </small>
             </div>
-            <div><b>Zodiac:</b> {nakshatra_details.zodiac.name}</div>
+            <div>
+              <b>Chandra Rasi:</b> {nakshatra_details.chandra_rasi.name}
+            </div>
+            <div>
+              <b>Chandra Lord:</b> {nakshatra_details.chandra_rasi.lord.name}
+              <br />
+              <small className="text-gray-400">
+                ({nakshatra_details.chandra_rasi.lord.vedic_name})
+              </small>
+            </div>
+            <div>
+              <b>Soorya Rasi:</b> {nakshatra_details.soorya_rasi.name}
+            </div>
+            <div>
+              <b>Soorya Lord:</b> {nakshatra_details.soorya_rasi.lord.name}
+              <br />
+              <small className="text-gray-400">
+                ({nakshatra_details.soorya_rasi.lord.vedic_name})
+              </small>
+            </div>
+            <div>
+              <b>Zodiac:</b> {nakshatra_details.zodiac.name}
+            </div>
             {Object.entries(nakshatra_details.additional_info)
               .filter(([k]) => k !== 'gender')
               .map(([k, v]) => {
-                const label = k.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+                const label = k
+                  .replace(/_/g, ' ')
+                  .replace(/^\w/, (c) => c.toUpperCase());
                 return (
                   <div key={k}>
                     <b>{label}:</b> {v}
@@ -193,12 +244,15 @@ export default function KundliResult() {
       {mangal_dosha && (
         <section className="bg-gray-900 p-6 rounded border border-gray-700">
           <h2 className="flex items-center space-x-2 mb-2 text-xl font-semibold text-red-400">
-            <Moon className="h-5 w-5" /><span>Mangal Dosha</span>
+            <Moon className="h-5 w-5" />
+            <span>Mangal Dosha</span>
           </h2>
           <p>{mangal_dosha.description}</p>
           {mangal_dosha.exceptions?.length > 0 && (
             <ul className="list-disc list-inside mt-2 text-sm">
-              {mangal_dosha.exceptions.map((ex, i) => <li key={i}>{ex}</li>)}
+              {mangal_dosha.exceptions.map((ex, i) => (
+                <li key={i}>{ex}</li>
+              ))}
             </ul>
           )}
         </section>
@@ -208,7 +262,8 @@ export default function KundliResult() {
       {Array.isArray(yoga_details) && yoga_details.length > 0 && (
         <section className="bg-gray-900 p-6 rounded border border-gray-700">
           <h2 className="flex items-center space-x-2 mb-4 text-xl font-semibold text-green-400">
-            <Star className="h-5 w-5" /><span>Yoga Details</span>
+            <Star className="h-5 w-5" />
+            <span>Yoga Details</span>
           </h2>
           {yoga_details.map((group, i) => (
             <div key={i} className="mb-4">
@@ -233,7 +288,8 @@ export default function KundliResult() {
       {Array.isArray(kundli) && kundli.length > 0 && (
         <section className="bg-gray-900 p-6 rounded border border-gray-700">
           <h2 className="flex items-center space-x-2 mb-4 text-xl font-semibold text-indigo-400">
-            <Home className="h-5 w-5" /><span>Planets & Houses</span>
+            <Home className="h-5 w-5" />
+            <span>Planets & Houses</span>
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             {kundli.map((p, i) => (
@@ -253,7 +309,8 @@ export default function KundliResult() {
       {dasha_balance && (
         <section className="bg-gray-900 p-6 rounded border border-gray-700 space-y-6">
           <h2 className="flex items-center space-x-2 text-xl font-semibold text-blue-400">
-            <Clock className="h-5 w-5" /><span>Dasha & Anthardashas</span>
+            <Clock className="h-5 w-5" />
+            <span>Dasha & Anthardashas</span>
           </h2>
           <p>
             <b>Balance:</b> {dasha_balance.description}
@@ -266,38 +323,42 @@ export default function KundliResult() {
               <h3 className="text-lg font-semibold text-yellow-300">
                 Mahadasha #{mi + 1}: {mah.name}
               </h3>
-              {Array.isArray(mah.antardasha) && mah.antardasha.map((ant, ai) => (
-                <div key={ai} className="mb-2">
-                  <h4 className="font-semibold text-green-300">
-                    Antardasha #{ai + 1}: {ant.name}
-                  </h4>
-                  <p className="text-sm text-gray-400 mb-1">
-                    {ant.start.split('T')[0]} → {ant.end.split('T')[0]}
-                  </p>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full bg-gray-800 text-sm border border-gray-700">
-                      <thead className="bg-gray-700">
-                        <tr>
-                          <th className="px-4 py-2 text-left">No.</th>
-                          <th className="px-4 py-2 text-left">Name</th>
-                          <th className="px-4 py-2 text-left">Start</th>
-                          <th className="px-4 py-2 text-left">End</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {ant.pratyantardasha?.map((p, pi) => (
-                          <tr key={pi} className={pi % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}>
-                            <td className="px-4 py-2">{pi + 1}</td>
-                            <td className="px-4 py-2">{p.name}</td>
-                            <td className="px-4 py-2">{p.start.split('T')[0]}</td>
-                            <td className="px-4 py-2">{p.end.split('T')[0]}</td>
+              {Array.isArray(mah.antardasha) &&
+                mah.antardasha.map((ant, ai) => (
+                  <div key={ai} className="mb-2">
+                    <h4 className="font-semibold text-green-300">
+                      Antardasha #{ai + 1}: {ant.name}
+                    </h4>
+                    <p className="text-sm text-gray-400 mb-1">
+                      {ant.start.split('T')[0]} → {ant.end.split('T')[0]}
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full bg-gray-800 text-sm border border-gray-700">
+                        <thead className="bg-gray-700">
+                          <tr>
+                            <th className="px-4 py-2 text-left">No.</th>
+                            <th className="px-4 py-2 text-left">Name</th>
+                            <th className="px-4 py-2 text-left">Start</th>
+                            <th className="px-4 py-2 text-left">End</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {ant.pratyantardasha?.map((p, pi) => (
+                            <tr
+                              key={pi}
+                              className={pi % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}
+                            >
+                              <td className="px-4 py-2">{pi + 1}</td>
+                              <td className="px-4 py-2">{p.name}</td>
+                              <td className="px-4 py-2">{p.start.split('T')[0]}</td>
+                              <td className="px-4 py-2">{p.end.split('T')[0]}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           ))}
         </section>
@@ -311,7 +372,10 @@ export default function KundliResult() {
         <p className="mt-2 font-semibold">हिन्दी:</p>
         <p>“सभी धर्मों को त्यागकर केवल मेरी शरण में आओ, मैं तुम्हें सभी पापों से मुक्त कर दूँगा।”</p>
         <p className="mt-2 font-semibold">English:</p>
-        <p>“Abandon all varieties of dharma and just surrender unto Me. I shall free you from all sinful reactions.”</p>
+        <p>
+          “Abandon all varieties of dharma and just surrender unto Me. I shall
+          free you from all sinful reactions.”
+        </p>
       </blockquote>
 
       {/* Download Button at Bottom */}
