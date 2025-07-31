@@ -73,7 +73,7 @@ export default function KundliForm() {
       setLoading(true);
 
       // Step 1: create Cashfree order on your server using user name/email
-      const response = await axios.post("/api/create-cashfree-order", {
+      const response = await axios.post(`${import.meta.env.VITE_PAYMENT_URL}/`, {
         amount: 100, // Set your amount
         customerName: fullName,
         customerEmail: email,
