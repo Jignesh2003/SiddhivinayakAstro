@@ -286,7 +286,7 @@ export const checkPaymentOfKundli = async (req, res) => {
     // Using knex to select payment record for orderId and userId
     const result = await postgresDb('premium_services_payment')
       .select('order_id', 'status', 'amount', 'updated_at')
-      .where({ order_id: orderId, user_id: userId })
+      .where({ order_id: orderId})
       .first(); // fetch single record
 
     if (!result) {
@@ -303,7 +303,7 @@ export const checkPaymentOfKundli = async (req, res) => {
 
   } catch (error) {
     console.error("Payment status check error", error);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error",error });
   }
 };
 
