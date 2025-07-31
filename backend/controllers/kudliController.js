@@ -302,6 +302,7 @@ export const checkPaymentOfKundli = async (req, res) => {
     });
 
   } catch (error) {
+    console.log(error);
     console.error("Payment status check error", error);
     return res.status(500).json({ message: "Server error",error });
   }
