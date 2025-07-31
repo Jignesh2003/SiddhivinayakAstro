@@ -74,7 +74,9 @@ export default function KundliResult() {
         
         if (statusRes.data.status !== 'SUCCESS') {
           toast.error('Payment not successful. Redirecting...');
-          navigate('/');
+          // navigate('/');
+          console.log("Redirect to /");
+          
           return;
         }
 
