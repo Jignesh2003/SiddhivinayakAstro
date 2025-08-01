@@ -164,7 +164,7 @@ export const premiumPanchangOrder = async (req, res) => {
   const CASHFREE_API_URL = "https://sandbox.cashfree.com/pg/orders";
 
   try {
-    const response = axios.post(CASHFREE_API_URL, {
+    const response = await axios.post(CASHFREE_API_URL, {
       order_id: orderId,
       order_amount: Number(amount),
       order_currency: "INR",
@@ -196,7 +196,7 @@ res.json({orderId: response.data.order_id,
 });
   } catch (error) {
     console.log(error);
-    res.status(500).json({message: error?.data?.message || "Cashfree order creation failed" })
+    res.status(500).json({message: error || "Cashfree order creation failed" })
 
   }
 

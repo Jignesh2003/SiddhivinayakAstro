@@ -215,7 +215,7 @@ export const verifyPayment = async (req, res) => {
         return res.status(500).send("Wallet credit failed.");
       }
     }
-    if (orderId.startsWith("PRE_KUNDLI_") || orderId.startsWith("PREMIUM_")) {
+    if (orderId.startsWith("PRE_KUNDLI_") || orderId.startsWith("PRE_")) {
       try {
         await PostgresDb.transaction(async trx => {
           // Insert payment event into premium_services_payment table
@@ -242,7 +242,7 @@ export const verifyPayment = async (req, res) => {
       }
     }
 
-     if (orderId.startsWith("PRE_PANCHNAG_") || orderId.startsWith("PREMIUM_")) {
+     if (orderId.startsWith("PRE_PANCH_") || orderId.startsWith("PRE_")) {
       try {
         await PostgresDb.transaction(async trx => {
           // Insert payment event into premium_services_payment table
