@@ -103,7 +103,7 @@ export default function PanchangForm() {
         }
       );
 
-      const { orderId, token: paymentSessionId } = response.data;
+      const { orderId, paymentSessionId } = response.data;
 
       if (!orderId || !paymentSessionId) {
         toast.error("Payment initiation failed: missing session info.");
