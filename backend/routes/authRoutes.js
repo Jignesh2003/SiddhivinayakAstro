@@ -5,8 +5,6 @@ import {
   forgotPassword,
   resetPassword,
   checkingAuth,
-  sendOtp,
-  verifyOtp,
   addReviewProduct,
   deleteReview,
   getPendingKycAstrologers,
@@ -61,10 +59,6 @@ router.post("/place-order", authMiddleware, placeOrder)
 router.get("/check-status", checkCodOrderStatus); // /api/orders/check-status
 
 router.get("/user-orders", authMiddleware, getUserOrders);
-
-router.post("/otp-sent",authMiddleware,sendOtp)
-
-router.post('/verify-otp',authMiddleware,verifyOtp)
 
 router.get("/order/:id", authMiddleware , getSingleOrder)
 

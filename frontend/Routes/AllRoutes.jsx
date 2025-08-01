@@ -15,7 +15,6 @@ import Private from "../src/pages/Private";
 import Tmc from "../src/pages/Tmc";
 import Partners from "../src/pages/Partners";
 import NotFound from "../src/pages/NotFound";
-import Otp from "../src/pages/Otp";
 import ForgotPassword from "../src/pages/ForgotPassword";
 import ResetPassword from "../src/pages/ResetPassword";
 import AdminLayout from "../src/admin/routes/AdminLayout";
@@ -107,7 +106,6 @@ const AppRoutes = () => {
           <Route path="/astro-list" element={<AstrologerList />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/my-orders" element={<MyOrders />} />
-          <Route path="/otp" element={<Otp />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders/:id" element={<SingleOrderDetails />} />
           <Route path="/order-confirmation" element={<OrderConfirmation />} />

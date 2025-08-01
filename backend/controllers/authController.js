@@ -1,11 +1,10 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import generateOTP from "../utils/generateOTP.js";
 import sendEmail from "../utils/sendEmail.js"; // Renamed for clarity
 import crypto from "crypto";
 import Product from "../models/Product.js";
-import { signupValidation ,loginSchema, verifyOtpSchema} from "../validation/userValidation.js";
+import { signupValidation ,loginSchema} from "../validation/userValidation.js";
 import PostgresDb from '../config/postgresDb.js'
 
 // ✅ Signup Controller
@@ -273,80 +272,6 @@ export const deleteReview = async (req, res) => {
   }
 };
 
-// Create and send otp to user
-export const sendOtp = async (req, res) => {
-  try {
- const { error, value } = sendOtpSchema.validate(req.body);
-  if (error) return res.status(400).json({ message: error.details[0].message });
-
-  const { userId } = value;  
-  const user = await User.findOne({_id:userId})
-  if (!user) {
-    return res.status(400).json({ message: 'User not found' });
-  }
-    // Generate OTP
-    const otp = generateOTP();
-    
-    // Set OTP expiration time (e.g., 5 minutes from now)
-    const expirationTime = new Date();
-    expirationTime.setMinutes(expirationTime.getMinutes() + 5);  // OTP expires in 5 minutes
-
-
-    // Save OTP and OTP expiry in the user's document
-    user.otp = otp;
-    user.otpExpiry = expirationTime;
-    await user.save();
-
-    await sendEmail(user.email, 'Your OTP for Verification', `Your OTP is: ${otp}`);
-    
-    // Return success response
-    res.status(200).json({ message: 'OTP sent successfully to your email' });
-  } catch (error) {
-    console.error('Error in OTP process:', error);
-    res.status(500).json({ message: 'Error generating or sending OTP' });
-  }
-}
-
-// Verify otp 
-export const verifyOtp = async (req, res) => {
-   try {
- const { error, value } = verifyOtpSchema.validate(req.body);
-  if (error) return res.status(400).json({ message: error.details[0].message });
-
-  const { userId, otp } = value;
- 
-    // Find the user by email
-    const user = await User.findOne({ _id:userId });
-    if (!user) {
-      return res.status(400).json({ message: 'User not found' });
-    }
-
-    // Check if OTP has expired
-    const currentTime = new Date();
-    if (user.otpExpiry < currentTime) {
-      return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
-    }
-
-    // Check if OTP is correct
-    if (user.otp !== otp) {
-      return res.status(400).json({ message: 'Invalid OTP. Please try again.' });
-    }
-
-    // OTP is valid, mark user as verified
-    user.isVerified = true;
-    user.otp = "";  // Clear OTP after successful verification
-    user.otpExpiry = "";  // Clear OTP expiry
-
-    // Save updated user document
-    await user.save();
-
-    res.status(200).json({ message: 'OTP verified successfully' });
-  } catch (error) {
-    console.error('Error in OTP verification:', error);
-    res.status(500).json({ message: 'Error verifying OTP' });
-  }
-};
-
 export const addProduct = async (req, res) => {
   try {
     // ensure files
@@ -430,7 +355,6 @@ export const addProduct = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-
 
 export const getPendingKycAstrologers = async (req, res) => {
   const userId = req.user.id;

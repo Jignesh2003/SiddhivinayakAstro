@@ -7,6 +7,7 @@ import {
   Loader2,
   ShoppingCart,
   Wallet,
+  Heart,
 } from "lucide-react";
 import assets from "../assets/assets";
 import useAuthStore from "../store/useAuthStore";
@@ -14,7 +15,7 @@ import useCartStore from "../store/useCartStore";
 import axios from "axios";
 
 const Navbar = () => {
-  const { isAuthenticated, login, logout, isVerified, role } = useAuthStore();
+  const { isAuthenticated, login, logout, role } = useAuthStore();
   const { cartCount } = useCartStore();
   const [isOpen, setIsOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -88,8 +89,10 @@ const Navbar = () => {
   const userLinks = (
     <>
       <Link to="/my-orders" className="text-white hover:text-purple-400 text-lg">My Orders</Link>
-      <Link to="/wishlist" className="text-white hover:text-purple-400 text-lg">Loved it</Link>
-      <Link to="/cart" className="relative text-white hover:text-purple-400">
+      <Link to="/wishlist" className="text-white hover:text-purple-400 text-lg flex items-center gap-1">
+        <Heart className="w-5 h-5" />
+        Wishlist
+      </Link>      <Link to="/cart" className="relative text-white hover:text-purple-400">
         <ShoppingCart size={20} />
         {cartCount > 0 && (
           <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">
@@ -165,11 +168,7 @@ const Navbar = () => {
 
             {isAuthenticated ? (
               <>
-                {!isVerified && (
-                  <button onClick={() => navigate("/otp")} className="text-red-500 text-sm">
-                    Please verify
-                  </button>
-                )}
+                {/* Removed Please verify button */}
                 <button onClick={handleLogout} className="text-white hover:text-red-500 text-lg">
                   Logout
                 </button>
@@ -204,17 +203,19 @@ const Navbar = () => {
             <Link to="/products" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Products</Link>
             <Link to="/daily-prediction" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Daily Prediction</Link>
             <Link to="/kundli-details" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Kundli</Link>
-            <Link to="/matching-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium" onClick={() => setIsOpen(false)}>Kundli Matching</Link>
-            <Link to="/panchang-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium" onClick={() => setIsOpen(false)}>Panchang</Link>
-            <Link to="/life-path-number" className="text-yellow-400 hover:text-purple-300 text-lg font-medium" onClick={() => setIsOpen(false)}>Life Path Number</Link>
+            <Link to="/matching-form" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Kundli Matching</Link>
+            <Link to="/panchang-form" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Panchang</Link>
+            <Link to="/life-path-number" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Life Path Number</Link>
 
             {isAuthenticated
               ? role !== "astrologer"
                 ? (
                   <>
                     <Link to="/my-orders" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>My Orders</Link>
-                    <Link to="/wishlist" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Loved it</Link>
-                    <Link to="/cart" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Cart</Link>
+                    <Link to="/wishlist" className="text-white hover:text-purple-400 text-lg flex items-center gap-1">
+                      <Heart className="w-5 h-5" />
+                      Wishlist
+                    </Link>                    <Link to="/cart" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Cart</Link>
                     <Link to="/wallet" className="flex items-center gap-1 text-white hover:text-purple-500 text-lg" onClick={() => setIsOpen(false)}><Wallet size={20} /> Wallet</Link>
                   </>
                 )
@@ -230,11 +231,6 @@ const Navbar = () => {
 
             {isAuthenticated ? (
               <>
-                {!isVerified && (
-                  <button onClick={() => { navigate("/otp"); setIsOpen(false); }} className="text-red-500 text-sm">
-                    Please verify
-                  </button>
-                )}
                 <button onClick={() => { handleLogout(); setIsOpen(false); }} className="text-white hover:text-red-500 text-lg">
                   Logout
                 </button>

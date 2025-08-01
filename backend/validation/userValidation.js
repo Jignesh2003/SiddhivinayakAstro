@@ -36,15 +36,6 @@ export const loginSchema = Joi.object({
   }),
 });
 
-export const sendOtpSchema = Joi.object({
-  userId: Joi.string().required(),
-});
-
-export const verifyOtpSchema = Joi.object({
-  userId: Joi.string().required(),
-  otp: Joi.string().length(6).required(),
-});
-
 export const addReviewSchema = Joi.object({
   userId: Joi.string().required(),
   text: Joi.string().required(),
