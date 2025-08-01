@@ -1,4 +1,3 @@
-// src/pages/PanchangResult.jsx
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -21,33 +20,77 @@ export default function PanchangResult() {
   const [loading, setLoading] = useState(true);
   const { token } = useAuthStore.getState();
 
+  // Extract params
+  const q = new URLSearchParams(search);
+
+  let ayanamsa   = q.get('ayanamsa');
+  let coordinates = q.get('coordinates');
+  let datetime    = q.get('datetime');
+  let orderId     = q.get('order_id');
+
+  // Support packed JSON if redirected from gateway with ?data=<json>
+  if (!ayanamsa || !coordinates || !datetime || !orderId) {
+    const dataStr = q.get('data');
+    if (dataStr) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(dataStr));
+        ayanamsa = ayanamsa || parsed.ayanamsa;
+        coordinates = coordinates || parsed.coordinates;
+        datetime = datetime || parsed.datetime;
+        orderId = orderId || q.get('order_id'); // in case it's there
+      } catch (err) {
+        console.log(err);
+        
+        // fallback: will redirect below
+      }
+    }
+  }
+
   useEffect(() => {
-    const q = new URLSearchParams(search);
-    const ayanamsa   = q.get('ayanamsa');
-    const coordinates = q.get('coordinates');
-    const datetime    = q.get('datetime');
+    if (!orderId) {
+      toast.error("Missing order ID, redirecting...");
+      setTimeout(() => navigate("/"), 3000);
+      return;
+    }
     if (!ayanamsa || !coordinates || !datetime) {
-      toast.error('Missing required parameters, redirecting…');
-      navigate('/');
+      toast.error("Missing required parameters, redirecting...");
+      setTimeout(() => navigate("/"), 3000);
       return;
     }
 
     (async () => {
       setLoading(true);
       try {
+        // 1: Check payment status
+        const statusRes = await axios.get(
+          `${import.meta.env.VITE_PAYMENT_URL}/status/${orderId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (statusRes.data.status !== "SUCCESS") {
+          toast.error("Payment failed! Redirecting...", { duration: 3000 });
+          setTimeout(() => navigate("/"), 3000);
+          return;
+        }
+        // 2: Fetch Panchang
+        const qs = new URLSearchParams({
+          ayanamsa,
+          coordinates,
+          datetime,
+        }).toString();
         const res = await axios.get(
-          `${import.meta.env.VITE_ASTROLOGY_URL}/panchang/detailed${search}`,
+          `${import.meta.env.VITE_ASTROLOGY_URL}/panchang/detailed?${qs}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setPanchang(res.data.data);
       } catch (err) {
         console.error(err);
         toast.error('Failed to load Panchang');
+        setTimeout(() => navigate("/"), 2500);
       } finally {
         setLoading(false);
       }
     })();
-  }, [search, navigate, token]);
+  }, [orderId, ayanamsa, coordinates, datetime, navigate, token]);
 
   const fmtTime = dt =>
     new Date(dt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

@@ -2,7 +2,7 @@ import express from "express"
 import authMiddleware from "../middlewares/authMiddleware.js"
 import { checkPaymentStatus, createCashfreeOrder } from "../controllers/cashFreeController.js"
 import {  getWithdrawalRequests, initiateWalletTopupOrder, listWalletTransactions, myWallet, updateWithdrawalStatus, withdrawFundsFromWallet } from "../controllers/walletControllers.js";
-import { checkPaymentOfKundli, premiumKundliOrder } from "../controllers/kudliController.js";
+import { checkPaymentOfKundli, checkPaymentOfPanchang, premiumKundliOrder, premiumPanchangOrder } from "../controllers/kudliController.js";
 
 const router = express.Router()
 
@@ -13,6 +13,11 @@ router.get("/cashfree/check-status", authMiddleware, checkPaymentStatus) // ceck
 //Premium services Cashfree order
 router.post("/premium/kundli" , authMiddleware, premiumKundliOrder)
 router.get('/status/:orderId', authMiddleware, checkPaymentOfKundli);
+
+//Panchang premium
+router.post("/premium/panchang" , authMiddleware, premiumPanchangOrder);
+
+
 
 //wallet related
 router.get('/wallet/me', authMiddleware, myWallet)  //check wallet balance    

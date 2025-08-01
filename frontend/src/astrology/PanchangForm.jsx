@@ -1,14 +1,12 @@
-// src/pages/PanchangForm.jsx
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Toaster, toast } from "react-hot-toast";
 import { Globe, MapPin, Calendar, ArrowRight } from "lucide-react";
 import { Country, State, City } from "country-state-city";
+import axios from "axios";
+import useAuthStore from "@/store/useAuthStore";
 
 export default function PanchangForm() {
-  const navigate = useNavigate();
-
-  // Lahiri only
+  const { token } = useAuthStore.getState();
   const ayanamsa = "1";
   const [la, setLa] = useState("en");
 
@@ -22,6 +20,9 @@ export default function PanchangForm() {
   const [coords, setCoords] = useState("");
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
+
+  // Loading state for disabling submit button
+  const [loading, setLoading] = useState(false);
 
   // load states on country change
   useEffect(() => {
@@ -52,24 +53,48 @@ export default function PanchangForm() {
     }
   }, [cityName, cities]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!dateTime || !coords) {
       return toast.error("Please fill date/time and select a city");
     }
 
-    // build full ISO string
-    const datetimeISO = `${dateTime}:00+05:30`;
+    setLoading(true);
 
-    // assemble query
-    const qs = new URLSearchParams({
-      ayanamsa,
-      coordinates: coords,
-      datetime: datetimeISO,
-      la,
-    }).toString();
+    try {
+      // build full ISO string
+      const datetimeISO = `${dateTime}:00+05:30`;
 
-    navigate(`/panchang-result?${qs}`);
+      // Build POST body as object
+      const body = {
+        ayanamsa,
+        coordinates: coords,
+        datetime: datetimeISO,
+        la,
+      };
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_PAYMENT_URL}/premium/panchang`,
+        body,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log(response);
+      
+
+      // You may want to redirect to Cashfree/payment etc. here
+      // e.g. cashfreeInstance.checkout({ ...response.data })
+      toast.success("Payment initiated! Continue with the next step.");
+
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Something went wrong!");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -93,9 +118,6 @@ export default function PanchangForm() {
           >
             <option value="en">English</option>
             <option value="hi">हिन्दी</option>
-            <option value="ta">தமிழ்</option>
-            <option value="te">తెలుగు</option>
-            <option value="ml">മലയാളം</option>
           </select>
         </div>
 
@@ -173,10 +195,11 @@ export default function PanchangForm() {
         {/* Submit */}
         <button
           type="submit"
-          className="w-full bg-yellow-400 hover:bg-yellow-500 transition rounded py-3 flex items-center justify-center gap-2 font-semibold text-black"
+          className="w-full bg-yellow-400 hover:bg-yellow-500 transition rounded py-3 flex items-center justify-center gap-2 font-semibold text-black disabled:opacity-50"
+          disabled={loading}
         >
           <ArrowRight className="w-5 h-5" />
-          Generate Panchang
+          {loading ? "Generating..." : "Generate Panchang"}
         </button>
       </form>
     </div>

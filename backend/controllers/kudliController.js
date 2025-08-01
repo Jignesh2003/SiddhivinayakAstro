@@ -4,6 +4,7 @@ import redis from '../utils/redisClient.js'
 import { v4 as uuidv4 } from "uuid";
 import User from '../models/User.js';
 import postgresDb from "../config/postgresDb.js"
+import { json } from 'express';
 
 
 export const detailedKundli = async (req, res) => {
@@ -135,7 +136,72 @@ export const premiumKundliOrder = async (req, res) => {
   }
 };
 
+export const premiumPanchangOrder = async (req, res) => {
 
+  const { ayanamsa,coordinates,datetime,la} = req.body;
+  const q = {ayanamsa,coordinates,datetime,la}
+  const userId = req.user.id;
+
+  const user = await User.findOne({ _id: userId })
+
+  if (!user) {
+    res.status(404).json({ message: "Invalid User !" });
+  }
+  const amount = 299;
+  if (amount < 299) {
+    return res.status(400).json({ message: "Invalid Amount !" })
+  };
+
+  const orderId = `PRE_PANCHANG_${user._id}_${Date.now()}`;
+
+  const clientId = process.env.CASHFREE_CLIENT_ID;
+  const clientSecret = process.env.CASHFREE_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    return res.status(500).json({ message: "Cashfree credentials missing !" });
+  }
+
+  const CASHFREE_API_URL = "https://sandbox.cashfree.com/pg/orders";
+
+  try {
+    const response = axios.post(CASHFREE_API_URL, {
+      order_id: orderId,
+      order_amount: Number(amount),
+      order_currency: "INR",
+      customer_details: {
+        customer_id: String(userId),
+        customerName: user.firstName,
+        customer_email: user.email,
+        customer_phone: user.phone
+      },
+      order_note: "Panchang order",
+      order_meta: {
+        notify_url: process.env.CASHFREE_WEBHOOK_URL || "",
+        return_url: `${process.env.CLIENT_URL}/panchang-result?order_id=${orderId}&data=${encodeURIComponent(JSON.stringify(q))}`
+      }
+    },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-version": "2022-09-01",
+          "x-client-id": clientId,
+          "x-client-secret": clientSecret,
+          "x-request-id": uuidv4(),
+        }
+      }
+    )
+
+res.json({orderId: response.data.order_id,
+  token:response.data.payment_session_id,
+});
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({message: error?.data?.message || "Cashfree order creation failed" })
+
+  }
+
+
+}
 
 export const detailedKundliMatching = async (req, res) => {
   try {
@@ -286,7 +352,7 @@ export const checkPaymentOfKundli = async (req, res) => {
     // Using knex to select payment record for orderId and userId
     const result = await postgresDb('premium_services_payment')
       .select('order_id', 'status', 'amount')
-      .where({ order_id: orderId})
+      .where({ order_id: orderId })
       .first(); // fetch single record
 
     if (!result) {
@@ -304,7 +370,10 @@ export const checkPaymentOfKundli = async (req, res) => {
   } catch (error) {
     console.log(error);
     console.error("Payment status check error", error);
-    return res.status(500).json({ message: "Server error",error });
+    return res.status(500).json({ message: "Server error", error });
   }
 };
+
+
+
 
