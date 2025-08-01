@@ -20,6 +20,7 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isAstroDropdownOpen, setIsAstroDropdownOpen] = useState(false);
   const menuRef = useRef(null);
   const audioRef = useRef(null);
   const navigate = useNavigate();
@@ -92,7 +93,8 @@ const Navbar = () => {
       <Link to="/wishlist" className="text-white hover:text-purple-400 text-lg flex items-center gap-1">
         <Heart className="w-5 h-5" />
         Wishlist
-      </Link>      <Link to="/cart" className="relative text-white hover:text-purple-400">
+      </Link>
+      <Link to="/cart" className="relative text-white hover:text-purple-400">
         <ShoppingCart size={20} />
         {cartCount > 0 && (
           <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">
@@ -155,11 +157,78 @@ const Navbar = () => {
           <div className="hidden lg:flex items-center gap-6">
             <Link to="/" className="text-white hover:text-purple-400 text-lg">Home</Link>
             <Link to="/products" className="text-white hover:text-purple-400 text-lg">Products</Link>
-            <Link to="/daily-prediction" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Daily Prediction</Link>
-            <Link to="/kundli-details" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Kundli</Link>
-            <Link to="/matching-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Kundli Matching</Link>
-            <Link to="/panchang-form" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Panchang</Link>
-            <Link to="/life-path-number" className="text-yellow-400 hover:text-purple-300 text-lg font-medium">Life Path Number</Link>
+
+            {/* Astrology Dropdown */}
+            <div
+              className="relative"
+              onMouseEnter={() => setIsAstroDropdownOpen(true)}
+              onMouseLeave={() => setIsAstroDropdownOpen(false)}
+            >
+              <button
+                className="text-yellow-400 hover:text-yellow-300 text-lg font-medium flex items-center gap-1 focus:outline-none"
+                aria-haspopup="true"
+                aria-expanded={isAstroDropdownOpen}
+                type="button"
+              >
+                Astrology
+                <svg
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    isAstroDropdownOpen ? "rotate-180" : "rotate-0"
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              <div
+                className={`absolute top-full left-0 mt-2 w-48 bg-black bg-opacity-90 rounded shadow-lg ring-1 ring-black ring-opacity-5 z-50
+                   transition-opacity duration-300
+                   ${isAstroDropdownOpen ? "opacity-100 visible" : "opacity-0 invisible"}
+                `}
+              >
+                <Link
+                  to="/daily-prediction"
+                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+                  onClick={() => setIsAstroDropdownOpen(false)}
+                >
+                  Daily Prediction
+                </Link>
+                <Link
+                  to="/kundli-details"
+                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+                  onClick={() => setIsAstroDropdownOpen(false)}
+                >
+                  Kundli
+                </Link>
+                <Link
+                  to="/matching-form"
+                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+                  onClick={() => setIsAstroDropdownOpen(false)}
+                >
+                  Kundli Matching
+                </Link>
+                <Link
+                  to="/panchang-form"
+                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+                  onClick={() => setIsAstroDropdownOpen(false)}
+                >
+                  Panchang
+                </Link>
+                <Link
+                  to="/life-path-number"
+                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+                  onClick={() => setIsAstroDropdownOpen(false)}
+                >
+                  Life Path Number
+                </Link>
+              </div>
+            </div>
+
+            {/* Other links are removed from desktop that now appear in dropdown */}
 
             {isAuthenticated
               ? role !== "astrologer" ? userLinks : astroLinks
@@ -168,7 +237,6 @@ const Navbar = () => {
 
             {isAuthenticated ? (
               <>
-                {/* Removed Please verify button */}
                 <button onClick={handleLogout} className="text-white hover:text-red-500 text-lg">
                   Logout
                 </button>
@@ -201,11 +269,11 @@ const Navbar = () => {
           >
             <Link to="/" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Home</Link>
             <Link to="/products" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Products</Link>
-            <Link to="/daily-prediction" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Daily Prediction</Link>
-            <Link to="/kundli-details" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Kundli</Link>
-            <Link to="/matching-form" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Kundli Matching</Link>
-            <Link to="/panchang-form" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Panchang</Link>
-            <Link to="/life-path-number" className="text-yellow-400 text-lg font-medium hover:text-purple-300" onClick={() => setIsOpen(false)}>Life Path Number</Link>
+            <Link to="/daily-prediction" className="text-yellow-400 text-lg font-medium hover:text-yellow-300" onClick={() => setIsOpen(false)}>Daily Prediction</Link>
+            <Link to="/kundli-details" className="text-yellow-400 text-lg font-medium hover:text-yellow-300" onClick={() => setIsOpen(false)}>Kundli</Link>
+            <Link to="/matching-form" className="text-yellow-400 text-lg font-medium hover:text-yellow-300" onClick={() => setIsOpen(false)}>Kundli Matching</Link>
+            <Link to="/panchang-form" className="text-yellow-400 text-lg font-medium hover:text-yellow-300" onClick={() => setIsOpen(false)}>Panchang</Link>
+            <Link to="/life-path-number" className="text-yellow-400 text-lg font-medium hover:text-yellow-300" onClick={() => setIsOpen(false)}>Life Path Number</Link>
 
             {isAuthenticated
               ? role !== "astrologer"
@@ -215,7 +283,8 @@ const Navbar = () => {
                     <Link to="/wishlist" className="text-white hover:text-purple-400 text-lg flex items-center gap-1">
                       <Heart className="w-5 h-5" />
                       Wishlist
-                    </Link>                    <Link to="/cart" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Cart</Link>
+                    </Link>
+                    <Link to="/cart" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Cart</Link>
                     <Link to="/wallet" className="flex items-center gap-1 text-white hover:text-purple-500 text-lg" onClick={() => setIsOpen(false)}><Wallet size={20} /> Wallet</Link>
                   </>
                 )
