@@ -138,8 +138,8 @@ export const premiumKundliOrder = async (req, res) => {
 
 export const premiumPanchangOrder = async (req, res) => {
 
-  const { ayanamsa,coordinates,datetime,la} = req.body;
-  const q = {ayanamsa,coordinates,datetime,la}
+  const { ayanamsa, coordinates, datetime, la } = req.body;
+  const q = { ayanamsa, coordinates, datetime, la }
   const userId = req.user.id;
 
   const user = await User.findOne({ _id: userId })
@@ -191,16 +191,15 @@ export const premiumPanchangOrder = async (req, res) => {
       }
     )
 
-res.json({orderId: response.data.order_id,
-  token:response.data.payment_session_id,
-});
+    res.json({
+      orderId: response.data.order_id,
+      paymentSessionId: response.data.payment_session_id,
+    });
   } catch (error) {
     console.log(error);
-    res.status(500).json({message: error || "Cashfree order creation failed" })
+    res.status(500).json({ message: error || "Cashfree order creation failed" })
 
   }
-
-
 }
 
 export const detailedKundliMatching = async (req, res) => {
@@ -331,11 +330,6 @@ export const detailedPanchang = async (req, res) => {
     });
   }
 };
-
-
-// Import or require knex instance; adjust import path as per your project setup
-// import knex from '../db/knex'; // for ESModules
-// const knex = require('../db/knex'); // for CommonJS
 
 export const checkPaymentOfKundli = async (req, res) => {
   const userId = req.user?.id;

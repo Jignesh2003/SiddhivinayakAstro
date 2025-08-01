@@ -10,10 +10,8 @@ export default function PanchangForm() {
   const ayanamsa = "1";
   const [la, setLa] = useState("en");
 
-  // Date & Time
   const [dateTime, setDateTime] = useState(""); // YYYY-MM-DDTHH:mm
 
-  // Location fields
   const [countryCode, setCountryCode] = useState("");
   const [stateCode, setStateCode] = useState("");
   const [cityName, setCityName] = useState("");
@@ -21,10 +19,10 @@ export default function PanchangForm() {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
 
-  // Loading state for disabling submit button
   const [loading, setLoading] = useState(false);
+  const [cashfreeInstance, setCashfreeInstance] = useState(null);
 
-  // load states on country change
+  // Load states on country change
   useEffect(() => {
     if (!countryCode) return;
     setStates(State.getStatesOfCountry(countryCode));
@@ -34,7 +32,7 @@ export default function PanchangForm() {
     setCoords("");
   }, [countryCode]);
 
-  // load cities on state change
+  // Load cities on state change
   useEffect(() => {
     if (!stateCode) return;
     setCities(City.getCitiesOfState(countryCode, stateCode));
@@ -42,7 +40,7 @@ export default function PanchangForm() {
     setCoords("");
   }, [stateCode, countryCode]);
 
-  // auto-fill coords on city select
+  // Auto-fill coords on city select
   useEffect(() => {
     if (!cityName) return;
     const selected = cities.find(c => c.name === cityName);
@@ -53,19 +51,41 @@ export default function PanchangForm() {
     }
   }, [cityName, cities]);
 
+  // Load Cashfree SDK once
+  useEffect(() => {
+    if (window.Cashfree) {
+      setCashfreeInstance(window.Cashfree({ mode: "sandbox" }));
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+    script.async = true;
+    script.onload = () => {
+      if (window.Cashfree) {
+        setCashfreeInstance(window.Cashfree({ mode: "sandbox" }));
+      } else {
+        toast.error("❌ Failed to initialize payment SDK");
+      }
+    };
+    script.onerror = () => toast.error("❌ Failed to load Cashfree SDK");
+    document.body.appendChild(script);
+    return () => document.body.removeChild(script);
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!dateTime || !coords) {
       return toast.error("Please fill date/time and select a city");
     }
 
+    if (!cashfreeInstance) {
+      return toast.error("Payment environment not ready. Please wait a moment.");
+    }
+
     setLoading(true);
 
     try {
-      // build full ISO string
       const datetimeISO = `${dateTime}:00+05:30`;
-
-      // Build POST body as object
       const body = {
         ayanamsa,
         coordinates: coords,
@@ -82,17 +102,35 @@ export default function PanchangForm() {
           },
         }
       );
-      console.log(response);
-      
 
-      // You may want to redirect to Cashfree/payment etc. here
-      // e.g. cashfreeInstance.checkout({ ...response.data })
-      toast.success("Payment initiated! Continue with the next step.");
+      const { orderId, token: paymentSessionId } = response.data;
 
+      if (!orderId || !paymentSessionId) {
+        toast.error("Payment initiation failed: missing session info.");
+        setLoading(false);
+        return;
+      }
+
+      // Open Cashfree payment popup using the paymentSessionId
+      cashfreeInstance.checkout({
+        paymentSessionId, // This is the token from your backend
+        redirectTarget: "_self",
+        onSuccess: function () {
+          toast.success("Payment successful! Redirecting...");
+          // You can redirect or update UI here after success
+        },
+        onFailure: function () {
+          toast.error("Payment failed. Please try again.");
+          setLoading(false);
+        },
+        onDismiss: function () {
+          toast("Payment cancelled.");
+          setLoading(false);
+        },
+      });
     } catch (error) {
       toast.error(error?.response?.data?.message || "Something went wrong!");
       console.error(error);
-    } finally {
       setLoading(false);
     }
   };
