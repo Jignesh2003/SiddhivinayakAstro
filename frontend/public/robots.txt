@@ -1,0 +1,7 @@
+# public/robots.txt
+User-agent: *
+Disallow:
+
+Sitemap: https://www.siddhivinayakastroworld.com/sitemap.xml
+Sitemap: https://www.siddhivinayakastroworld.in/sitemap.xml
+
