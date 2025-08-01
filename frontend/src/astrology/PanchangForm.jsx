@@ -102,6 +102,7 @@ export default function PanchangForm() {
           },
         }
       );
+console.log(response);
 
       const { orderId, paymentSessionId } = response.data;
 
