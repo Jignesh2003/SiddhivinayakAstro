@@ -152,7 +152,7 @@ export const premiumPanchangOrder = async (req, res) => {
     return res.status(400).json({ message: "Invalid Amount !" })
   };
 
-  const orderId = `PRE_PANCHANG_${user._id}_${Date.now()}`;
+  const orderId = `PRE_PANCH_${user._id}_${Date.now()}`;
 
   const clientId = process.env.CASHFREE_CLIENT_ID;
   const clientSecret = process.env.CASHFREE_CLIENT_SECRET;
