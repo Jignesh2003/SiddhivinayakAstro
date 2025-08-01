@@ -21,6 +21,7 @@ const Navbar = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isAstroDropdownOpen, setIsAstroDropdownOpen] = useState(false);
+  const astroDropdownRef = useRef(null);
   const menuRef = useRef(null);
   const audioRef = useRef(null);
   const navigate = useNavigate();
@@ -159,75 +160,71 @@ const Navbar = () => {
             <Link to="/products" className="text-white hover:text-purple-400 text-lg">Products</Link>
 
             {/* Astrology Dropdown */}
-            <div
-              className="relative"
-              onMouseEnter={() => setIsAstroDropdownOpen(true)}
-              onMouseLeave={() => setIsAstroDropdownOpen(false)}
-            >
-              <button
-                className="text-yellow-400 hover:text-yellow-300 text-lg font-medium flex items-center gap-1 focus:outline-none"
-                aria-haspopup="true"
-                aria-expanded={isAstroDropdownOpen}
-                type="button"
-              >
-                Astrology
-                <svg
-                  className={`w-4 h-4 transition-transform duration-200 ${
-                    isAstroDropdownOpen ? "rotate-180" : "rotate-0"
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+        <div className="relative" ref={astroDropdownRef}>
+  <button
+    className="text-yellow-400 hover:text-yellow-300 text-lg font-medium flex items-center gap-1 focus:outline-none"
+    aria-haspopup="true"
+    aria-expanded={isAstroDropdownOpen}
+    type="button"
+    onClick={() => setIsAstroDropdownOpen(prev => !prev)}
+  >
+    Astrology
+    <svg
+      className={`w-4 h-4 transition-transform duration-200 ${
+        isAstroDropdownOpen ? "rotate-180" : "rotate-0"
+      }`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  </button>
 
-              <div
-                className={`absolute top-full left-0 mt-2 w-48 bg-black bg-opacity-90 rounded shadow-lg ring-1 ring-black ring-opacity-5 z-50
-                   transition-opacity duration-300
-                   ${isAstroDropdownOpen ? "opacity-100 visible" : "opacity-0 invisible"}
-                `}
-              >
-                <Link
-                  to="/daily-prediction"
-                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
-                  onClick={() => setIsAstroDropdownOpen(false)}
-                >
-                  Daily Prediction
-                </Link>
-                <Link
-                  to="/kundli-details"
-                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
-                  onClick={() => setIsAstroDropdownOpen(false)}
-                >
-                  Kundli
-                </Link>
-                <Link
-                  to="/matching-form"
-                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
-                  onClick={() => setIsAstroDropdownOpen(false)}
-                >
-                  Kundli Matching
-                </Link>
-                <Link
-                  to="/panchang-form"
-                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
-                  onClick={() => setIsAstroDropdownOpen(false)}
-                >
-                  Panchang
-                </Link>
-                <Link
-                  to="/life-path-number"
-                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
-                  onClick={() => setIsAstroDropdownOpen(false)}
-                >
-                  Life Path Number
-                </Link>
-              </div>
-            </div>
-
+  <div
+    className={`absolute top-full left-0 mt-2 w-48 bg-black bg-opacity-90 rounded shadow-lg ring-1 ring-black ring-opacity-5 z-50
+      transition-opacity duration-300
+      ${isAstroDropdownOpen ? "opacity-100 visible" : "opacity-0 invisible"}
+    `}
+  >
+    <Link
+      to="/daily-prediction"
+      className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+      onClick={() => setIsAstroDropdownOpen(false)}
+    >
+      Daily Prediction
+    </Link>
+    <Link
+      to="/kundli-details"
+      className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+      onClick={() => setIsAstroDropdownOpen(false)}
+    >
+      Kundli
+    </Link>
+    <Link
+      to="/matching-form"
+      className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+      onClick={() => setIsAstroDropdownOpen(false)}
+    >
+      Kundli Matching
+    </Link>
+    <Link
+      to="/panchang-form"
+      className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+      onClick={() => setIsAstroDropdownOpen(false)}
+    >
+      Panchang
+    </Link>
+    <Link
+      to="/life-path-number"
+      className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+      onClick={() => setIsAstroDropdownOpen(false)}
+    >
+      Life Path
+    </Link>
+  </div>
+</div>
             {/* Other links are removed from desktop that now appear in dropdown */}
 
             {isAuthenticated
