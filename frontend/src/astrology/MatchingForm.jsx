@@ -155,9 +155,10 @@ export default function MatchForm() {
         setLoading(false);
         return;
       }
+      const data = response.data;
 
       cashfreeInstance.checkout({
-        paymentSessionId, // Cashfree paymentSessionId (token)
+        paymentSessionId:data.paymentSessionId, // Cashfree paymentSessionId (token)
         redirectTarget: "_self",
         onSuccess: function () {
           toast.success("Payment successful! Processing...");

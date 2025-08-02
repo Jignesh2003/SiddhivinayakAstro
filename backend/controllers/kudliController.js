@@ -243,10 +243,10 @@ export const premiumKundliMatchingOrder = async (req, res) => {
         customer_email: user.email,
         customer_phone: user.phone
       },
-      order_note: "Panchang order",
+      order_note: "Kundli matching order",
       order_meta: {
         notify_url: process.env.CASHFREE_WEBHOOK_URL || "",
-        return_url: `${process.env.CLIENT_URL}/panchang-result?order_id=${orderId}&data=${encodeURIComponent(JSON.stringify(q))}`
+        return_url: `${process.env.CLIENT_URL}/matching-kundli-result?order_id=${orderId}&data=${encodeURIComponent(JSON.stringify(q))}`
       }
     },
       {
