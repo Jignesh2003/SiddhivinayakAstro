@@ -1,4 +1,3 @@
-// src/pages/CompatibilityResult.jsx
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -17,13 +16,47 @@ export default function MatchingCompatibilityResult() {
   const { token } = useAuthStore.getState();
 
   const q = new URLSearchParams(search);
-  const ayanamsa = q.get('ayanamsa');
-  const girl_coordinates = q.get('girl_coordinates');
-  const girl_dob = q.get('girl_dob');
-  const boy_coordinates = q.get('boy_coordinates');
-  const boy_dob = q.get('boy_dob');
+  let ayanamsa = q.get('ayanamsa');
+  let girl_coordinates = q.get('girl_coordinates');
+  let girl_dob = q.get('girl_dob');
+  let boy_coordinates = q.get('boy_coordinates');
+  let boy_dob = q.get('boy_dob');
+  const orderId = q.get('order_id');
+
+  // Also support for packed data param (if needed in your flow)
+  if (
+    !ayanamsa ||
+    !girl_coordinates ||
+    !girl_dob ||
+    !boy_coordinates ||
+    !boy_dob ||
+    !orderId
+  ) {
+    const dataStr = q.get('data');
+    if (dataStr) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(dataStr));
+        // Fill in missing params if packed JSON present
+        if (!ayanamsa) ayanamsa = parsed.ayanamsa;
+        if (!girl_coordinates) girl_coordinates = parsed.girl_coordinates;
+        if (!girl_dob) girl_dob = parsed.girl_dob;
+        if (!boy_coordinates) boy_coordinates = parsed.boy_coordinates;
+        if (!boy_dob) boy_dob = parsed.boy_dob;
+      } catch (err) {
+        console.log(err);
+        
+        // fallback below
+      }
+    }
+  }
 
   useEffect(() => {
+    if (!orderId) {
+      toast.error('Missing order ID, redirecting...');
+      setTimeout(() => navigate('/'), 3000);
+      return;
+    }
+    
     if (
       !ayanamsa ||
       !girl_coordinates ||
@@ -32,40 +65,61 @@ export default function MatchingCompatibilityResult() {
       !boy_dob
     ) {
       toast.error('Missing params, redirecting…');
-      navigate('/');
+      setTimeout(() => navigate('/'), 3000);
       return;
     }
+
     (async () => {
       setLoading(true);
+
       try {
+        // 1. Verify payment status
+        const statusRes = await axios.get(
+          `${import.meta.env.VITE_PAYMENT_URL}/status/${orderId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (statusRes.data.status !== 'SUCCESS') {
+          toast.error('Payment not verified!', { duration: 3000 });
+          setTimeout(() => navigate('/'), 3000);
+          return;
+        }
+
+        // 2. Fetch compatibility data
+        const qs = new URLSearchParams({
+          ayanamsa,
+          girl_coordinates,
+          girl_dob,
+          boy_coordinates,
+          boy_dob,
+        }).toString();
+
         const res = await axios.get(
-          `${import.meta.env.VITE_ASTROLOGY_URL}/kundali-matching/detailed${search}`,
+          `${import.meta.env.VITE_ASTROLOGY_URL}/kundali-matching/detailed?${qs}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           }
         );
-        // ProKerala nests the real payload under `.data`
         setData(res.data.data || res.data);
       } catch (err) {
         console.error(err);
         toast.error('Failed to load compatibility');
+        setTimeout(() => navigate('/'), 2500);
       } finally {
         setLoading(false);
       }
     })();
   }, [
-    search,
-    navigate,
     ayanamsa,
     girl_coordinates,
     girl_dob,
     boy_coordinates,
     boy_dob,
+    orderId,
+    navigate,
     token,
   ]);
-console.log(data);
 
   if (loading) {
     return (

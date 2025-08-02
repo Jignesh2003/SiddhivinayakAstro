@@ -1,12 +1,13 @@
-// src/pages/MatchForm.jsx
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Toaster, toast } from "react-hot-toast";
 import { Globe, User, ArrowRight, MapPin } from "lucide-react";
 import { Country, State, City } from "country-state-city";
+import axios from "axios";
+import useAuthStore from "@/store/useAuthStore";
 
-export default function MatchingForm() {
-  const navigate = useNavigate();
+export default function MatchForm() {
+  // Auth token for API
+  const { token } = useAuthStore.getState();
 
   // Common
   const [ayanamsa, setAyanamsa] = useState("1");
@@ -30,7 +31,32 @@ export default function MatchingForm() {
   const [boyStates, setBoyStates] = useState([]);
   const [boyCities, setBoyCities] = useState([]);
 
-  // Load girl states on country change
+  // Cashfree SDK + loading
+  const [cashfreeInstance, setCashfreeInstance] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // Load Cashfree SDK once
+  useEffect(() => {
+    if (window.Cashfree) {
+      setCashfreeInstance(window.Cashfree({ mode: "sandbox" }));
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+    script.async = true;
+    script.onload = () => {
+      if (window.Cashfree) {
+        setCashfreeInstance(window.Cashfree({ mode: "sandbox" }));
+      } else {
+        toast.error("❌ Failed to initialize payment SDK");
+      }
+    };
+    script.onerror = () => toast.error("❌ Failed to load Cashfree SDK");
+    document.body.appendChild(script);
+    return () => document.body.removeChild(script);
+  }, []);
+
+  // Load girl states/cities/coords
   useEffect(() => {
     if (!girlCountry) return;
     setGirlStates(State.getStatesOfCountry(girlCountry));
@@ -39,16 +65,12 @@ export default function MatchingForm() {
     setGirlCities([]);
     setGirlCoords("");
   }, [girlCountry]);
-
-  // Load girl cities on state change
   useEffect(() => {
     if (!girlState) return;
     setGirlCities(City.getCitiesOfState(girlCountry, girlState));
     setGirlCity("");
     setGirlCoords("");
   }, [girlState, girlCountry]);
-
-  // Auto‑fill girl coords when city selected
   useEffect(() => {
     if (!girlCity) return;
     const c = girlCities.find((c) => c.name === girlCity);
@@ -59,7 +81,7 @@ export default function MatchingForm() {
     }
   }, [girlCity, girlCities]);
 
-  // Repeat for boy
+  // Load boy states/cities/coords
   useEffect(() => {
     if (!boyCountry) return;
     setBoyStates(State.getStatesOfCountry(boyCountry));
@@ -68,14 +90,12 @@ export default function MatchingForm() {
     setBoyCities([]);
     setBoyCoords("");
   }, [boyCountry]);
-
   useEffect(() => {
     if (!boyState) return;
     setBoyCities(City.getCitiesOfState(boyCountry, boyState));
     setBoyCity("");
     setBoyCoords("");
   }, [boyState, boyCountry]);
-
   useEffect(() => {
     if (!boyCity) return;
     const c = boyCities.find((c) => c.name === boyCity);
@@ -86,9 +106,8 @@ export default function MatchingForm() {
     }
   }, [boyCity, boyCities]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (
       !ayanamsa ||
       !girlDob ||
@@ -101,27 +120,64 @@ export default function MatchingForm() {
       );
     }
 
-    // Append seconds and timezone offset +05:30
-    const formatISO = (dt) => {
-      // dt is "YYYY-MM-DDTHH:MM"
-      return `${dt}:00+05:30`;
-    };
+    // Helper to append seconds + timezone
+    const formatISO = (dt) => `${dt}:00+05:30`;
 
     const isoGirl = formatISO(girlDob);
     const isoBoy = formatISO(boyDob);
 
-    const qs = new URLSearchParams({
+    const body = {
       ayanamsa,
+      la,
       girl_coordinates: girlCoords,
       girl_dob: isoGirl,
       boy_coordinates: boyCoords,
       boy_dob: isoBoy,
-      la,
-    }).toString();
+    };
 
-    navigate(`/matching-kundli-result?${qs}`);
-    console.log(qs);
-    
+    if (!cashfreeInstance) {
+      toast.error("Payment environment not ready. Please wait a moment.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_PAYMENT_URL}/premium/kundli/matching`,
+        body,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const { orderId, token: paymentSessionId } = response.data;
+
+      if (!orderId || !paymentSessionId) {
+        toast.error("Payment initiation failed: no session returned.");
+        setLoading(false);
+        return;
+      }
+
+      cashfreeInstance.checkout({
+        paymentSessionId, // Cashfree paymentSessionId (token)
+        redirectTarget: "_self",
+        onSuccess: function () {
+          toast.success("Payment successful! Processing...");
+          setLoading(false);
+          // Optionally you can trigger next step or inform user
+        },
+        onFailure: function () {
+          toast.error("Payment failed. Please try again.");
+          setLoading(false);
+        },
+        onDismiss: function () {
+          toast("Payment cancelled.");
+          setLoading(false);
+        },
+      });
+    } catch (error) {
+      setLoading(false);
+      toast.error(error?.response?.data?.message || "Payment initiation failed!");
+      console.error(error);
+    }
   };
 
   return (
@@ -301,10 +357,11 @@ export default function MatchingForm() {
         {/* Submit */}
         <button
           type="submit"
-          className="w-full bg-yellow-500 hover:bg-yellow-600 transition rounded py-3 font-semibold flex items-center justify-center gap-2"
+          className="w-full bg-yellow-500 hover:bg-yellow-600 transition rounded py-3 font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+          disabled={loading}
         >
           <ArrowRight className="h-5 w-5" />
-          Check Compatibility
+          {loading ? "Processing..." : "Check Compatibility & Pay"}
         </button>
       </form>
     </div>

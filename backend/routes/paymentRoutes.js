@@ -2,7 +2,7 @@ import express from "express"
 import authMiddleware from "../middlewares/authMiddleware.js"
 import { checkPaymentStatus, createCashfreeOrder } from "../controllers/cashFreeController.js"
 import {  getWithdrawalRequests, initiateWalletTopupOrder, listWalletTransactions, myWallet, updateWithdrawalStatus, withdrawFundsFromWallet } from "../controllers/walletControllers.js";
-import { checkPaymentOfKundli, premiumKundliOrder, premiumPanchangOrder } from "../controllers/kudliController.js";
+import { checkPaymentOfKundli, premiumKundliMatchingOrder, premiumKundliOrder, premiumPanchangOrder } from "../controllers/kudliController.js";
 
 const router = express.Router()
 
@@ -16,6 +16,7 @@ router.get('/status/:orderId', authMiddleware, checkPaymentOfKundli);
 
 //Panchang premium
 router.post("/premium/panchang" , authMiddleware, premiumPanchangOrder);
+router.post("/premium/kundli/matching", authMiddleware, premiumKundliMatchingOrder)
 
 
 

@@ -202,6 +202,75 @@ export const premiumPanchangOrder = async (req, res) => {
   }
 }
 
+export const premiumKundliMatchingOrder = async (req, res) => {
+  const { userId } = req.user.id;
+
+  const user = await User.findOne({ _id: userId })
+  if (!user) {
+    res.status(401).json({ message: "Invalid User !" })
+  };
+
+  const amount = 999;
+  if (amount < 999) {
+    res.status(400).json({ message: "Invalid amount !" })
+  };
+
+  const { ayanamsa, girl_coordinates, girl_dob, boy_coordinates, boy_dob, la } = req.body;
+
+  if (!ayanamsa || !girl_coordinates || !girl_dob || !boy_coordinates || !boy_dob || !la) {
+    res.status(401).json({ message: "Data incomplete !" })
+  }
+  const q = { ayanamsa, girl_coordinates, girl_dob, boy_coordinates, boy_dob, la }
+  const orderId = `PRE_MATCH_${user._id}_${Date.now()}`
+
+
+  const clientId = process.env.CASHFREE_CLIENT_ID;
+  const clientSecret = process.env.CASHFREE_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    res.status(500).json({ message: "Cashfree credential missing !" })
+  }
+
+  const CASHFREE_API_URL = "https://sandbox.cashfree.com/pg/orders";
+  try {
+    const response = await axios.post(CASHFREE_API_URL, {
+      order_id: orderId,
+      order_amount: Number(amount),
+      order_currency: "INR",
+      customer_details: {
+        customer_id: String(userId),
+        customerName: user.firstName,
+        customer_email: user.email,
+        customer_phone: user.phone
+      },
+      order_note: "Panchang order",
+      order_meta: {
+        notify_url: process.env.CASHFREE_WEBHOOK_URL || "",
+        return_url: `${process.env.CLIENT_URL}/panchang-result?order_id=${orderId}&data=${encodeURIComponent(JSON.stringify(q))}`
+      }
+    },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-version": "2022-09-01",
+          "x-client-id": clientId,
+          "x-client-secret": clientSecret,
+          "x-request-id": uuidv4(),
+        }
+      }
+    )
+    res.json({
+      orderId: response.data.order_id,
+      paymentSessionId: response.data.payment_session_id
+    })
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: error || "Cashfree order creation failed" })
+
+  }
+}
+
 export const detailedKundliMatching = async (req, res) => {
   try {
     const {
