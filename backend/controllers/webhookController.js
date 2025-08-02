@@ -132,34 +132,34 @@ export const verifyPayment = async (req, res) => {
       }
 
 
-    try {
-  await PostgresDb.transaction(async (trx) => {
-    const updatedRows = await trx("productorders_transactions")
-      .where({ order_id: orderId })
-      .update({
-        cf_order_id: cfOrderId || null,
-        cf_payment_id: cfPaymentId,
-        status: paymentStatus,                  // Update status based on webhook data
-        amount: paymentAmount,
-        currency: paymentCurrency,
-        payment_method: JSON.stringify(paymentMethod || {}),
-        payment_time: eventTime,  // Convert epoch to JS Date
-        email: customerEmail,
-        phone: customerPhone,
-        signature: incomingSignature,
-      });
+      try {
+        await PostgresDb.transaction(async (trx) => {
+          const updatedRows = await trx("productorders_transactions")
+            .where({ order_id: orderId })
+            .update({
+              cf_order_id: cfOrderId || null,
+              cf_payment_id: cfPaymentId,
+              status: paymentStatus,                  // Update status based on webhook data
+              amount: paymentAmount,
+              currency: paymentCurrency,
+              payment_method: JSON.stringify(paymentMethod || {}),
+              payment_time: eventTime,  // Convert epoch to JS Date
+              email: customerEmail,
+              phone: customerPhone,
+              signature: incomingSignature,
+            });
 
-    if (updatedRows === 0) {
-      logWithTS(`[${requestId}] ⚠️ No matching productorders_transactions record found for order_id=${orderId}`);
-      // Optionally: handle missing record, e.g., insert, alert, or log
-    } else {
-      logWithTS(`[${requestId}] 📝 Postgres audit log updated for order_id=${orderId}`);
-    }
-  });
-} catch (pgErr) {
-  logWithTS(`[${requestId}] ❌ Postgres audit log update failed for orderId=${orderId}:`, pgErr.message || pgErr);
-  // Optionally: handle error further (alert, retry, etc.)
-}
+          if (updatedRows === 0) {
+            logWithTS(`[${requestId}] ⚠️ No matching productorders_transactions record found for order_id=${orderId}`);
+            // Optionally: handle missing record, e.g., insert, alert, or log
+          } else {
+            logWithTS(`[${requestId}] 📝 Postgres audit log updated for order_id=${orderId}`);
+          }
+        });
+      } catch (pgErr) {
+        logWithTS(`[${requestId}] ❌ Postgres audit log update failed for orderId=${orderId}:`, pgErr.message || pgErr);
+        // Optionally: handle error further (alert, retry, etc.)
+      }
 
     }
 
@@ -233,7 +233,8 @@ export const verifyPayment = async (req, res) => {
             signature: incomingSignature,
             extra_payload: JSON.stringify(payload),
             audit_logged_at: trx.fn.now(),
-          });
+          }).onConflict("order_id")
+            .merge(); // Ensures only one row per order_id, always latest status
         });
         logWithTS(`[${requestId}] 📝 PG audit log: premium services payment event for ${orderId}`);
       } catch (pgErr) {
@@ -242,7 +243,7 @@ export const verifyPayment = async (req, res) => {
       }
     }
 
-     if (orderId.startsWith("PRE_PANCH_") || orderId.startsWith("PRE_P")) {
+    if (orderId.startsWith("PRE_PANCH_") || orderId.startsWith("PRE_P")) {
       try {
         await PostgresDb.transaction(async trx => {
           // Insert payment event into premium_services_payment table
@@ -260,34 +261,37 @@ export const verifyPayment = async (req, res) => {
             signature: incomingSignature,
             extra_payload: JSON.stringify(payload),
             audit_logged_at: trx.fn.now(),
-          });
+          }).onConflict("order_id")
+            .merge(); // Ensures only one row per order_id, always latest status
         });
-         if (orderId.startsWith("PRE_MATCH_") || orderId.startsWith("PRE_M")) {
-      try {
-        await PostgresDb.transaction(async trx => {
-          // Insert payment event into premium_services_payment table
-          await trx("premium_services_payment").insert({
-            order_id: orderId,
-            cf_order_id: cfOrderId || null,
-            cf_payment_id: cfPaymentId,
-            status: paymentStatus,
-            amount: paymentAmount,
-            currency: paymentCurrency,
-            payment_method: JSON.stringify(paymentMethod || {}),
-            payment_time: eventTime,  // convert epoch seconds to JS Date
-            customer_email: customerEmail,
-            customer_phone: customerPhone,
-            signature: incomingSignature,
-            extra_payload: JSON.stringify(payload),
-            audit_logged_at: trx.fn.now(),
-          });
-        });
-        logWithTS(`[${requestId}] 📝 PG audit log: premium services payment event for ${orderId}`);
-      } catch (pgErr) {
-        logWithTS(`[${requestId}] ❌ PG audit log failed for premium services:`, pgErr.message || pgErr);
-        return res.status(500).send("Postgres insert failed.");
-      }
-    }
+
+        if (orderId.startsWith("PRE_MATCH_") || orderId.startsWith("PRE_M")) {
+          try {
+            await PostgresDb.transaction(async trx => {
+              // Insert payment event into premium_services_payment table
+              await trx("premium_services_payment").insert({
+                order_id: orderId,
+                cf_order_id: cfOrderId || null,
+                cf_payment_id: cfPaymentId,
+                status: paymentStatus,
+                amount: paymentAmount,
+                currency: paymentCurrency,
+                payment_method: JSON.stringify(paymentMethod || {}),
+                payment_time: eventTime,  // convert epoch seconds to JS Date
+                customer_email: customerEmail,
+                customer_phone: customerPhone,
+                signature: incomingSignature,
+                extra_payload: JSON.stringify(payload),
+                audit_logged_at: trx.fn.now(),
+              }).onConflict("order_id")
+                .merge(); // Ensures only one row per order_id, always latest status
+            });
+            logWithTS(`[${requestId}] 📝 PG audit log: premium services payment event for ${orderId}`);
+          } catch (pgErr) {
+            logWithTS(`[${requestId}] ❌ PG audit log failed for premium services:`, pgErr.message || pgErr);
+            return res.status(500).send("Postgres insert failed.");
+          }
+        }
         logWithTS(`[${requestId}] 📝 PG audit log: premium services payment event for ${orderId}`);
       } catch (pgErr) {
         logWithTS(`[${requestId}] ❌ PG audit log failed for premium services:`, pgErr.message || pgErr);
