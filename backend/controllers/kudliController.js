@@ -203,7 +203,7 @@ export const premiumPanchangOrder = async (req, res) => {
 }
 
 export const premiumKundliMatchingOrder = async (req, res) => {
-  const { userId } = req.user.id;
+  const userId  = req.user.id;
 
   const user = await User.findOne({ _id: userId })
   if (!user) {
