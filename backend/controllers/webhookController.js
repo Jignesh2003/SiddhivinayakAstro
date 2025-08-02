@@ -265,7 +265,14 @@ export const verifyPayment = async (req, res) => {
             .merge(); // Ensures only one row per order_id, always latest status
         });
 
-        if (orderId.startsWith("PRE_MATCH_") || orderId.startsWith("PRE_M")) {
+     
+        logWithTS(`[${requestId}] 📝 PG audit log: premium services payment event for ${orderId}`);
+      } catch (pgErr) {
+        logWithTS(`[${requestId}] ❌ PG audit log failed for premium services:`, pgErr.message || pgErr);
+        return res.status(500).send("Postgres insert failed.");
+      }
+    }
+       if (orderId.startsWith("PRE_MATCH_") || orderId.startsWith("PRE_M")) {
           try {
             await PostgresDb.transaction(async trx => {
               // Insert payment event into premium_services_payment table
@@ -292,12 +299,6 @@ export const verifyPayment = async (req, res) => {
             return res.status(500).send("Postgres insert failed.");
           }
         }
-        logWithTS(`[${requestId}] 📝 PG audit log: premium services payment event for ${orderId}`);
-      } catch (pgErr) {
-        logWithTS(`[${requestId}] ❌ PG audit log failed for premium services:`, pgErr.message || pgErr);
-        return res.status(500).send("Postgres insert failed.");
-      }
-    }
     // --- Audit payment event in Postgres ---
     try {
       await PostgresDb.transaction(async trx => {

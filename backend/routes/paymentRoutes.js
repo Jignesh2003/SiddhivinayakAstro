@@ -16,6 +16,8 @@ router.get('/status/:orderId', authMiddleware, checkPaymentOfKundli);
 
 //Panchang premium
 router.post("/premium/panchang" , authMiddleware, premiumPanchangOrder);
+
+//Premium Matching
 router.post("/premium/kundli/matching", authMiddleware, premiumKundliMatchingOrder)
 
 
