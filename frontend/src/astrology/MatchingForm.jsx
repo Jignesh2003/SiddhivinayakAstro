@@ -148,7 +148,7 @@ export default function MatchForm() {
         body,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      const { orderId, token: paymentSessionId } = response.data;
+      const { orderId,  paymentSessionId } = response.data;
 
       if (!orderId || !paymentSessionId) {
         toast.error("Payment initiation failed: no session returned.");
