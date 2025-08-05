@@ -87,7 +87,7 @@ const Home = () => {
   };
 
   return (
-    <div className="bg-gradient-to-b from-black via-black to-indigo-900 text-white min-h-screen">
+    <div className="bg-gradient-to-b from-black via-black to-indigo-900 text-white min-h-screen flex flex-col">
       {/* Logo */}
       <div
         className="w-full cursor-pointer"
@@ -100,7 +100,7 @@ const Home = () => {
         />
       </div>
 
-      {/* Zodiac Carousel (below logo) */}
+      {/* Zodiac Carousel */}
       <section className="py-4">
         <Swiper
           modules={[Navigation, Autoplay]}
@@ -129,7 +129,7 @@ const Home = () => {
       </section>
 
       {/* Products Grid */}
-      <section className="py-10 px-4 sm:px-6 lg:px-8 max-w-screen-xl mx-auto">
+      <section className="py-10 px-4 sm:px-6 lg:px-8 max-w-screen-xl mx-auto flex-grow">
         <h2 className="text-3xl sm:text-4xl font-bold text-center mb-8">
           Our Products
         </h2>
@@ -179,6 +179,7 @@ const Home = () => {
                       handleWishlistToggle(p);
                     }}
                     className="absolute top-3 right-3 bg-gray-900/90 p-2 rounded-full shadow hover:bg-gray-700 z-40"
+                    aria-label={wishlist.some((w) => w._id === p._id) ? "Remove from wishlist" : "Add to wishlist"}
                   >
                     <Heart
                       size={22}
@@ -288,6 +289,11 @@ const Home = () => {
           Chat with Astrologer
         </Button>
       </section>
+
+      {/* Legal Name Footer */}
+      <footer className="bg-black text-gray-400 text-center py-4 mt-auto select-none text-sm">
+        © {new Date().getFullYear()} SV ASTRO PRIVATE LIMITED. All rights reserved.
+      </footer>
     </div>
   );
 };
