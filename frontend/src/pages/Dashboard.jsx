@@ -280,7 +280,7 @@ const Home = () => {
         <p className="max-w-2xl mx-auto italic mb-2 text-xs sm:text-base">
           “This is the best astrology store! Amazing products and great service.”
         </p>
-        <p className="font-medium mb-6">— Siddhivinayak Astro</p>
+        <p className="font-medium mb-6">— SV ASTRO PRIVATE LIMITED</p>
         <Button
           onClick={() => navigate("/astro-list")}
           className="text-sm sm:text-base bg-gradient-to-r from-yellow-500 to-yellow-700 text-black hover:from-yellow-600 hover:to-yellow-800 py-1 sm:py-2 px-4 sm:px-6 shadow"
