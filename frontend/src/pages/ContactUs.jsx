@@ -1,88 +1,98 @@
-import  "react";
+import "react";
 import assets from "../assets/assets";
 
 const ContactUs = () => {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-6 py-12" style={{ backgroundImage: `url(${assets.GalaxyBackground})` }}>
-      <div className="max-w-4xl bg-white p-10 rounded-2xl shadow-lg mt-16 md:mt-24">
+    <div
+      className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-6 py-20"
+      style={{ backgroundImage: `url(${assets.GalaxyBackground})` }}
+    >
+      <div className="max-w-3xl bg-white bg-opacity-90 p-10 rounded-3xl shadow-xl text-center">
         {/* Title */}
-        <h2 className="text-4xl font-bold text-yellow-500 text-center mb-6">
+        <h2 className="text-5xl font-extrabold text-yellow-500 mb-8">
           Contact Us
         </h2>
 
         {/* Introduction */}
-        <p className="text-gray-600 text-lg text-center">
+        <p className="text-gray-700 text-lg mb-10 leading-relaxed">
           Have questions or need guidance? Our team at{" "}
-          <span className="text-yellow-500 font-semibold"> Siddhivinayak Astro </span>  
-          is here to help! Feel free to reach out to us for astrology consultations,  
+          <span className="text-yellow-500 font-semibold">Siddhivinayak Astro</span>{" "}
+          is here to help! Reach out to us anytime for astrology consultations,
           spiritual remedies, or any inquiries.
         </p>
 
+        {/* Legal Name Section */}
+        <div className="mb-10">
+          <h3 className="text-2xl font-semibold text-gray-800 mb-2">SV ASTRO PRIVATE LIMITED</h3>
+          <p className="text-gray-900 font-medium">
+            SV ASTRO Private Limited
+          </p>
+        </div>
+
         {/* Contact Details */}
-        <div className="mt-8">
-          <h3 className="text-2xl font-semibold text-gray-700">Our Contact Information</h3>
-          <div className="mt-4 space-y-3 text-gray-600">
-            <p>📍 <strong>Address:</strong> 123 Spiritual Lane, Pune, India</p>
-            <p>📞 <strong>Phone:</strong> +91 98765 43210</p>
-            <p>📧 <strong>Email:</strong> support@siddhivinayakastro.com</p>
-            <p>🌍 <strong>Website:</strong> www.siddhivinayakastro.com</p>
-          </div>
+        <div className="mb-10 text-gray-700 space-y-4">
+          <p className="text-lg">
+            📍 <strong>Address:</strong> 505-506, BUILDING NO 3 HIGHLAND
+            BUILDING, LOKHANDWALA TOWNSHIP
+            Kandivali East Maharashtra 400101
+            Kandivali East Mumbai India
+          </p>
+          <p className="text-lg">
+            📞 <strong>Phone:</strong> +91 877 982 2161
+          </p>
+          <p className="text-lg">
+            📧 <strong>Email:</strong> siddhivinayakastroworld@gmail.com
+          </p>
+          <p className="text-lg">
+            🌍 <strong>Website:</strong> www.siddhivinayakastro.com
+          </p>
+            <p className="text-lg">
+            🌍 <strong>Website:</strong> www.siddhivinayakastro.in
+          </p>
         </div>
 
         {/* Business Hours */}
-        <div className="mt-8">
-          <h3 className="text-2xl font-semibold text-gray-700">Business Hours</h3>
-          <ul className="mt-4 space-y-3 text-gray-600">
+        <div className="mb-10">
+          <h3 className="text-2xl font-semibold text-gray-800 mb-4">
+            Business Hours
+          </h3>
+          <ul className="text-gray-700 space-y-2 text-lg leading-relaxed">
             <li>🕘 <strong>Monday - Friday:</strong> 9:00 AM – 7:00 PM</li>
             <li>🕙 <strong>Saturday - Sunday:</strong> 10:00 AM – 5:00 PM</li>
             <li>📅 <strong>Holidays:</strong> Closed on major festivals</li>
           </ul>
         </div>
 
-        {/* Contact Form */}
-        <div className="mt-8">
-          <h3 className="text-2xl font-semibold text-gray-700">Send Us a Message</h3>
-          <p className="text-gray-600 mt-3">
-            Fill out the form below, and we&apos;ll get back to you as soon as possible.
-          </p>
-          <form className="mt-6 space-y-4">
-            <input
-              type="text"
-              placeholder="Your Name"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            />
-            <input
-              type="email"
-              placeholder="Your Email"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            />
-            <textarea
-              placeholder="Your Message"
-              rows="4"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            ></textarea>
-            <button
-              type="submit"
-              className="w-full bg-yellow-500 text-white py-3 rounded-lg text-lg font-semibold hover:bg-yellow-600 transition"
-            >
-              Send Message
-            </button>
-          </form>
-        </div>
-
         {/* Social Media Links */}
-        <div className="mt-8 text-center">
-          <h3 className="text-2xl font-semibold text-gray-700">Connect with Us</h3>
-          <p className="text-gray-600 mt-3">Follow us on social media for updates:</p>
-          <div className="flex justify-center space-x-6 mt-4">
-            <a href="https://facebook.com" className="text-blue-600 text-3xl hover:text-blue-800">
-              🔵 Facebook
+        <div>
+          <h3 className="text-2xl font-semibold text-gray-800 mb-4">Connect with Us</h3>
+          <div className="flex justify-center space-x-10 text-4xl">
+            <a
+              href="https://www.facebook.com/people/Siddhivinayak-Astro/pfbid02b4zzioDRA3wVwoEVc6BfsAZrwUcitAV77EgmjnhjMUyxdQrAyXEdcVBJGtWHRsxnl/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 transition"
+              aria-label="Facebook"
+            >
+              🔵
             </a>
-            <a href="https://instagram.com" className="text-pink-600 text-3xl hover:text-pink-800">
-              📷 Instagram
+            <a
+              href="https://www.instagram.com/siddhivinayak_astro/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-pink-600 hover:text-pink-800 transition"
+              aria-label="Instagram"
+            >
+              📷
             </a>
-            <a href="https://twitter.com" className="text-blue-400 text-3xl hover:text-blue-600">
-              🐦 Twitter
+            <a
+              href="https://x.com/SiddhiVinayak33?fbclid=PAZXh0bgNhZW0CMTEAAafw5OTwShZXhtYLOLLMmhCtt8-OufxNYb9-URSzA268YteVMGZ_4v2-qmcfqg_aem_yFpRzZKhd46ZofmI8TYyEg"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-600 transition"
+              aria-label="Twitter"
+            >
+              🐦
             </a>
           </div>
         </div>
