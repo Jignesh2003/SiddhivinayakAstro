@@ -99,68 +99,66 @@ export const verifyPayment = async (req, res) => {
 
     if (orderId.startsWith("PREORDER_") && mongoUpdate) {
       const mongoSession = await Order.startSession();
-
       try {
         logWithTS(`[${requestId}] ⚙️ Starting Mongo order payment update`);
         await mongoSession.withTransaction(async () => {
-          updatedOrder = await Order.findOneAndUpdate(
+          const existingOrder = await Order.findOne(
             { customOrderId: orderId },
-            mongoUpdate,
-            { session: mongoSession, new: true }
+            null,
+            { session: mongoSession }
           );
-          if (!updatedOrder) throw new Error(`No order found with customOrderId=${orderId}`);
 
+          if (!existingOrder) {
+            throw new Error(`No order found with customOrderId=${orderId}`);
+          }
+
+          // ⚠️ Idempotency check — only update if status actually changes
+          if (
+            existingOrder.paymentStatus === "Paid" &&
+            paymentStatus === "SUCCESS"
+          ) {
+            logWithTS(
+              `[${requestId}] ℹ️ Order ${orderId} already marked Paid, skipping stock deduction`
+            );
+            return; // exit — already processed successfully
+          }
+
+          // Update order status
+          Object.assign(existingOrder, mongoUpdate);
+          await existingOrder.save({ session: mongoSession });
+
+          // Deduct stock only on first success
           if (paymentStatus === "SUCCESS") {
-            for (const item of updatedOrder.items) {
+            for (const item of existingOrder.items) {
               const prodRes = await Product.findOneAndUpdate(
-                { _id: item.product, "stock.quantity": { $gte: item.quantity } },
+                {
+                  _id: item.product,
+                  "stock.quantity": { $gte: item.quantity },
+                },
                 { $inc: { "stock.$.quantity": -item.quantity } },
                 { session: mongoSession, new: true }
               );
-              if (!prodRes)
-                throw new Error(`Insufficient stock or product not found for: ${item.product}`);
+              if (!prodRes) {
+                throw new Error(
+                  `Insufficient stock or product not found for: ${item.product}`
+                );
+              }
             }
           }
         });
         mongoSession.endSession();
-        logWithTS(`[${requestId}] ✅ Mongo order ${orderId} status/stock processed: ${paymentStatus}`);
+        logWithTS(
+          `[${requestId}] ✅ Mongo order ${orderId} status/stock processed: ${paymentStatus}`
+        );
       } catch (err) {
         await mongoSession.abortTransaction();
         mongoSession.endSession();
-        logWithTS(`[${requestId}] ❌ MongoDB order/stock update failed:`, err.message);
+        logWithTS(
+          `[${requestId}] ❌ MongoDB order/stock update failed:`,
+          err.message
+        );
         return res.status(500).send("Order/stock update failed.");
       }
-
-
-      try {
-        await PostgresDb.transaction(async (trx) => {
-          const updatedRows = await trx("productorders_transactions")
-            .where({ order_id: orderId })
-            .update({
-              cf_order_id: cfOrderId || null,
-              cf_payment_id: cfPaymentId,
-              status: paymentStatus,                  // Update status based on webhook data
-              amount: paymentAmount,
-              currency: paymentCurrency,
-              payment_method: JSON.stringify(paymentMethod || {}),
-              payment_time: eventTime,  // Convert epoch to JS Date
-              email: customerEmail,
-              phone: customerPhone,
-              signature: incomingSignature,
-            });
-
-          if (updatedRows === 0) {
-            logWithTS(`[${requestId}] ⚠️ No matching productorders_transactions record found for order_id=${orderId}`);
-            // Optionally: handle missing record, e.g., insert, alert, or log
-          } else {
-            logWithTS(`[${requestId}] 📝 Postgres audit log updated for order_id=${orderId}`);
-          }
-        });
-      } catch (pgErr) {
-        logWithTS(`[${requestId}] ❌ Postgres audit log update failed for orderId=${orderId}:`, pgErr.message || pgErr);
-        // Optionally: handle error further (alert, retry, etc.)
-      }
-
     }
 
     // --- Handle WALLET_xxx wallet top-ups ---

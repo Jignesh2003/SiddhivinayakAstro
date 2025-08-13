@@ -25,7 +25,7 @@ const app = express();
 connectDB();
 
 
-app.use("/api/webhook", webhookRoutes);
+app.use("/api/webhook", webhookRoutes); //mutiple debit products 
 
 // Middleware
 app.use(express.json());
