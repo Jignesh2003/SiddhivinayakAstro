@@ -1,7 +1,7 @@
 import  { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import useAuthStore from "../../../store/authStore"; // adjust path if needed
+import useAuthStore from "../../store/useAuthStore"; // adjust path if needed
 import { toast } from "react-toastify";
 
 export const Invoice = () => {
