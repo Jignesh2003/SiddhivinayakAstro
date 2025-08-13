@@ -238,7 +238,7 @@ const AdminOrders = () => {
 
                   {/* Invoice Redirect */}
                   <button
-                    onClick={() => navigate(`/admin-invoice/${order._id}`)}
+                    onClick={() => navigate(`/admin/invoice/${order._id}`)}
                     className="mt-3 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
                   >
                     📄 Invoice
