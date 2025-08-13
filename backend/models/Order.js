@@ -21,11 +21,13 @@ const orderSchema = new mongoose.Schema(
     ],
 
     totalAmount: { type: Number, required: true },
+    gstAmount: { type: Number, required: true }, // calculated GST total
+    deliveryCharges: { type: Number, default: 0 }, // delivery fees
 
     // ── New field to store your Cashfree string ID ──
     customOrderId: {
       type: String,
-      index: true,       // index for fast lookups in webhook
+      index: true, // index for fast lookups in webhook
       default: null,
     },
 
@@ -41,17 +43,24 @@ const orderSchema = new mongoose.Schema(
     },
     orderStatus: {
       type: String,
-      enum: ["Pending", "Shipped", "Out-for-delivery", "Delivered", "Cancelled", "On-way"],
+      enum: [
+        "Pending",
+        "Shipped",
+        "Out-for-delivery",
+        "Delivered",
+        "Cancelled",
+        "On-way",
+      ],
       default: "Pending",
     },
 
     shippingAddress: {
-      name:     { type: String, required: true },
-      phone:    { type: String, required: true },
-      address:  { type: String, required: true },
-      city:     { type: String, required: true },
-      state:    { type: String, required: true },
-      pincode:  { type: String, required: true },
+      name: { type: String, required: true },
+      phone: { type: String, required: true },
+      address: { type: String, required: true },
+      city: { type: String, required: true },
+      state: { type: String, required: true },
+      pincode: { type: String, required: true },
       landmark: { type: String },
     },
   },

@@ -117,30 +117,30 @@ export default function Checkout() {
         ...(item.size && { size: item.size }),
       }));
 
-      if (selectedMethod === "cod") {
-        const orderData = {
-          user: userId,
-          items: orderItems,
-          totalAmount,
-          paymentMethod: "cod",
-          paymentStatus: "Pending",
-          orderStatus: "Pending",
-          shippingAddress,
-        };
+      // if (selectedMethod === "cod") {
+      //   const orderData = {
+      //     user: userId,
+      //     items: orderItems,
+      //     totalAmount,
+      //     paymentMethod: "cod",
+      //     paymentStatus: "Pending",
+      //     orderStatus: "Pending",
+      //     shippingAddress,
+      //   };
 
-        const { data } = await axios.post(
-          `${import.meta.env.VITE_BASE_URL}/place-order`,
-          orderData,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+      //   const { data } = await axios.post(
+      //     `${import.meta.env.VITE_BASE_URL}/place-order`,
+      //     orderData,
+      //     {
+      //       headers: { Authorization: `Bearer ${token}` },
+      //     }
+      //   );
 
-        toast.success("✅ Order placed with Cash on Delivery!");
-        clearCart();
-        navigate(`/cod-confirmation?order_id=${data.order._id}&paymentStatus=${data.paymentStatus}`);
-        return;
-      }
+      //   toast.success("✅ Order placed with Cash on Delivery!");
+      //   clearCart();
+      //   navigate(`/cod-confirmation?order_id=${data.order._id}&paymentStatus=${data.paymentStatus}`);
+      //   return;
+      // }
 
       // ✅ Online Payment (Cashfree)
       if (!cashfreeInstance) throw new Error("Cashfree SDK not ready");
@@ -195,18 +195,18 @@ export default function Checkout() {
 
       <div className="mt-4 space-y-2">
         <h3 className="font-semibold">Payment Method</h3>
-        <label className="flex items-center gap-2 cursor-pointer">
+        {/* <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="radio"
             checked={selectedMethod === "cod"}
             onChange={() => setSelectedMethod("cod")}
           /> Cash on Delivery
-        </label>
+        </label> */}
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="radio"
             checked={selectedMethod === "online"}
-            onChange={() => setSelectedMethod("online")}
+            onChange={() => setSelectedMethod("online")} required
           /> UPI / Card (via Cashfree)
         </label>
       </div>
