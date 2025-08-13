@@ -3,6 +3,7 @@ import authMiddleware from "../middlewares/authMiddleware.js"
 import { checkPaymentStatus, createCashfreeOrder } from "../controllers/cashFreeController.js"
 import {  getWithdrawalRequests, initiateWalletTopupOrder, listWalletTransactions, myWallet, updateWithdrawalStatus, withdrawFundsFromWallet } from "../controllers/walletControllers.js";
 import { checkPaymentOfKundli, premiumKundliMatchingOrder, premiumKundliOrder, premiumPanchangOrder } from "../controllers/kudliController.js";
+import { getOrderInvoiceData } from "../controllers/orderController.js";
 
 const router = express.Router()
 
@@ -31,6 +32,9 @@ router.post('/wallet/initiateTopUp', authMiddleware, initiateWalletTopupOrder)
 
 router.post("/admin/withdrawals/:id/update-status",authMiddleware, updateWithdrawalStatus) // admin withdrawl request response update 
 router.get('/admin/withdrawals/requests', authMiddleware, getWithdrawalRequests); // admin list of withdrawls
+
+router.get("/invoice/:orderId", authMiddleware, getOrderInvoiceData);
+
 
 
 export default router;

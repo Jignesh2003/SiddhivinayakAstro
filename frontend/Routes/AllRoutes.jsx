@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoutes";
 import Layout from "./Layout"; // Import the Layout component
 import DailyPrediction from "../src/pages/DailyPrediction"
+import Invoice from "../src/admin/pages/Invoice"
 
 // Import all your pages
 import Dashboard from "../src/pages/Dashboard";
@@ -58,13 +59,15 @@ import AdminWithdrawalRequests from '../src/admin/pages/AdminWithdrawalRequests'
 
 const AppRoutes = () => {
   return (
-    <Layout> {/* Wrap all routes in the Layout component */}
+    <Layout>
+      {" "}
+      {/* Wrap all routes in the Layout component */}
       <Routes>
         {/* ✅ Public Routes */}
         <Route path="/" element={<Dashboard />} />
         <Route path="/login" element={<Login />} />
         <Route path="/sign-up" element={<Signup />} />
-        <Route path="/astrologer-signup" element={< AstrologerSignup />} />
+        <Route path="/astrologer-signup" element={<AstrologerSignup />} />
         <Route path="/forgot-my-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/about-us" element={<AboutUs />} />
@@ -73,22 +76,26 @@ const AppRoutes = () => {
         <Route path="/partners" element={<Partners />} />
         <Route path="/daily-prediction" element={<DailyPrediction />} />
         <Route path="/life-path-number" element={<LifePathNumber />} />
-        <Route path="/cancellation-policy" element={<CancellationRefundPolicy />} />
+        <Route
+          path="/cancellation-policy"
+          element={<CancellationRefundPolicy />}
+        />
         <Route path="/shipping-policy" element={<ShippingDeliveryPolicy />} />
-
-
-
-
 
         {/* ✅ Blog Pages */}
         <Route path="/blogs-astrology-and-you" element={<AstrologyAndYou />} />
         <Route path="/blogs-daily" element={<DailyBlog />} />
-        <Route path="/blogs-power-of-meditation" element={<PowerOfMeditation />} />
+        <Route
+          path="/blogs-power-of-meditation"
+          element={<PowerOfMeditation />}
+        />
         <Route path="/blogs-sacred-yantras" element={<SacredYantras />} />
-        <Route path="/blogs-planetary-influence" element={<PlanetaryInfluence />} />
+        <Route
+          path="/blogs-planetary-influence"
+          element={<PlanetaryInfluence />}
+        />
         <Route path="/products" element={<Products />} />
         <Route path="/single-product/:id" element={<SingleProduct />} />
-
 
         {/* ✅ 404 Not Found Page */}
         <Route path="*" element={<NotFound />} />
@@ -98,10 +105,19 @@ const AppRoutes = () => {
 
         {/* ✅ Protected Routes */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/astrologer-dashboard" element={<AstrologerDashboard />} />
+          <Route
+            path="/astrologer-dashboard"
+            element={<AstrologerDashboard />}
+          />
           <Route path="/astrologer-profile" element={<AstrologerProfile />} />
-          <Route path="/chat-waiting/:sessionId" element={<ChatRequestTimer />} />
-          <Route path="/astrologer-chat-request" element={<AstrologerChatRequests />} />
+          <Route
+            path="/chat-waiting/:sessionId"
+            element={<ChatRequestTimer />}
+          />
+          <Route
+            path="/astrologer-chat-request"
+            element={<AstrologerChatRequests />}
+          />
           <Route path="/astro-user-chat/:sessionId" element={<ChatBox />} />
           <Route path="/astro-list" element={<AstrologerList />} />
           <Route path="/cart" element={<Cart />} />
@@ -114,13 +130,14 @@ const AppRoutes = () => {
           <Route path="/kundli-details" element={<KundliForm />} />
           <Route path="/kundli-result" element={<KundliResult />} />
           <Route path="/matching-form" element={<MatchingForm />} />
-          <Route path="/matching-kundli-result" element={<MatchingCompatiblityResult />} />
+          <Route
+            path="/matching-kundli-result"
+            element={<MatchingCompatiblityResult />}
+          />
           <Route path="/panchang-form" element={<PanchangForm />} />
           <Route path="/panchang-result" element={<PanchangResult />} />
           <Route path="/cod-confirmation" element={<CodOrderConfirmation />} />
           <Route path="/wallet" element={<Wallet />} />
-
-
         </Route>
 
         {/* ✅ Admin Panel */}
@@ -128,13 +145,18 @@ const AppRoutes = () => {
           <Route element={<AdminLayout />}>
             <Route index element={<AdminHome />} />
             <Route path="dashboard" element={<DashboardAdmin />} />
-            <Route path="verify-astrologers" element={<AdminVerifyAstrologers />} />
+            <Route
+              path="verify-astrologers"
+              element={<AdminVerifyAstrologers />}
+            />
             <Route path="add-product" element={<AddProduct />} />
             <Route path="manage-products" element={<ManageProducts />} />
             <Route path="orders" element={<AdminOrders />} />
-            <Route path="withdrawal-requests" element={<AdminWithdrawalRequests />} />
-
-
+            <Route
+              path="withdrawal-requests"
+              element={<AdminWithdrawalRequests />}
+            />
+            <Route path="invoice/:orderId" element={<Invoice />} />
           </Route>
         </Route>
       </Routes>

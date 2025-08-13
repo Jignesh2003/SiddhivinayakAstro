@@ -156,3 +156,127 @@ export const checkCodOrderStatus = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const getOrderInvoiceData = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId)
+      .populate("user")
+      .populate("product.product");
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Ensure numeric values have safe defaults
+    const totalAmount =
+      typeof order.totalAmount === "number" ? order.totalAmount : 0;
+    const gstAmount = typeof order.gstAmount === "number" ? order.gstAmount : 0;
+    const deliveryCharges =
+      typeof order.deliveryCharges === "number" ? order.deliveryCharges : 0;
+
+    // Set PDF headers before streaming
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=invoice-${orderId}.pdf`
+    );
+
+    const doc = new PDFDocument({ margin: 50 });
+
+    // Handle PDF generation errors
+    doc.on("error", (err) => {
+      console.error("PDF generation error:", err);
+      if (!res.headersSent) {
+        res.status(500).end("Error generating PDF");
+      }
+    });
+
+    // Pipe PDF to the HTTP response
+    doc.pipe(res);
+
+    // ======== PDF CONTENT ========
+
+    // Header
+    doc.fontSize(22).text("INVOICE", { align: "center" }).moveDown();
+
+    // Order info
+    doc.fontSize(12).text(`Order ID: ${order._id}`);
+    doc
+      .text(`Date: ${new Date(order.createdAt).toLocaleDateString()}`)
+      .moveDown();
+
+    // Customer info
+    doc.text(`Customer: ${order.user?.name || "N/A"}`);
+    doc.text(`Email: ${order.user?.email || "N/A"}`);
+    doc.text(`Phone: ${order.shippingAddress?.phone || "N/A"}`).moveDown();
+
+    // Shipping address
+    doc.fontSize(14).text("Shipping Address:", { underline: true });
+    doc
+      .fontSize(12)
+      .text(
+        `${order.shippingAddress?.name || ""}, ${
+          order.shippingAddress?.address || ""
+        }, ${order.shippingAddress?.city || ""}, ${
+          order.shippingAddress?.state || ""
+        } - ${order.shippingAddress?.pincode || ""}`
+      );
+    doc
+      .text(`Landmark: ${order.shippingAddress?.landmark || "N/A"}`)
+      .moveDown();
+
+    // Product list
+    doc.fontSize(14).text("Products:", { underline: true });
+    order.product.forEach((item, index) => {
+      const p = item.product;
+      const price = typeof p.price === "number" ? p.price : 0;
+      doc
+        .fontSize(12)
+        .text(
+          `${index + 1}. ${p.name} (${item.size}) x ${item.quantity} — Rs ${(
+            price * item.quantity
+          ).toFixed(2)}`
+        );
+    });
+
+    doc.moveDown();
+    console.log(gstAmount);
+
+    // Totals (with corrected GST and safe defaults)
+    doc
+      .fontSize(12)
+      .text(`Subtotal: Rs ${(totalAmount - gstAmount).toFixed(2)}`);
+    doc.text(`GST: Rs ${gstAmount.toFixed(2)}`);
+    if (deliveryCharges > 0) {
+      doc.text(`Delivery: Rs ${deliveryCharges.toFixed(2)}`);
+    }
+    doc.font("Helvetica-Bold").text(`Total: Rs ${totalAmount.toFixed(2)}`);
+    doc.font("Helvetica");
+
+    // Payment info
+    doc
+      .moveDown()
+      .text(
+        `Payment: ${order.paymentMethod || "N/A"} — ${
+          order.paymentStatus || "N/A"
+        }`
+      );
+
+    // Footer note
+    doc
+      .moveDown(2)
+      .text("Thank you for shopping with us!", { align: "center" });
+
+    // ======== END CONTENT ========
+
+    // Finalize PDF and close HTTP response
+    doc.end();
+  } catch (error) {
+    console.error("Error generating invoice:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+};
