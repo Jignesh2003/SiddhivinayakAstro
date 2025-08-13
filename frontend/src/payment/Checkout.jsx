@@ -8,7 +8,7 @@ export default function Checkout() {
   const { userId, token, logout } = useAuthStore.getState();
   const { cart, clearCart, fetchCart } = useCartStore.getState();
 
-  const [selectedMethod, setSelectedMethod] = useState("cod");
+  const [selectedMethod, setSelectedMethod] = useState(""); // no default, must be explicitly chosen
   const [loading, setLoading] = useState(false);
   const [cashfreeInstance, setCashfreeInstance] = useState(null);
   const [shippingAddress, setShippingAddress] = useState({
@@ -46,7 +46,9 @@ export default function Checkout() {
   // ✅ Fetch live stock for each product
   const fetchLiveStock = async (productId) => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_BASE_URL}/products/${productId}`);
+      const res = await axios.get(
+        `${import.meta.env.VITE_BASE_URL}/products/${productId}`
+      );
       return res.data;
     } catch (error) {
       console.error("❌ Failed to fetch live product:", productId, error);
@@ -76,15 +78,13 @@ export default function Checkout() {
       let available = 0;
 
       if (product.sizeType !== "Quantity" && item.size) {
-        const variant = product.stock.find(v => v.size === item.size);
+        const variant = product.stock.find((v) => v.size === item.size);
         available = variant ? Number(variant.quantity) : 0;
       } else {
         available = Array.isArray(product.stock)
           ? product.stock.reduce((sum, s) => sum + Number(s.quantity || 0), 0)
           : Number(product.stock?.quantity ?? 0);
       }
-
-      console.log(`Validating: ${product.name}, want ${quantity}, available ${available}`);
 
       if (!Number.isFinite(quantity) || quantity < 1)
         throw new Error(
@@ -94,96 +94,98 @@ export default function Checkout() {
         throw new Error(`Only ${available} left of "${product.name}"`);
       }
     }
+
+    // Require the online payment method selection
+    if (!selectedMethod) {
+      throw new Error("Please select a payment method");
+    }
   };
 
- const handleOrderSubmit = async () => {
-   if (loading) return;
-   setLoading(true);
+  const handleOrderSubmit = async () => {
+    if (loading) return;
+    setLoading(true);
 
-   try {
-     await fetchCart(); // Refresh cart
-     await validateInputs();
+    try {
+      await fetchCart();
+      await validateInputs();
 
-     // Calculate subtotal (price w/o GST separation yet)
-     const subTotal = cart.reduce(
-       (sum, item) => sum + item.product.price * Number(item.quantity ?? 1),
-       0
-     );
-
-     // GST is included in price: Extract 18% portion
-     // Formula to extract GST from an inclusive amount: amount * (18 / 118)
-     const gstAmount = Number(((subTotal * 18) / 118).toFixed(2));
-
-     // Delivery logic
-     const deliveryCharges = subTotal > 499 ? 0 : 100;
-
-     const orderItems = cart.map((item) => ({
-       product: item.product._id,
-       quantity: Number(item.quantity ?? 1),
-       ...(item.size && { size: item.size }),
-     }));
-
-     // === COD Example (uncomment if needed) ===
-     /*
-    if (selectedMethod === "cod") {
-      const { data } = await axios.post(
-        `${import.meta.env.VITE_BASE_URL}/place-order`,
-        {
-          user: userId,
-          items: orderItems,
-          totalAmount: subTotal + deliveryCharges,
-          gstAmount,
-          deliveryCharges,
-          paymentMethod: "cod",
-          paymentStatus: "Pending",
-          orderStatus: "Pending",
-          shippingAddress,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const subTotal = cart.reduce(
+        (sum, item) => sum + item.product.price * Number(item.quantity ?? 1),
+        0
       );
 
-      toast.success("✅ Order placed with Cash on Delivery!");
-      clearCart();
-      navigate(`/cod-confirmation?order_id=${data.order._id}&paymentStatus=${data.paymentStatus}`);
-      return;
+      const gstAmount = Number(((subTotal * 18) / 118).toFixed(2));
+      const deliveryCharges = subTotal > 499 ? 0 : 100;
+
+      const orderItems = cart.map((item) => ({
+        product: item.product._id,
+        quantity: Number(item.quantity ?? 1),
+        ...(item.size && { size: item.size }),
+      }));
+
+      // COD — commented out for future
+      /*
+      if (selectedMethod === "cod") {
+        const { data } = await axios.post(
+          `${import.meta.env.VITE_BASE_URL}/place-order`,
+          {
+            user: userId,
+            items: orderItems,
+            totalAmount: subTotal + deliveryCharges,
+            gstAmount,
+            deliveryCharges,
+            paymentMethod: "cod",
+            paymentStatus: "Pending",
+            orderStatus: "Pending",
+            shippingAddress,
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        toast.success("✅ Order placed with Cash on Delivery!");
+        clearCart();
+        navigate(
+          `/cod-confirmation?order_id=${data.order._id}&paymentStatus=${data.paymentStatus}`
+        );
+        return;
+      }
+      */
+
+      // ✅ Online Payment (Cashfree)
+      if (!cashfreeInstance) throw new Error("Cashfree SDK not ready");
+
+      const cfRes = await axios.post(
+        `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
+        {
+          amount: subTotal + deliveryCharges,
+          gstAmount,
+          deliveryCharges,
+          shippingAddress,
+          items: orderItems,
+          paymentMethod: "online", // force online payment
+        },
+        {
+          headers: { Authorization: token ? `Bearer ${token}` : "" },
+        }
+      );
+
+      const { payment_session_id } = cfRes.data;
+      if (!payment_session_id)
+        throw new Error("No payment session ID received");
+
+      cashfreeInstance.checkout({
+        paymentSessionId: payment_session_id,
+        redirectTarget: "_self",
+      });
+    } catch (err) {
+      console.error("❌ Checkout error:", err);
+      toast.error(
+        err?.response?.data?.message || err.message || "Checkout failed."
+      );
+      if (err.message && err.message.includes("not logged in")) logout();
+    } finally {
+      setLoading(false);
     }
-    */
-
-     // ✅ Online Payment (Cashfree)
-     if (!cashfreeInstance) throw new Error("Cashfree SDK not ready");
-
-     const cfRes = await axios.post(
-       `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
-       {
-         amount: subTotal + deliveryCharges, // send full amount
-         gstAmount, // send GST separately
-         deliveryCharges,
-         shippingAddress,
-         items: orderItems,
-       },
-       {
-         headers: { Authorization: token ? `Bearer ${token}` : "" },
-       }
-     );
-
-     const { payment_session_id } = cfRes.data;
-     if (!payment_session_id) throw new Error("No payment session ID received");
-
-     cashfreeInstance.checkout({
-       paymentSessionId: payment_session_id,
-       redirectTarget: "_self",
-     });
-   } catch (err) {
-     console.error("❌ Checkout error:", err);
-     toast.error(
-       err?.response?.data?.message || err.message || "Checkout failed."
-     );
-     if (err.message && err.message.includes("not logged in")) logout();
-   } finally {
-     setLoading(false);
-   }
- };
-
+  };
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg">
@@ -206,19 +208,27 @@ export default function Checkout() {
 
       <div className="mt-4 space-y-2">
         <h3 className="font-semibold">Payment Method</h3>
-        {/* <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            checked={selectedMethod === "cod"}
-            onChange={() => setSelectedMethod("cod")}
-          /> Cash on Delivery
-        </label> */}
+
+        {/* COD kept for future use but hidden for now
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="radio"
+            name="paymentMethod"
+            checked={selectedMethod === "cod"}
+            onChange={() => setSelectedMethod("cod")}
+          /> Cash on Delivery
+        </label>
+        */}
+
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="paymentMethod"
             checked={selectedMethod === "online"}
-            onChange={() => setSelectedMethod("online")} required
-          /> UPI / Card (via Cashfree)
+            onChange={() => setSelectedMethod("online")}
+            required
+          />{" "}
+          UPI / Card (via Cashfree)
         </label>
       </div>
 
