@@ -10,6 +10,7 @@ export const createCashfreeOrder = async (req, res) => {
   const session = await Order.startSession();
   session.startTransaction();
   let customOrderId, user, amount, shippingAddress, items, userId;
+
   try {
     ({ amount, shippingAddress, items } = req.body);
     userId = req.user?.id;
@@ -20,7 +21,9 @@ export const createCashfreeOrder = async (req, res) => {
 
     user = await User.findById(userId);
     if (!user || !user.email) {
-      return res.status(400).json({ message: "User not found or missing email" });
+      return res
+        .status(400)
+        .json({ message: "User not found or missing email" });
     }
 
     // Validate phone format
@@ -30,33 +33,53 @@ export const createCashfreeOrder = async (req, res) => {
 
     customOrderId = `PREORDER_${userId}_${Date.now()}`;
 
-    // Step 1: Validate items, DO NOT update stock here!
+    // Step 1: Validate items, DO NOT update stock here
     for (const item of items) {
       const product = await Product.findById(item.product);
       if (!product) {
         await session.abortTransaction();
         session.endSession();
-        return res.status(400).json({ message: `Product not found: ${item.product}` });
+        return res
+          .status(400)
+          .json({ message: `Product not found: ${item.product}` });
       }
-      const stockEntry = product.stock?.find(s => s.quantity >= item.quantity);
+      const stockEntry = product.stock?.find(
+        (s) => s.quantity >= item.quantity
+      );
       if (!stockEntry) {
         await session.abortTransaction();
         session.endSession();
-        return res.status(400).json({ message: `Not enough stock for product ${item.product}` });
+        return res
+          .status(400)
+          .json({ message: `Not enough stock for product ${item.product}` });
       }
     }
 
-    // Step 2: Save the pending order in Mongo
-    const newOrder = await Order.create([{
-      user: userId,
-      items,
-      totalAmount: amount,
-      paymentMethod: "online",
-      paymentStatus: "Initiated",
-      orderStatus: "Pending",
-      shippingAddress,
-      customOrderId,
-    }], { session });
+    // === Step 2: Calculate GST and Delivery Charges ===
+    // GST is included in amount (18% inclusive) -> extract GST portion
+    const gstAmount = Number(((amount * 18) / 118).toFixed(2));
+
+    // Delivery: Free if >499 else ₹100
+    const deliveryCharges = amount > 499 ? 0 : 100;
+
+    // === Step 3: Save the pending order in Mongo ===
+    const newOrder = await Order.create(
+      [
+        {
+          user: userId,
+          items,
+          totalAmount: amount + deliveryCharges, // store full payable total
+          gstAmount,
+          deliveryCharges,
+          paymentMethod: "online",
+          paymentStatus: "Initiated",
+          orderStatus: "Pending",
+          shippingAddress,
+          customOrderId,
+        },
+      ],
+      { session }
+    );
 
     await session.commitTransaction();
     session.endSession();
@@ -77,7 +100,7 @@ export const createCashfreeOrder = async (req, res) => {
       cf_order_id: null,
       cf_payment_id: null,
       status: "INITIATED",
-      amount: amount,
+      amount: amount, // original subtotal without delivery
       currency: "INR",
       payment_method: null,
       payment_time: new Date(),
@@ -87,7 +110,6 @@ export const createCashfreeOrder = async (req, res) => {
     });
   } catch (pgErr) {
     console.error("❌ Failed to log initiated payment in Postgres:", pgErr);
-    // Do not fail the API, but you may want to notify ops/admin here
   }
 
   // === CALL CASHFREE API ===
@@ -100,7 +122,7 @@ export const createCashfreeOrder = async (req, res) => {
 
     const payload = {
       order_id: customOrderId,
-      order_amount: Number(amount),
+      order_amount: Number(amount + (amount > 499 ? 0 : 100)), // total to pay
       order_currency: "INR",
       customer_details: {
         customer_id: String(userId),
@@ -119,6 +141,10 @@ export const createCashfreeOrder = async (req, res) => {
       },
     };
 
+    if (process.env.NODE_ENV !== "production") {
+      console.log("📦 Cashfree Payload:", JSON.stringify(payload, null, 2));
+    }
+
     const headers = {
       "x-client-id": clientId,
       "x-client-secret": clientSecret,
@@ -126,10 +152,6 @@ export const createCashfreeOrder = async (req, res) => {
       "x-request-id": uuidv4(),
       "Content-Type": "application/json",
     };
-
-    if (process.env.NODE_ENV !== "production") {
-      console.log("📦 Cashfree Payload:", JSON.stringify(payload, null, 2));
-    }
 
     const response = await axios.post(
       "https://sandbox.cashfree.com/pg/orders",
@@ -139,7 +161,9 @@ export const createCashfreeOrder = async (req, res) => {
 
     const { payment_session_id, payment_link, checkout_url } = response.data;
     if (!payment_session_id) {
-      return res.status(500).json({ message: "Missing session ID in Cashfree response" });
+      return res
+        .status(500)
+        .json({ message: "Missing session ID in Cashfree response" });
     }
 
     return res.status(200).json({
@@ -149,13 +173,17 @@ export const createCashfreeOrder = async (req, res) => {
       customOrderId,
     });
   } catch (err) {
-    console.error("❌ Cashfree API order creation failed:", err.response?.data || err.message || err);
+    console.error(
+      "❌ Cashfree API order creation failed:",
+      err.response?.data || err.message || err
+    );
     return res.status(500).json({
       message: "Failed to create Cashfree order",
       details: err.response?.data || err.message || err,
     });
   }
 };
+
 
 
 export const checkPaymentStatus = async (req, res) => {

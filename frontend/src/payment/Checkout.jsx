@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import useAuthStore from "../store/useAuthStore";
 import useCartStore from "../store/useCartStore";
 
 export default function Checkout() {
-  const navigate = useNavigate();
   const { userId, token, logout } = useAuthStore.getState();
   const { cart, clearCart, fetchCart } = useCartStore.getState();
 
@@ -98,81 +96,94 @@ export default function Checkout() {
     }
   };
 
-  const handleOrderSubmit = async () => {
-    if (loading) return;
-    setLoading(true);
+ const handleOrderSubmit = async () => {
+   if (loading) return;
+   setLoading(true);
 
-    try {
-      await fetchCart(); // Ensure cart is refreshed
-      await validateInputs(); // ❗ Live product validation
+   try {
+     await fetchCart(); // Refresh cart
+     await validateInputs();
 
-      const totalAmount = cart.reduce(
-        (sum, item) => sum + item.product.price * Number(item.quantity ?? 1),
-        0
-      );
+     // Calculate subtotal (price w/o GST separation yet)
+     const subTotal = cart.reduce(
+       (sum, item) => sum + item.product.price * Number(item.quantity ?? 1),
+       0
+     );
 
-      const orderItems = cart.map((item) => ({
-        product: item.product._id,
-        quantity: Number(item.quantity ?? 1),
-        ...(item.size && { size: item.size }),
-      }));
+     // GST is included in price: Extract 18% portion
+     // Formula to extract GST from an inclusive amount: amount * (18 / 118)
+     const gstAmount = Number(((subTotal * 18) / 118).toFixed(2));
 
-      // if (selectedMethod === "cod") {
-      //   const orderData = {
-      //     user: userId,
-      //     items: orderItems,
-      //     totalAmount,
-      //     paymentMethod: "cod",
-      //     paymentStatus: "Pending",
-      //     orderStatus: "Pending",
-      //     shippingAddress,
-      //   };
+     // Delivery logic
+     const deliveryCharges = subTotal > 499 ? 0 : 100;
 
-      //   const { data } = await axios.post(
-      //     `${import.meta.env.VITE_BASE_URL}/place-order`,
-      //     orderData,
-      //     {
-      //       headers: { Authorization: `Bearer ${token}` },
-      //     }
-      //   );
+     const orderItems = cart.map((item) => ({
+       product: item.product._id,
+       quantity: Number(item.quantity ?? 1),
+       ...(item.size && { size: item.size }),
+     }));
 
-      //   toast.success("✅ Order placed with Cash on Delivery!");
-      //   clearCart();
-      //   navigate(`/cod-confirmation?order_id=${data.order._id}&paymentStatus=${data.paymentStatus}`);
-      //   return;
-      // }
-
-      // ✅ Online Payment (Cashfree)
-      if (!cashfreeInstance) throw new Error("Cashfree SDK not ready");
-
-      const cfRes = await axios.post(
-        `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
+     // === COD Example (uncomment if needed) ===
+     /*
+    if (selectedMethod === "cod") {
+      const { data } = await axios.post(
+        `${import.meta.env.VITE_BASE_URL}/place-order`,
         {
-          amount: totalAmount,
-          shippingAddress,
+          user: userId,
           items: orderItems,
+          totalAmount: subTotal + deliveryCharges,
+          gstAmount,
+          deliveryCharges,
+          paymentMethod: "cod",
+          paymentStatus: "Pending",
+          orderStatus: "Pending",
+          shippingAddress,
         },
-        {
-          headers: { Authorization: token ? `Bearer ${token}` : "" },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const { payment_session_id } = cfRes.data;
-      if (!payment_session_id) throw new Error("No payment session ID received");
-
-      cashfreeInstance.checkout({
-        paymentSessionId: payment_session_id,
-        redirectTarget: "_self",
-      });
-
-    } catch (err) {
-      console.error("❌ Checkout error:", err);
-      toast.error(err?.response?.data?.message || err.message || "Checkout failed.");
-      if (err.message && err.message.includes("not logged in")) logout();
-    } finally {
-      setLoading(false);
+      toast.success("✅ Order placed with Cash on Delivery!");
+      clearCart();
+      navigate(`/cod-confirmation?order_id=${data.order._id}&paymentStatus=${data.paymentStatus}`);
+      return;
     }
-  };
+    */
+
+     // ✅ Online Payment (Cashfree)
+     if (!cashfreeInstance) throw new Error("Cashfree SDK not ready");
+
+     const cfRes = await axios.post(
+       `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
+       {
+         amount: subTotal + deliveryCharges, // send full amount
+         gstAmount, // send GST separately
+         deliveryCharges,
+         shippingAddress,
+         items: orderItems,
+       },
+       {
+         headers: { Authorization: token ? `Bearer ${token}` : "" },
+       }
+     );
+
+     const { payment_session_id } = cfRes.data;
+     if (!payment_session_id) throw new Error("No payment session ID received");
+
+     cashfreeInstance.checkout({
+       paymentSessionId: payment_session_id,
+       redirectTarget: "_self",
+     });
+   } catch (err) {
+     console.error("❌ Checkout error:", err);
+     toast.error(
+       err?.response?.data?.message || err.message || "Checkout failed."
+     );
+     if (err.message && err.message.includes("not logged in")) logout();
+   } finally {
+     setLoading(false);
+   }
+ };
+
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg">

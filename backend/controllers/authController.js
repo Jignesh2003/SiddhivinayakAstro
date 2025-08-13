@@ -74,7 +74,6 @@ export const signupUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 // ✅ Login Controller
 export const loginUser = async (req, res) => {
   try {
