@@ -2,7 +2,7 @@ import wkhtmltopdf from 'wkhtmltopdf';
 import ejs from 'ejs';
 import fs from 'fs';
 import path from 'path';
-import redis from '../utils/redisClient.js';
+// import redis from '../utils/redisClient.js';
 
 export const generateKundaliPDF = async (req, res) => {
   try {

@@ -1,25 +1,27 @@
 import mongoose from "mongoose";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js"
-import {  updateOrderStatusSchema } from "../validation/orderValidation.js"
 import Cart from "../models/cart.js"
+import PDFDocument from "pdfkit";
+
 
 // 🟢 Get single order by ID || FOr order Details
 export const getSingleOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
-      .select("-items") // Exclude the items field
-      .lean(); // Use .lean() for better performance
+      .populate("items.product", "name images price") // get product details
+      .lean();
 
     if (!order) return res.status(404).json({ error: "Order not found" });
 
-    console.log("Order fetched:", order); // Log the fetched order
+    console.log("Order fetched:", order);
     res.json(order);
   } catch (error) {
     console.error("Error fetching order:", error);
     res.status(500).json({ error: "Server Error" });
   }
 };
+
 
 // ✅ Get All Orders (Admin & Seller)
 export const getAllOrders = async (req, res) => {
@@ -117,8 +119,6 @@ export const placeOrder = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
-
 //getiing user order placed list
 export const getUserOrders = async (req, res) => {
   try {
@@ -157,126 +157,172 @@ export const checkCodOrderStatus = async (req, res) => {
   }
 };
 
-export const getOrderInvoiceData = async (req, res, next) => {
+export const getOrderInvoiceData = async (req, res) => {
   try {
     const { orderId } = req.params;
+    console.log(orderId);
 
     const order = await Order.findById(orderId)
-      .populate("user")
-      .populate("product.product");
+      .populate("items.product")
+      .populate("user", "name email");
 
     if (!order) {
-      return res.status(404).json({ message: "Order not found" });
+      console.log("Order not found");
+      return res.status(404).send("Order not found");
     }
 
-    // Ensure numeric values have safe defaults
-    const totalAmount =
-      typeof order.totalAmount === "number" ? order.totalAmount : 0;
-    const gstAmount = typeof order.gstAmount === "number" ? order.gstAmount : 0;
-    const deliveryCharges =
-      typeof order.deliveryCharges === "number" ? order.deliveryCharges : 0;
-
-    // Set PDF headers before streaming
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=invoice-${orderId}.pdf`
-    );
-
-    const doc = new PDFDocument({ margin: 50 });
-
-    // Handle PDF generation errors
-    doc.on("error", (err) => {
-      console.error("PDF generation error:", err);
-      if (!res.headersSent) {
-        res.status(500).end("Error generating PDF");
-      }
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename=invoice-${orderId}.pdf`,
     });
 
-    // Pipe PDF to the HTTP response
+    const doc = new PDFDocument({ size: "A4", margin: 50 });
     doc.pipe(res);
 
-    // ======== PDF CONTENT ========
+    // Helper function to draw horizontal lines
+    const drawLine = (y) => {
+      doc
+        .strokeColor("#eeeeee")
+        .lineWidth(1)
+        .moveTo(50, y)
+        .lineTo(545, y)
+        .stroke();
+    };
 
-    // Header
-    doc.fontSize(22).text("INVOICE", { align: "center" }).moveDown();
-
-    // Order info
-    doc.fontSize(12).text(`Order ID: ${order._id}`);
+    // === BRANDING & HEADER ===
     doc
-      .text(`Date: ${new Date(order.createdAt).toLocaleDateString()}`)
+      .fillColor("#333333")
+      .fontSize(20)
+      .text("SV ASTRO PRIVATE LIMITED", 180, 50, { align: "left" })
+      // .fontSize(10)
+      // .text("GSTIN: 22AAAAA0000A1Z5", 180, 75)
+      .text("www.siddhivinayakastroworld.com", 180, 90)
       .moveDown();
 
-    // Customer info
-    doc.text(`Customer: ${order.user?.name || "N/A"}`);
-    doc.text(`Email: ${order.user?.email || "N/A"}`);
-    doc.text(`Phone: ${order.shippingAddress?.phone || "N/A"}`).moveDown();
+    drawLine(120);
 
-    // Shipping address
-    doc.fontSize(14).text("Shipping Address:", { underline: true });
+    // === INVOICE TITLE & DETAILS ===
+    doc.fontSize(18).fillColor("#111111").text("TAX INVOICE", 50, 130);
+
+    const startY = 160;
+    doc
+      .fontSize(10)
+      .fillColor("#555555")
+      .text(`Invoice ID: ${order._id}`, 50, startY)
+      .text(
+        `Order Date: ${new Date(order.createdAt).toLocaleDateString()}`,
+        50,
+        startY + 15
+      )
+      .text(`Payment Method: ${order.paymentMethod}`, 50, startY + 30)
+      .text(`Payment Status: ${order.paymentStatus}`, 50, startY + 45)
+      .text(`Order Status: ${order.orderStatus}`, 50, startY + 60);
+
+    // === BILL TO (CUSTOMER) ===
+    const billToX = 350;
+    doc
+      .fontSize(10)
+      .fillColor("#555555")
+      .text("Bill To:", billToX, 130)
+      .font("Helvetica-Bold")
+      .fillColor("#000000")
+      .text(order.shippingAddress.name, billToX, 145)
+      .font("Helvetica")
+      .text(`Phone: ${order.shippingAddress.phone}`, billToX, 160)
+      .text(order.shippingAddress.address, billToX, 175)
+      .text(
+        `${order.shippingAddress.city}, ${order.shippingAddress.state} - ${order.shippingAddress.pincode}`,
+        billToX,
+        190
+      );
+
+    if (order.shippingAddress.landmark) {
+      doc.text(`Landmark: ${order.shippingAddress.landmark}`, billToX, 205);
+    }
+
+    drawLine(230);
+
+    // === TABLE HEADER ===
+    const tableTop = 250;
+    const itemX = 50;
+    const qtyX = 60;
+    const prodX = 100;
+    const priceX = 350;
+    const totalX = 450;
+
     doc
       .fontSize(12)
-      .text(
-        `${order.shippingAddress?.name || ""}, ${
-          order.shippingAddress?.address || ""
-        }, ${order.shippingAddress?.city || ""}, ${
-          order.shippingAddress?.state || ""
-        } - ${order.shippingAddress?.pincode || ""}`
-      );
-    doc
-      .text(`Landmark: ${order.shippingAddress?.landmark || "N/A"}`)
-      .moveDown();
+      .fillColor("#000000")
+      .font("Helvetica-Bold")
+      .text("Qty", qtyX, tableTop)
+      .text("Product Name", prodX, tableTop)
+      .text("Price", priceX, tableTop, { width: 90, align: "right" })
+      .text("Total", totalX, tableTop, { align: "right" });
 
-    // Product list
-    doc.fontSize(14).text("Products:", { underline: true });
-    order.product.forEach((item, index) => {
-      const p = item.product;
-      const price = typeof p.price === "number" ? p.price : 0;
+    drawLine(tableTop + 18);
+
+    // === TABLE ROWS ===
+    let y = tableTop + 25;
+    doc.font("Helvetica").fontSize(11).fillColor("#333333");
+
+    order.items.forEach((item) => {
+      const itemTotal = item.quantity * (item.product.price || 0);
+
       doc
-        .fontSize(12)
-        .text(
-          `${index + 1}. ${p.name} (${item.size}) x ${item.quantity} — Rs ${(
-            price * item.quantity
-          ).toFixed(2)}`
-        );
+        .text(item.quantity, qtyX, y)
+        .text(item.product.name, prodX, y)
+        .text(`RS ${item.product.price.toFixed(2)}`, priceX, y, {
+          width: 90,
+          align: "right",
+        })
+        .text(`RS ${itemTotal.toFixed(2)}`, totalX, y, { align: "right" });
+
+      y += 20;
+      drawLine(y - 5);
     });
 
-    doc.moveDown();
-    console.log(gstAmount);
+    // === SUMMARY BOX ===
+    y += 15;
+    drawLine(y);
 
-    // Totals (with corrected GST and safe defaults)
+    const subTotal =
+      order.totalAmount - (order.gstAmount || 0) - (order.deliveryCharges || 0);
+
     doc
       .fontSize(12)
-      .text(`Subtotal: Rs ${(totalAmount - gstAmount).toFixed(2)}`);
-    doc.text(`GST: Rs ${gstAmount.toFixed(2)}`);
-    if (deliveryCharges > 0) {
-      doc.text(`Delivery: Rs ${deliveryCharges.toFixed(2)}`);
-    }
-    doc.font("Helvetica-Bold").text(`Total: Rs ${totalAmount.toFixed(2)}`);
-    doc.font("Helvetica");
+      .font("Helvetica-Bold")
+      .text("Summary", 50, y + 10);
 
-    // Payment info
     doc
-      .moveDown()
-      .text(
-        `Payment: ${order.paymentMethod || "N/A"} — ${
-          order.paymentStatus || "N/A"
-        }`
-      );
+      .fontSize(11)
+      .font("Helvetica")
+      .text(`Subtotal:`, 350, y + 30)
+      .text(`RS ${subTotal.toFixed(2)}`, 460, y + 30, { align: "right" })
+      .text(`GST:`, 350, y + 50)
+      .text(`RS ${(order.gstAmount || 0).toFixed(2)}`, 460, y + 50, {
+        align: "right",
+      })
+      .text(`Delivery Charges:`, 350, y + 70)
+      .text(`RS ${(order.deliveryCharges || 0).toFixed(2)}`, 460, y + 70, {
+        align: "right",
+      })
+      .font("Helvetica-Bold")
+      .text(`Grand Total:`, 350, y + 90)
+      .text(`RS ${order.totalAmount.toFixed(2)}`, 460, y + 90, {
+        align: "right",
+      });
 
-    // Footer note
-    doc
-      .moveDown(2)
-      .text("Thank you for shopping with us!", { align: "center" });
-
-    // ======== END CONTENT ========
-
-    // Finalize PDF and close HTTP response
-    doc.end();
+    // === FOOTER ===
+    doc.fontSize(10).font("Helvetica").fillColor("#666666");
+    doc.text(
+      "Thank you for your purchase! For any queries, contact siddhivinayakastroworld@gmail.com",
+      50,
+      780,
+      { align: "center", width: 500 }
+    );
+    doc.end();    
   } catch (error) {
-    console.error("Error generating invoice:", error);
-    if (!res.headersSent) {
-      res.status(500).json({ message: "Internal server error" });
-    }
+    console.error("Invoice PDF generation failed:", error);
+    res.status(500).send("Server error");
   }
-};
+}

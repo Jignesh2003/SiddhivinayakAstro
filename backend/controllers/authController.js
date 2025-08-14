@@ -205,20 +205,26 @@ export const checkingAuth = (req, res) => {
 //Add review and rating 
 export const addReviewProduct = async (req,res)=>{
     try {
+//  const { error, value } = addReviewSchema.validate(req.body);
+//   if (error) return res.status(400).json({ message: error.details[0].message });
+    const userId = req.user.id;
+    const {productId} = req.params;
+  const { text, rating, media } = req.body; 
 
- const { error, value } = addReviewSchema.validate(req.body);
-  if (error) return res.status(400).json({ message: error.details[0].message });
-
-  const { userId, text, rating, media } = value;  
+  console.log(productId);
+  
+   
   if (!userId || !text || !rating) {
     return res.status(400).json({ message: "User ID, text, and rating are required." });
   }
+  console.log(text, rating, media);
 
+  // Validate rating range
   if (rating < 1 || rating > 5) {
     return res.status(400).json({ message: "Rating must be between 1 and 5." });
   }
 
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
@@ -236,6 +242,8 @@ export const addReviewProduct = async (req,res)=>{
 
     res.status(201).json({ message: "Review added", review: newReview });
   } catch (error) {
+    console.log(error);
+    
     res.status(500).json({ message: "Error adding review", error });
   }
 }
@@ -277,7 +285,6 @@ export const addProduct = async (req, res) => {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: "At least one image is required." });
     }
-
     // basic fields
     const {
       name,

@@ -7,20 +7,18 @@ import { toast } from "react-toastify";
 export const Invoice = () => {
   const { orderId } = useParams();
   const { token } = useAuthStore();
+console.log(orderId);
 
   // Function to download invoice
   const handleDownloadInvoice = async () => {
     try {
       const res = await axios.get(
-        `${import.meta.env.VITE_API_ORDER_URL}/invoice/${orderId}`,
+        `${import.meta.env.VITE_PAYMENT_URL}/invoice/${orderId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-          responseType: "blob", // Important for downloading PDF
+          responseType: "blob",
         }
       );
-      console.log(res);
-
-      // Create a Blob URL
       const url = window.URL.createObjectURL(
         new Blob([res.data], { type: "application/pdf" })
       );
@@ -30,10 +28,10 @@ export const Invoice = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
-
-      toast.success("Invoice downloaded");
+      window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Invoice download failed", error);
+      console.log(error);
+      
       toast.error("Failed to download invoice");
     }
   };

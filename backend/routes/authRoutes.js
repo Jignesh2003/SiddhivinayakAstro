@@ -69,7 +69,7 @@ router.post("/add-wishlist", authMiddleware, addToWishlist);
 router.delete("/remove-wishlist", authMiddleware, removeFromWishlist);
 
 //add reviews and rating 
-router.post("/products/:id/reviews", authMiddleware, addReviewProduct)
+router.post("/products/:productId/reviews", authMiddleware, addReviewProduct);
 
 //delete my review
 router.delete("/:productId/reviews/:reviewId", authMiddleware, deleteReview);

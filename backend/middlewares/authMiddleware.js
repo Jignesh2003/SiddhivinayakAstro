@@ -12,10 +12,9 @@ import jwt from "jsonwebtoken";
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded; // ✅ Ensure `req.user.id` is available
     console.log(req.user);
-    
     next();
   } catch (error) {
-    console.error("JWT Verification Error:", error.message);
+    console.log("JWT Verification Error:", error.message);
     res.status(401).json({ message: "Invalid token" });
   }
 }
