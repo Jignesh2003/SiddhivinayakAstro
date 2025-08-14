@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { getProkeralaToken } from '../utils/prokerelaClient.js'
-// import redis from '../utils/redisClient.js'
+import redis from '../utils/redisClient.js'
 import { v4 as uuidv4 } from "uuid";
 import User from '../models/User.js';
 import postgresDb from "../config/postgresDb.js"

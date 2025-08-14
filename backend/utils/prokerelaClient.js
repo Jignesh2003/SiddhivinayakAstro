@@ -1,7 +1,7 @@
 import axios from 'axios';
 import qs from 'qs';
 import dotenv from 'dotenv';
-// import redisClient from './redisClient.js';
+import redisClient from './redisClient.js';
 dotenv.config();
 
 const TOKEN_KEY = 'prokerala:token';
