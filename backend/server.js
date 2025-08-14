@@ -75,6 +75,8 @@ const io = new Server(server, {
 // Start all services
 async function startServer() {
   try {
+    console.log("Starting server...");
+
     console.log("🔄 Connecting to Database...");
     await connectDB(); // Will throw if fails
     console.log("✅ MongoDB Connected!");
