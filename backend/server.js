@@ -7,7 +7,6 @@ import http from "http";
 import path from "path";
 import { Server } from "socket.io";
 import cron from "node-cron";
-
 import connectDB from "./config/db.js";
 import chatRoutes from "./routes/chatRoute.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -71,6 +70,7 @@ const io = new Server(server, {
     credentials: true,
   },
 });
+console.log(process.env.MONGO_URI);
 
 // Start all services
 async function startServer() {
