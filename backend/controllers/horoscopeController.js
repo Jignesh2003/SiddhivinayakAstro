@@ -1,5 +1,5 @@
 import axios from 'axios';
-// import redisClient from '../utils/redisClient.js';
+import redisClient from '../utils/redisClient.js';
 import { getProkeralaToken } from '../utils/prokerelaClient.js';
 
 export const allGeneralPredictions = async (req, res) => {
