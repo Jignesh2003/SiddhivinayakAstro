@@ -34,9 +34,9 @@ router.post("/signup", otpLimiter, signupUser);
 router.post("/login", loginUser);
 
 //otp route here
-router.post("/forgot-password", otpLimiter, forgotPassword); // 🔥 Forgot Password Route
+router.post("/forgot-password", otpLimiter, forgotPassword); //  Forgot Password Route
 
-router.post("/reset-password/:token", resetPassword); // 🔥 Reset Password Route
+router.post("/reset-password/:token", resetPassword); //  Reset Password Route
 
 router.get("/checking-auth", authMiddleware, checkingAuth);
 
