@@ -446,9 +446,7 @@ const Home = () => {
                       {p.name}
                     </div>
                     <div className="text-xs text-gray-300">{p.miniDesc}</div>
-                    <div className="text-xs font-medium text-gray-400">
-                      Size: {sizes}
-                    </div>
+                    
                     <div className="flex items-center text-yellow-400">
                       {Array(rating)
                         .fill()

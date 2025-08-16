@@ -147,106 +147,146 @@ const Navbar = () => {
             <img
               src={assets.SiddhivinayakAstroLogo}
               alt="Logo"
-              className="h-16 w-auto object-contain"
+              className="h-20 sm:h-16 w-auto object-contain"
             />
-            <span className="text-xl sm:text-2xl font-bold text-yellow-500">
-              Siddhivinayak Astro
-            </span>
+            <div className="flex flex-col">
+              <h1 className="text-yellow-500 font-extrabold text-2xl sm:text-3xl md:text-4xl leading-tight">
+                Siddhivinak Astro
+              </h1>
+              <p className="text-yellow-300 italic text-sm sm:text-base tracking-wide mt-1">
+                Your Stars, Your Story, Your Future
+              </p>
+            </div>
           </Link>
 
           {/* Desktop Nav */}
           <div className="hidden lg:flex items-center gap-6">
-            <Link to="/" className="text-white hover:text-purple-400 text-lg">Home</Link>
-            <Link to="/products" className="text-white hover:text-purple-400 text-lg">Products</Link>
+            <Link to="/" className="text-white hover:text-purple-400 text-lg">
+              Home
+            </Link>
+            <Link
+              to="/products"
+              className="text-white hover:text-purple-400 text-lg"
+            >
+              Products
+            </Link>
 
             {/* Astrology Dropdown */}
-        <div className="relative" ref={astroDropdownRef}>
-  <button
-    className="text-yellow-400 hover:text-yellow-300 text-lg font-medium flex items-center gap-1 focus:outline-none"
-    aria-haspopup="true"
-    aria-expanded={isAstroDropdownOpen}
-    type="button"
-    onClick={() => setIsAstroDropdownOpen(prev => !prev)}
-  >
-    Astrology
-    <svg
-      className={`w-4 h-4 transition-transform duration-200 ${
-        isAstroDropdownOpen ? "rotate-180" : "rotate-0"
-      }`}
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
-  </button>
+            <div className="relative" ref={astroDropdownRef}>
+              <button
+                className="text-yellow-400 hover:text-yellow-300 text-lg font-medium flex items-center gap-1 focus:outline-none"
+                aria-haspopup="true"
+                aria-expanded={isAstroDropdownOpen}
+                type="button"
+                onClick={() => setIsAstroDropdownOpen((prev) => !prev)}
+              >
+                Astrology
+                <svg
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    isAstroDropdownOpen ? "rotate-180" : "rotate-0"
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
 
-  <div
-    className={`absolute top-full left-0 mt-2 w-48 bg-black bg-opacity-90 rounded shadow-lg ring-1 ring-black ring-opacity-5 z-50
+              <div
+                className={`absolute top-full left-0 mt-2 w-48 bg-black bg-opacity-90 rounded shadow-lg ring-1 ring-black ring-opacity-5 z-50
       transition-opacity duration-300
       ${isAstroDropdownOpen ? "opacity-100 visible" : "opacity-0 invisible"}
     `}
-  >
-    <Link
-      to="/daily-prediction"
-      className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
-      onClick={() => setIsAstroDropdownOpen(false)}
-    >
-      Daily Prediction
-    </Link>
-    <Link
-      to="/kundli-details"
-      className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
-      onClick={() => setIsAstroDropdownOpen(false)}
-    >
-      Kundli
-    </Link>
-    <Link
-      to="/matching-form"
-      className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
-      onClick={() => setIsAstroDropdownOpen(false)}
-    >
-      Kundli Matching
-    </Link>
-    <Link
-      to="/panchang-form"
-      className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
-      onClick={() => setIsAstroDropdownOpen(false)}
-    >
-      Panchang
-    </Link>
-    <Link
-      to="/life-path-number"
-      className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
-      onClick={() => setIsAstroDropdownOpen(false)}
-    >
-      Life Path
-    </Link>
-  </div>
-</div>
+              >
+                <Link
+                  to="/daily-prediction"
+                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+                  onClick={() => setIsAstroDropdownOpen(false)}
+                >
+                  Daily Prediction
+                </Link>
+                <Link
+                  to="/kundli-details"
+                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+                  onClick={() => setIsAstroDropdownOpen(false)}
+                >
+                  Kundli
+                </Link>
+                <Link
+                  to="/matching-form"
+                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+                  onClick={() => setIsAstroDropdownOpen(false)}
+                >
+                  Kundli Matching
+                </Link>
+                <Link
+                  to="/panchang-form"
+                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+                  onClick={() => setIsAstroDropdownOpen(false)}
+                >
+                  Panchang
+                </Link>
+                <Link
+                  to="/life-path-number"
+                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+                  onClick={() => setIsAstroDropdownOpen(false)}
+                >
+                  Life Path
+                </Link>
+              </div>
+            </div>
             {/* Other links are removed from desktop that now appear in dropdown */}
 
             {isAuthenticated
-              ? role !== "astrologer" ? userLinks : astroLinks
-              : null
-            }
+              ? role !== "astrologer"
+                ? userLinks
+                : astroLinks
+              : null}
 
             {isAuthenticated ? (
               <>
-                <button onClick={handleLogout} className="text-white hover:text-red-500 text-lg">
+                <button
+                  onClick={handleLogout}
+                  className="text-white hover:text-red-500 text-lg"
+                >
                   Logout
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" className="text-white hover:text-purple-400 text-lg">Login</Link>
-                <Link to="/sign-up" className="text-white hover:text-purple-400 text-lg">Sign Up</Link>
+                <Link
+                  to="/login"
+                  className="text-white hover:text-purple-400 text-lg"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/sign-up"
+                  className="text-white hover:text-purple-400 text-lg"
+                >
+                  Sign Up
+                </Link>
               </>
             )}
 
-            <button onClick={toggleMusic} className="text-white flex items-center">
-              ON/OFF <Music size={20} className={`ml-2 ${isPlaying ? "text-yellow-400" : "text-white"}`} />
+            <button
+              onClick={toggleMusic}
+              className="text-white flex items-center"
+            >
+              ON/OFF{" "}
+              <Music
+                size={20}
+                className={`ml-2 ${
+                  isPlaying ? "text-yellow-400" : "text-white"
+                }`}
+              />
             </button>
           </div>
 
@@ -264,51 +304,150 @@ const Navbar = () => {
             ref={menuRef}
             className="absolute top-24 left-0 w-full bg-black/90 backdrop-blur-md flex flex-col items-center space-y-4 py-6 lg:hidden"
           >
-            <Link to="/" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Home</Link>
-            <Link to="/products" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Products</Link>
-            <Link to="/daily-prediction" className="text-yellow-400 text-lg font-medium hover:text-yellow-300" onClick={() => setIsOpen(false)}>Daily Prediction</Link>
-            <Link to="/kundli-details" className="text-yellow-400 text-lg font-medium hover:text-yellow-300" onClick={() => setIsOpen(false)}>Kundli</Link>
-            <Link to="/matching-form" className="text-yellow-400 text-lg font-medium hover:text-yellow-300" onClick={() => setIsOpen(false)}>Kundli Matching</Link>
-            <Link to="/panchang-form" className="text-yellow-400 text-lg font-medium hover:text-yellow-300" onClick={() => setIsOpen(false)}>Panchang</Link>
-            <Link to="/life-path-number" className="text-yellow-400 text-lg font-medium hover:text-yellow-300" onClick={() => setIsOpen(false)}>Life Path Number</Link>
+            <Link
+              to="/"
+              className="text-white text-lg hover:text-purple-500"
+              onClick={() => setIsOpen(false)}
+            >
+              Home
+            </Link>
+            <Link
+              to="/products"
+              className="text-white text-lg hover:text-purple-500"
+              onClick={() => setIsOpen(false)}
+            >
+              Products
+            </Link>
+            <Link
+              to="/daily-prediction"
+              className="text-yellow-400 text-lg font-medium hover:text-yellow-300"
+              onClick={() => setIsOpen(false)}
+            >
+              Daily Prediction
+            </Link>
+            <Link
+              to="/kundli-details"
+              className="text-yellow-400 text-lg font-medium hover:text-yellow-300"
+              onClick={() => setIsOpen(false)}
+            >
+              Kundli
+            </Link>
+            <Link
+              to="/matching-form"
+              className="text-yellow-400 text-lg font-medium hover:text-yellow-300"
+              onClick={() => setIsOpen(false)}
+            >
+              Kundli Matching
+            </Link>
+            <Link
+              to="/panchang-form"
+              className="text-yellow-400 text-lg font-medium hover:text-yellow-300"
+              onClick={() => setIsOpen(false)}
+            >
+              Panchang
+            </Link>
+            <Link
+              to="/life-path-number"
+              className="text-yellow-400 text-lg font-medium hover:text-yellow-300"
+              onClick={() => setIsOpen(false)}
+            >
+              Life Path Number
+            </Link>
 
-            {isAuthenticated
-              ? role !== "astrologer"
-                ? (
-                  <>
-                    <Link to="/my-orders" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>My Orders</Link>
-                    <Link to="/wishlist" className="text-white hover:text-purple-400 text-lg flex items-center gap-1">
-                      <Heart className="w-5 h-5" />
-                      Wishlist
-                    </Link>
-                    <Link to="/cart" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Cart</Link>
-                    <Link to="/wallet" className="flex items-center gap-1 text-white hover:text-purple-500 text-lg" onClick={() => setIsOpen(false)}><Wallet size={20} /> Wallet</Link>
-                  </>
-                )
-                : (
-                  <>
-                    <Link to="/astrologer-dashboard" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Astrologer Dashboard</Link>
-                    <Link to="/astrologer-chat-request" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Chat Requests</Link>
-                    <Link to="/wallet" className="flex items-center gap-1 text-white hover:text-purple-500 text-lg" onClick={() => setIsOpen(false)}><Wallet size={20} /> Wallet</Link>
-                  </>
-                )
-              : null
-            }
+            {isAuthenticated ? (
+              role !== "astrologer" ? (
+                <>
+                  <Link
+                    to="/my-orders"
+                    className="text-white text-lg hover:text-purple-500"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    My Orders
+                  </Link>
+                  <Link
+                    to="/wishlist"
+                    className="text-white hover:text-purple-400 text-lg flex items-center gap-1"
+                  >
+                    <Heart className="w-5 h-5" />
+                    Wishlist
+                  </Link>
+                  <Link
+                    to="/cart"
+                    className="text-white text-lg hover:text-purple-500"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Cart
+                  </Link>
+                  <Link
+                    to="/wallet"
+                    className="flex items-center gap-1 text-white hover:text-purple-500 text-lg"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <Wallet size={20} /> Wallet
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/astrologer-dashboard"
+                    className="text-white text-lg hover:text-purple-500"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Astrologer Dashboard
+                  </Link>
+                  <Link
+                    to="/astrologer-chat-request"
+                    className="text-white text-lg hover:text-purple-500"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Chat Requests
+                  </Link>
+                  <Link
+                    to="/wallet"
+                    className="flex items-center gap-1 text-white hover:text-purple-500 text-lg"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <Wallet size={20} /> Wallet
+                  </Link>
+                </>
+              )
+            ) : null}
 
             {isAuthenticated ? (
               <>
-                <button onClick={() => { handleLogout(); setIsOpen(false); }} className="text-white hover:text-red-500 text-lg">
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsOpen(false);
+                  }}
+                  className="text-white hover:text-red-500 text-lg"
+                >
                   Logout
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Login</Link>
-                <Link to="/sign-up" className="text-white text-lg hover:text-purple-500" onClick={() => setIsOpen(false)}>Sign Up</Link>
+                <Link
+                  to="/login"
+                  className="text-white text-lg hover:text-purple-500"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/sign-up"
+                  className="text-white text-lg hover:text-purple-500"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Sign Up
+                </Link>
               </>
             )}
             <button onClick={toggleMusic} className="text-white text-lg">
-              <Music size={20} className={`${isPlaying ? "text-yellow-400" : "text-white"}`} />
+              <Music
+                size={20}
+                className={`${isPlaying ? "text-yellow-400" : "text-white"}`}
+              />
             </button>
           </div>
         )}

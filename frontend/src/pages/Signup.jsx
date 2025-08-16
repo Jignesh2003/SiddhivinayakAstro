@@ -22,6 +22,7 @@ const Signup = () => {
     state: "",
     city: "",
     password: "",
+    agreedToTerms: false, // <-- added
   });
 
   const [selectedCountry, setSelectedCountry] = useState(null);
@@ -33,21 +34,28 @@ const Signup = () => {
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+    setFormData({ ...formData, [name]: type === "checkbox" ? checked : value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // only added this validation
+    if (!formData.agreedToTerms) {
+      toast.error("Please agree to the Terms & Policies before signing up.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/signup`, formData);
-      console.log(formData);
-      
-
+      const response = await axios.post(
+        `${import.meta.env.VITE_BASE_URL}/signup`,
+        formData
+      );
       if (response.status === 201) {
         toast.success("Account created! Logging you in...", { duration: 3000 });
-
         if (response.data.token) {
           login(response.data.user, response.data.token);
           toast.success("Login successful! 🎉", { duration: 3000 });
@@ -57,13 +65,16 @@ const Signup = () => {
         }
       }
     } catch (error) {
-      console.error("Error during signup:", error.response?.data || error.message);
+      console.error(
+        "Error during signup:",
+        error.response?.data || error.message
+      );
 
       if (error.response?.status === 409) {
         toast.error("User already exists! Redirecting to login...");
         setTimeout(() => navigate("/login"), 2000);
       } else {
-        toast.error(error.response?.data?.errors|| "Signup failed!");
+        toast.error(error.response?.data?.errors || "Signup failed!");
       }
     } finally {
       setIsLoading(false);
@@ -84,10 +95,12 @@ const Signup = () => {
     : [];
 
   const cityOptions = selectedState
-    ? City.getCitiesOfState(selectedCountry.value, selectedState.value).map((c) => ({
-        label: c.name,
-        value: c.name,
-      }))
+    ? City.getCitiesOfState(selectedCountry.value, selectedState.value).map(
+        (c) => ({
+          label: c.name,
+          value: c.name,
+        })
+      )
     : [];
 
   return (
@@ -99,7 +112,12 @@ const Signup = () => {
 
       <div className="relative z-10 flex min-h-screen flex-col justify-center px-6 py-4 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-          <img className="mx-auto h-50 w-auto" src={assets.SiddhivinayakAstroLogo} alt="Logo" />
+          {/* LOGO stays here as before */}
+          <img
+            className="mx-auto h-50 w-auto"
+            src={assets.SiddhivinayakAstroLogo}
+            alt="Logo"
+          />
           <h2 className="mt-5 text-center text-2xl font-bold tracking-tight text-yellow-500">
             Create Your Account
           </h2>
@@ -109,7 +127,10 @@ const Signup = () => {
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-blue-100">
+                <label
+                  htmlFor="firstName"
+                  className="block text-sm font-medium text-blue-100"
+                >
                   First Name
                 </label>
                 <input
@@ -124,7 +145,10 @@ const Signup = () => {
                 />
               </div>
               <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-blue-100">
+                <label
+                  htmlFor="lastName"
+                  className="block text-sm font-medium text-blue-100"
+                >
                   Last Name
                 </label>
                 <input
@@ -141,7 +165,10 @@ const Signup = () => {
             </div>
 
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-blue-100">
+              <label
+                htmlFor="phone"
+                className="block text-sm font-medium text-blue-100"
+              >
                 Phone Number
               </label>
               <input
@@ -158,7 +185,10 @@ const Signup = () => {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-blue-100">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-blue-100"
+              >
                 Email
               </label>
               <input
@@ -174,7 +204,10 @@ const Signup = () => {
             </div>
 
             <div>
-              <label htmlFor="address" className="block text-sm font-medium text-blue-100">
+              <label
+                htmlFor="address"
+                className="block text-sm font-medium text-blue-100"
+              >
                 Address
               </label>
               <textarea
@@ -192,7 +225,9 @@ const Signup = () => {
             {/* Location Dropdowns */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-blue-100">Country</label>
+                <label className="block text-sm font-medium text-blue-100">
+                  Country
+                </label>
                 <Select
                   options={countryOptions}
                   value={selectedCountry}
@@ -200,12 +235,19 @@ const Signup = () => {
                     setSelectedCountry(val);
                     setSelectedState(null);
                     setSelectedCity(null);
-                    setFormData({ ...formData, country: val.label, state: "", city: "" });
+                    setFormData({
+                      ...formData,
+                      country: val.label,
+                      state: "",
+                      city: "",
+                    });
                   }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-blue-100">State</label>
+                <label className="block text-sm font-medium text-blue-100">
+                  State
+                </label>
                 <Select
                   options={stateOptions}
                   value={selectedState}
@@ -218,7 +260,9 @@ const Signup = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-blue-100">City</label>
+                <label className="block text-sm font-medium text-blue-100">
+                  City
+                </label>
                 <Select
                   options={cityOptions}
                   value={selectedCity}
@@ -232,7 +276,10 @@ const Signup = () => {
             </div>
 
             <div>
-              <label htmlFor="pincode" className="block text-sm font-medium text-blue-100">
+              <label
+                htmlFor="pincode"
+                className="block text-sm font-medium text-blue-100"
+              >
                 Pincode
               </label>
               <input
@@ -249,7 +296,10 @@ const Signup = () => {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-blue-100">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-blue-100"
+              >
                 Password
               </label>
               <div className="relative">
@@ -273,6 +323,38 @@ const Signup = () => {
               </div>
             </div>
 
+            {/* === TERMS CHECKBOX ADDED HERE (nothing else changed) === */}
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="checkbox"
+                id="agreedToTerms"
+                name="agreedToTerms"
+                checked={formData.agreedToTerms}
+                onChange={handleChange}
+                required
+                className="h-4 w-4 text-yellow-500 border-gray-300 rounded focus:ring-yellow-500"
+              />
+              <label
+                htmlFor="agreedToTerms"
+                className="text-yellow-500 text-sm select-none"
+              >
+                I agree to the{" "}
+                <Link to="/terms" className="underline">
+                  Terms & Conditions
+                </Link>
+                ,{" "}
+                <Link to="/privacy" className="underline">
+                  Privacy Policy
+                </Link>
+                , and{" "}
+                <Link to="/refund" className="underline">
+                  Cancellation & Refund Policy
+                </Link>
+                .
+              </label>
+            </div>
+            {/* === END CHECKBOX ADDITION === */}
+
             <div>
               <button
                 type="submit"
@@ -287,12 +369,15 @@ const Signup = () => {
           <div className="mt-4 text-center">
             <p className="text-sm text-blue-100">
               Already have an account?{" "}
-              <a href="/login" className="font-semibold text-yellow-400 hover:text-yellow-500">
+              <a
+                href="/login"
+                className="font-semibold text-yellow-400 hover:text-yellow-500"
+              >
                 Log in
               </a>
             </p>
           </div>
-             <Link
+          <Link
             to="/astrologer-signup"
             className=" block font-semibold text-blue-100 hover:text-yellow-300 text-center text-xl pt-5 text-yellow-500"
           >

@@ -72,5 +72,24 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Manual auto-increment pre-save hook
+productSchema.pre("save", async function (next) {
+  if (this.isNew) {
+    try {
+      const counter = await Counter.findByIdAndUpdate(
+        "productNumber",            // counter document id
+        { $inc: { seq: 1 } },       // increment seq by 1
+        { new: true, upsert: true } // create counter doc if not exists
+      );
+      this.productNumber = counter.seq;  // assign incremented value
+      next();
+    } catch (error) {
+      next(error);
+    }
+  } else {
+    next();
+  }
+});
+
 export default mongoose.models.Product ||
   mongoose.model("Product", productSchema);

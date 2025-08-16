@@ -22,7 +22,7 @@ const ShippingDeliveryPolicy = () => {
           </p>
           <p>
             Typical delivery time for reports or personalized services is between{" "}
-            <strong>1 to 3 business days</strong> from the order date.
+            <strong>3 to 5 business days</strong> from the order date.
           </p>
           <p>
             In case of live consultations, the time slot will be confirmed via email or phone.
