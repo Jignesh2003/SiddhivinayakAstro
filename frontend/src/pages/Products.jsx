@@ -8,14 +8,13 @@ import {
   ArrowUpDown,
   X,
   ArrowUp,
+  Search,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
 import useAuthStore from "../store/useAuthStore";
 import useWishlistStore from "../store/useWishlistStore";
-import assets from "../assets/assets";
 import Footer from "../components/Footer";
 
 const Products = () => {

@@ -207,39 +207,6 @@ const Home = () => {
 const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5];
   return (
     <div className="bg-gradient-to-b from-black via-black to-indigo-900 text-white min-h-screen flex flex-col font-poppins">
-      <section className="py-6 ">
-        <Swiper
-          modules={[Navigation, Autoplay]}
-          // navigation
-          loop
-          autoplay={{ delay: 3000, disableOnInteraction: false }}
-          spaceBetween={16}
-          breakpoints={{
-            0: { slidesPerView: 1 },
-            480: { slidesPerView: 2 },
-            640: { slidesPerView: 3 },
-            1024: { slidesPerView: 6 },
-          }}
-          className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 w-full"
-        >
-          {posters.map((src, idx) => (
-            <SwiperSlide
-              key={idx}
-              className="w-full h-40 md:h-48 rounded-lg overflow-hidden shadow-lg cursor-pointer"
-            >
-              <img
-                onClick={() => navigate("/products")}
-                src={src}
-                alt={`Poster ${idx}`}
-                className="w-full h-full object-cover transition-transform duration-500 ease-in-out hover:scale-105"
-                loading="lazy"
-                draggable={true}
-              />
-            </SwiperSlide>
-          ))}
-        </Swiper>
-      </section>
-
       {/* Logo */}
       <div
         className="w-full cursor-pointer"
@@ -396,25 +363,24 @@ const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5
               const stock = getTotalStock(p.stock);
               const isOutOfStock = stock <= 0;
               // const sizes =
-                Array.isArray(p.stock) && p.stock.length > 0
-                  ? p.stock
-                      .filter((s) => !!s.size)
-                      .map((s) => s.size)
-                      .join(", ")
-                  : "-";
+              Array.isArray(p.stock) && p.stock.length > 0
+                ? p.stock
+                    .filter((s) => !!s.size)
+                    .map((s) => s.size)
+                    .join(", ")
+                : "-";
               const reviews = Array.isArray(p.reviews) ? p.reviews : [];
               const rating = 5;
-                // ? Math.round(
-                //     reviews.reduce((a, r) => a + r.rating, 0) / reviews.length
-                //   )
-                // : 0;
+              // ? Math.round(
+              //     reviews.reduce((a, r) => a + r.rating, 0) / reviews.length
+              //   )
+              // : 0;
 
               return (
                 <div
                   key={p._id}
                   className={`relative rounded shadow-xs transition hover:shadow-lg flex flex-col bg-gray-800/90 border border-gray-700 text-white
                     ${
-
                       isOutOfStock
                         ? "opacity-60 pointer-events-none grayscale"
                         : "hover:scale-[1.02]"
@@ -487,9 +453,7 @@ const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5
                         .map((_, i) => (
                           <Star key={i} size={12} />
                         ))}
-                      <span className="ml-1 text-gray-400 text-xs">
-                        ({5})
-                      </span>
+                      <span className="ml-1 text-gray-400 text-xs">({5})</span>
                     </div>
                     {!isOutOfStock && stock < 10 && (
                       <div
@@ -676,7 +640,38 @@ const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5
           </div>
         </div>
       )}
-
+      <section className="py-6 ">
+        <Swiper
+          modules={[Navigation, Autoplay]}
+          // navigation
+          loop
+          autoplay={{ delay: 3000, disableOnInteraction: false }}
+          spaceBetween={16}
+          breakpoints={{
+            0: { slidesPerView: 1 },
+            480: { slidesPerView: 2 },
+            640: { slidesPerView: 2 },
+            1024: { slidesPerView: 3 },
+          }}
+          className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 w-full"
+        >
+          {posters.map((src, idx) => (
+            <SwiperSlide
+              key={idx}
+              className="w-full h-40 md:h-48 rounded-lg overflow-hidden shadow-lg cursor-pointer"
+            >
+              <img
+                onClick={() => navigate("/products")}
+                src={src}
+                alt={`Poster ${idx}`}
+                className="w-full h-full object-fit transition-transform duration-500 ease-in-out hover:scale-105"
+                loading="lazy"
+                draggable={true}
+              />
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      </section>
       {/* Testimonials */}
       <section className="py-12 px-4 sm:px-6 bg-black/80 text-center text-white max-w-screen-xl mx-auto">
         <h2 className="text-xl sm:text-2xl font-semibold mb-4">Testimonials</h2>
