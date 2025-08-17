@@ -14,16 +14,19 @@ import Sagittarius from "./Saggitarius.jpeg"
 import Taurus from "./Taurus.jpeg"
 import Virgo from "./Virgo.jpeg"
 import Scorpio from "./Scorpio.jpeg"
-
-
+import Poster1 from "./4.jpg"
+import Poster2 from "./23.jpg";
+import Poster3 from "./24.jpg";
+import Poster4 from "./25.jpg"
+import Poster5 from "./22.jpg"
 
 
 const assets = {
  SiddhivinayakAstroLogo,
  GalaxyBackground,
  HeroSelectionBackground,
- 
- Aquarius,Aries,Cancer,Capricorn,ChatWithAstroLogo,Gemini,Leo,Libra,Pisces,Sagittarius,Taurus,Virgo,Scorpio
+
+ Aquarius,Aries,Cancer,Capricorn,ChatWithAstroLogo,Gemini,Leo,Libra,Pisces,Sagittarius,Taurus,Virgo,Scorpio,Poster1,Poster2,Poster3,Poster4,Poster5
 };
 
 export default assets;

@@ -204,9 +204,42 @@ const Home = () => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
+const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5];
   return (
     <div className="bg-gradient-to-b from-black via-black to-indigo-900 text-white min-h-screen flex flex-col font-poppins">
+      <section className="py-6 ">
+        <Swiper
+          modules={[Navigation, Autoplay]}
+          // navigation
+          loop
+          autoplay={{ delay: 3000, disableOnInteraction: false }}
+          spaceBetween={16}
+          breakpoints={{
+            0: { slidesPerView: 1 },
+            480: { slidesPerView: 2 },
+            640: { slidesPerView: 3 },
+            1024: { slidesPerView: 6 },
+          }}
+          className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 w-full"
+        >
+          {posters.map((src, idx) => (
+            <SwiperSlide
+              key={idx}
+              className="w-full h-40 md:h-48 rounded-lg overflow-hidden shadow-lg cursor-pointer"
+            >
+              <img
+                onClick={() => navigate("/products")}
+                src={src}
+                alt={`Poster ${idx}`}
+                className="w-full h-full object-cover transition-transform duration-500 ease-in-out hover:scale-105"
+                loading="lazy"
+                draggable={true}
+              />
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      </section>
+
       {/* Logo */}
       <div
         className="w-full cursor-pointer"
@@ -362,7 +395,7 @@ const Home = () => {
             {filteredProducts.map((p) => {
               const stock = getTotalStock(p.stock);
               const isOutOfStock = stock <= 0;
-              const sizes =
+              // const sizes =
                 Array.isArray(p.stock) && p.stock.length > 0
                   ? p.stock
                       .filter((s) => !!s.size)
@@ -370,11 +403,11 @@ const Home = () => {
                       .join(", ")
                   : "-";
               const reviews = Array.isArray(p.reviews) ? p.reviews : [];
-              const rating = reviews.length
-                ? Math.round(
-                    reviews.reduce((a, r) => a + r.rating, 0) / reviews.length
-                  )
-                : 0;
+              const rating = 5;
+                // ? Math.round(
+                //     reviews.reduce((a, r) => a + r.rating, 0) / reviews.length
+                //   )
+                // : 0;
 
               return (
                 <div
@@ -446,7 +479,7 @@ const Home = () => {
                       {p.name}
                     </div>
                     <div className="text-xs text-gray-300">{p.miniDesc}</div>
-                    
+
                     <div className="flex items-center text-yellow-400">
                       {Array(rating)
                         .fill()
