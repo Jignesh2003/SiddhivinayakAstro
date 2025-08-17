@@ -414,7 +414,7 @@ const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5
                   key={p._id}
                   className={`relative rounded shadow-xs transition hover:shadow-lg flex flex-col bg-gray-800/90 border border-gray-700 text-white
                     ${
-                      
+
                       isOutOfStock
                         ? "opacity-60 pointer-events-none grayscale"
                         : "hover:scale-[1.02]"
@@ -488,7 +488,7 @@ const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5
                           <Star key={i} size={12} />
                         ))}
                       <span className="ml-1 text-gray-400 text-xs">
-                        ({reviews.length})
+                        ({5})
                       </span>
                     </div>
                     {!isOutOfStock && stock < 10 && (
