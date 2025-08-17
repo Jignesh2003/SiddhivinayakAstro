@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import useAuthStore from "../store/useAuthStore";
 import assets from "../assets/assets";
+import { Star } from "lucide-react";
 
 const SingleOrder = () => {
   const { id } = useParams();
@@ -100,22 +101,23 @@ const SingleOrder = () => {
     );
   }
 
-  // ✅ Use `items` from backend
+  // Use items from backend
   const orderItems = Array.isArray(order.items) ? order.items : [];
 
-  // ✅ Check delivered & items exist
+  // Check delivered & items exist
   const isDelivered =
     order.orderStatus?.toLowerCase().trim() === "delivered" &&
     orderItems.length > 0;
-
-  console.log(isDelivered, orderItems);
 
   return (
     <div
       className="min-h-screen bg-cover bg-center relative"
       style={{ backgroundImage: `url(${assets.GalaxyBackground})` }}
     >
+      {/* Blurred Black Overlay */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+
+      {/* Order content */}
       <div className="relative z-10 max-w-3xl mx-auto text-white px-6 py-12">
         <h2 className="text-3xl font-bold mb-4">Order Details</h2>
         <p className="mb-1">
@@ -165,77 +167,96 @@ const SingleOrder = () => {
             Products in this Order
           </h3>
           <ul className="divide-y divide-white/20">
-            {orderItems.map((item) => (
-              <li key={item._id} className="py-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-semibold">{item.product.name}</p>
-                    <p className="text-sm text-gray-300">
-                      Quantity: {item.quantity} &nbsp;|&nbsp; Price: ₹
-                      {item.product.price}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Review Form */}
-                {isDelivered && (
-                  <div className="mt-4 bg-black/30 p-4 rounded">
-                    {messages[item.product._id] && (
-                      <p className="mb-2 text-sm">
-                        {messages[item.product._id]}
+            {orderItems.map((item) => {
+              const prod = item.product;
+              const reviews = Array.isArray(prod.reviews) ? prod.reviews : [];
+              const rating = reviews.length
+                ? Math.round(
+                    reviews.reduce((a, r) => a + r.rating, 0) / reviews.length
+                  )
+                : 0;
+              return (
+                <li key={item._id} className="py-4">
+                  <div className="flex justify-between items-center">
+                    <div className="flex-1">
+                      {/* Product Name & MiniDesc */}
+                      <p className="font-semibold">{prod.name}</p>
+                      <p className="text-xs text-gray-300 mb-1">
+                        {prod.miniDesc}
                       </p>
-                    )}
-
-                    <label className="block mb-2 text-sm">Rating:</label>
-                    <select
-                      value={reviews[item.product._id]?.rating || ""}
-                      onChange={(e) =>
-                        handleReviewChange(
-                          item.product._id,
-                          "rating",
-                          Number(e.target.value)
-                        )
-                      }
-                      className="p-2 rounded w-full text-black mb-3"
-                      required
-                    >
-                      <option value="">Select Rating</option>
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <option key={star} value={star}>
-                          {star} Star{star > 1 ? "s" : ""}
-                        </option>
-                      ))}
-                    </select>
-
-                    <label className="block mb-2 text-sm">Review:</label>
-                    <textarea
-                      value={reviews[item.product._id]?.comment || ""}
-                      onChange={(e) =>
-                        handleReviewChange(
-                          item.product._id,
-                          "comment",
-                          e.target.value
-                        )
-                      }
-                      rows="3"
-                      className="p-2 rounded w-full text-black mb-3"
-                      placeholder="Write your review..."
-                      required
-                    />
-
-                    <button
-                      onClick={() => handleSubmitReview(item.product._id)}
-                      disabled={submitting[item.product._id]}
-                      className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded disabled:opacity-50"
-                    >
-                      {submitting[item.product._id]
-                        ? "Submitting..."
-                        : "Submit Review"}
-                    </button>
+                      <p className="text-sm text-gray-300">
+                        Quantity: {item.quantity} &nbsp;|&nbsp; Price: ₹
+                        {prod.price}
+                      </p>
+                      {/* Star Rating and Count */}
+                      <div className="flex items-center text-yellow-400 mt-1">
+                        {Array(rating)
+                          .fill()
+                          .map((_, i) => (
+                            <Star key={i} size={14} />
+                          ))}
+                        <span className="ml-1 text-gray-400 text-xs">
+                          ({reviews.length})
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </li>
-            ))}
+
+                  {/* Review Form if delivered */}
+                  {isDelivered && (
+                    <div className="mt-4 bg-black/30 p-4 rounded">
+                      {messages[prod._id] && (
+                        <p className="mb-2 text-sm">{messages[prod._id]}</p>
+                      )}
+                      <label className="block mb-2 text-sm">Rating:</label>
+                      <select
+                        value={reviews[prod._id]?.rating || ""}
+                        onChange={(e) =>
+                          handleReviewChange(
+                            prod._id,
+                            "rating",
+                            Number(e.target.value)
+                          )
+                        }
+                        className="p-2 rounded w-full text-black mb-3"
+                        required
+                      >
+                        <option value="">Select Rating</option>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <option key={star} value={star}>
+                            {star} Star{star > 1 ? "s" : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <label className="block mb-2 text-sm">Review:</label>
+                      <textarea
+                        value={reviews[prod._id]?.comment || ""}
+                        onChange={(e) =>
+                          handleReviewChange(
+                            prod._id,
+                            "comment",
+                            e.target.value
+                          )
+                        }
+                        rows="3"
+                        className="p-2 rounded w-full text-black mb-3"
+                        placeholder="Write your review..."
+                        required
+                      />
+                      <button
+                        onClick={() => handleSubmitReview(prod._id)}
+                        disabled={submitting[prod._id]}
+                        className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded disabled:opacity-50"
+                      >
+                        {submitting[prod._id]
+                          ? "Submitting..."
+                          : "Submit Review"}
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>
