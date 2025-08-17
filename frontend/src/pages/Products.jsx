@@ -17,7 +17,7 @@ import "react-toastify/dist/ReactToastify.css";
 import useAuthStore from "../store/useAuthStore";
 import useWishlistStore from "../store/useWishlistStore";
 import assets from "../assets/assets";
-import Footer from "../components/Footer"; // ✅ make sure this path is correct
+import Footer from "../components/Footer"; // Make sure this path is correct
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -334,15 +334,8 @@ const Products = () => {
                 ) : filteredProducts.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredProducts.map((product) => {
+                      const fakeRating = 5; // Fake 5-star rating
                       const reviewCount = product.reviews?.length || 0;
-                      const avgRating = reviewCount
-                        ? Math.round(
-                            product.reviews.reduce(
-                              (sum, r) => sum + r.rating,
-                              0
-                            ) / reviewCount
-                          )
-                        : 0;
                       const totalStock = Array.isArray(product.stock)
                         ? product.stock.reduce(
                             (sum, v) => sum + (v.quantity || 0),
@@ -409,7 +402,7 @@ const Products = () => {
                               {totalStock === 0 ? "Out of Stock" : "In Stock"}
                             </p>
                             <div className="flex items-center gap-1 text-yellow-300">
-                              {Array(avgRating)
+                              {Array(fakeRating)
                                 .fill()
                                 .map((_, i) => (
                                   <Star key={i} size={16} />
@@ -562,15 +555,6 @@ const Products = () => {
                 className="flex-1 bg-gray-700 rounded-md py-2 hover:bg-gray-600 text-white transition"
               >
                 Reset
-              </button>
-              <button
-                onClick={() => {
-                  applyFiltersAndSort();
-                  setShowFilterModal(false);
-                }}
-                className="flex-1 bg-indigo-600 text-white rounded-md py-2 hover:bg-indigo-700 transition"
-              >
-                Apply
               </button>
             </div>
           </div>
