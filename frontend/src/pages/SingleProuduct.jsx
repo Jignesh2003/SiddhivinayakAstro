@@ -11,7 +11,7 @@ import assets from "../assets/assets";
 
 // Swiper React components
 import { Swiper, SwiperSlide } from "swiper/react";
-// Swiper modules (correct v11+ import)
+// Swiper modules (for v11+)
 import { Navigation, Pagination } from "swiper/modules";
 // Swiper styles
 import "swiper/css";
@@ -31,7 +31,7 @@ const SingleProduct = () => {
   const addToCart = useCartStore((state) => state.addToCart);
   const { userId, token, logout } = useAuthStore();
 
-  // Fetch single product
+  // Fetch single product & reviews
   useEffect(() => {
     (async () => {
       try {
@@ -57,7 +57,7 @@ const SingleProduct = () => {
     })();
   }, [id, token]);
 
-  // Fetch all products for carousel
+  // Fetch all products for "You Might Also Like" carousel
   useEffect(() => {
     (async () => {
       try {
@@ -89,35 +89,35 @@ const SingleProduct = () => {
   const variant = product.stock.find((v) => v.size === selectedSize);
   const selectedStock = variant?.quantity || 0;
 
+  // Add product to cart handler
   const handleAddToCart = async () => {
-  if (!userId) {
-    toast.error("Please log in first!");
-    logout();
-    return navigate("/login");
-  }
-  if (product.sizeType !== "Quantity" && !selectedSize) {
-    return toast.error("Please select a size!");
-  }
-  const stockToUse =
-    product.sizeType !== "Quantity" ? selectedStock : totalStock;
+    if (!userId) {
+      toast.error("Please log in first!");
+      logout();
+      return navigate("/login");
+    }
+    if (product.sizeType !== "Quantity" && !selectedSize) {
+      return toast.error("Please select a size!");
+    }
+    const stockToUse =
+      product.sizeType !== "Quantity" ? selectedStock : totalStock;
+    if (stockToUse === 0) {
+      return toast.error("Out of stock!");
+    }
+    try {
+      await addToCart({
+        product: product._id,
+        size: selectedSize,
+        quantity: 1,
+        availableStock: stockToUse,
+      });
+      toast.success("Added to cart!");
+    } catch {
+      toast.error("Failed to add to cart.");
+    }
+  };
 
-  if (stockToUse === 0) {
-    return toast.error("Out of stock!");
-  }
-  try {
-    await addToCart({
-      product: product._id,
-      size: selectedSize,
-      quantity: 1,
-      availableStock: stockToUse, // 💡 pass this in!
-    });
-    toast.success("Added to cart!");
-  } catch {
-    toast.error("Failed to add to cart.");
-  }
-};
-
-
+  // Buy Now handler calls AddToCart then navigates to cart page
   const handleBuyNow = async () => {
     await handleAddToCart();
     navigate("/cart");
@@ -148,7 +148,6 @@ const SingleProduct = () => {
       {/* Main Content */}
       <div className="relative z-10 text-white py-10 px-4 md:px-10">
         <div className="max-w-6xl mx-auto bg-black bg-opacity-70 backdrop-blur-md rounded-lg shadow-xl p-6">
-          
           {/* Product Details */}
           <div className="flex flex-col md:flex-row gap-8">
             <div className="w-full md:w-1/2">
@@ -160,20 +159,29 @@ const SingleProduct = () => {
                 slideDuration={200}
               />
             </div>
+
             <div className="flex-1 flex flex-col">
               <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
               <p className="text-sm text-gray-300 mb-4">
-                Brand: <span className="font-medium">{product.brand}</span> | Category:{" "}
+                Brand: <span className="font-medium">{product.brand}</span> |
+                Category:{" "}
                 <span className="font-medium">{product.category}</span>
               </p>
-              <p className="text-md text-gray-100 mb-4">{product.description}</p>
+              <p className="text-md text-gray-100 mb-4">
+                {product.description}
+              </p>
               <p className="text-2xl font-semibold text-yellow-400 mb-2">
                 ₹{product.price}
               </p>
-              <p className={`mb-4 font-semibold ${totalStock ? "text-green-400" : "text-red-500"}`}>
+              <p
+                className={`mb-4 font-semibold ${
+                  totalStock ? "text-green-400" : "text-red-500"
+                }`}
+              >
                 {totalStock ? "In Stock" : "Out of Stock"}
               </p>
 
+              {/* Size selection */}
               {product.sizeType !== "Quantity" && (
                 <div className="mb-4">
                   <label className="block text-gray-300 mb-1">
@@ -193,6 +201,7 @@ const SingleProduct = () => {
                 </div>
               )}
 
+              {/* Average rating */}
               {avgRating && (
                 <div className="flex items-center mb-6">
                   <span className="text-xl font-medium mr-2">{avgRating}</span>
@@ -201,16 +210,21 @@ const SingleProduct = () => {
                       <Star
                         key={val}
                         size={20}
-                        className={val <= Math.round(avgRating) ? "text-yellow-400" : "text-gray-600"}
+                        className={
+                          val <= Math.round(avgRating)
+                            ? "text-yellow-400"
+                            : "text-gray-600"
+                        }
                       />
                     ))}
                   </div>
                   <span className="text-sm text-gray-400 ml-2">
-                    ({reviews.length} review{reviews.length !== 1 && "s"})
+                    ({reviews.length} review{reviews.length !== 1 ? "s" : ""})
                   </span>
                 </div>
               )}
 
+              {/* Action buttons */}
               <div className="flex gap-4 mt-auto">
                 <button
                   onClick={handleAddToCart}
@@ -236,9 +250,11 @@ const SingleProduct = () => {
             </div>
           </div>
 
-          {/* Reviews */}
+          {/* Reviews Section */}
           <div className="mt-12">
-            <h2 className="text-2xl font-semibold mb-4 text-yellow-400">Customer Reviews</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-yellow-400">
+              Customer Reviews
+            </h2>
             {reviews.length > 0 ? (
               reviews.map((r) => (
                 <div
@@ -252,7 +268,9 @@ const SingleProduct = () => {
                         alt={r.userId.name}
                         className="w-8 h-8 rounded-full object-cover"
                       />
-                      <span className="font-medium text-sm text-white">{r.userId.name}</span>
+                      <span className="font-medium text-sm text-white">
+                        {r.userId.name}
+                      </span>
                     </div>
                   )}
                   <div className="flex items-center mb-2">
@@ -276,9 +294,11 @@ const SingleProduct = () => {
             )}
           </div>
 
-          {/* “You Might Also Like” Carousel */}
+          {/* You Might Also Like Carousel */}
           <div className="mt-16">
-            <h2 className="text-2xl font-semibold mb-4 text-yellow-400">You Might Also Like</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-yellow-400">
+              You Might Also Like
+            </h2>
             <Swiper
               modules={[Navigation, Pagination]}
               navigation
@@ -302,7 +322,7 @@ const SingleProduct = () => {
                       <img
                         src={p.image[0]}
                         alt={p.name}
-                        className="w-full h-70 object-fit"
+                        className="w-full h-70 object-cover"
                       />
                       <div className="p-4">
                         <h3 className="text-lg font-medium text-white truncate">
