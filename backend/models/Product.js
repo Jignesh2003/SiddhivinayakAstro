@@ -45,7 +45,7 @@ const productSchema = new mongoose.Schema(
         "Gemstones",
         "Necklaces",
         "Rings",
-        "Bracelets", 
+        "Bracelets",
         "Puja samagri",
         "Turtle",
         "Rudraksha",
@@ -69,6 +69,7 @@ const productSchema = new mongoose.Schema(
     image: [{ type: String }],
     imagePublicId: [{ type: String }],
     reviews: [reviewSchema],
+    productNumber: { type: Number, unique: true }, 
   },
   { timestamps: true }
 );
