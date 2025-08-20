@@ -4,21 +4,27 @@ import { toast } from "react-toastify";
 import useAuthStore from "../../store/useAuthStore";
 
 const CATEGORY_OPTIONS = [
-  "Gifts","Gemstones","Necklaces","Rings",
-  "Braclets","Puja samagri","Turtle",
-  "Rudraksha","Customized",
+  "Gifts",
+  "Gemstones",
+  "Necklaces",
+  "Rings",
+  "Bracelets",
+  "Puja samagri",
+  "Turtle",
+  "Rudraksha",
+  "Customized",
 ];
 
 const SUBCATEGORY_OPTIONS = {
-  Gifts:        ["Birthday","Anniversary","Housewarming"],
-  Gemstones:    ["Precious","Semi-Precious"],
-  Necklaces:    ["Pendant","Chains","Choker"],
-  Rings:        ["Wedding","Fashion","Engagement"],
-  Bracelets:     ["Beaded","Copper","Silver"],
-  "Puja samagri":["Incense","Puja Thali","Dhoop"],
-  Turtle:       ["Small","Medium","Large"],
-  Rudraksha:    ["1 Mukhi","2 Mukhi","3 Mukhi","5 Mukhi","7 Mukhi"],
-  Customized:   ["Engraving","Personalized Text","Photo Print"],
+  Gifts: ["Birthday", "Anniversary", "Housewarming"],
+  Gemstones: ["Precious", "Semi-Precious"],
+  Necklaces: ["Pendant", "Chains", "Choker"],
+  Rings: ["Wedding", "Fashion", "Engagement"],
+  Bracelets: ["Beaded", "Copper", "Silver"],
+  "Puja samagri": ["Incense", "Puja Thali", "Dhoop"],
+  Turtle: ["Small", "Medium", "Large"],
+  Rudraksha: ["1 Mukhi", "2 Mukhi", "3 Mukhi", "5 Mukhi", "7 Mukhi"],
+  Customized: ["Engraving", "Personalized Text", "Photo Print"],
 };
 
 const SIZE_TYPE_OPTIONS = ["Ring","Quantity","Mukhi","Gemstone"];
