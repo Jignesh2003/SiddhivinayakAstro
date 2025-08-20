@@ -14,7 +14,7 @@ const SUBCATEGORY_OPTIONS = {
   Gemstones:    ["Precious","Semi-Precious"],
   Necklaces:    ["Pendant","Chains","Choker"],
   Rings:        ["Wedding","Fashion","Engagement"],
-  Braclets:     ["Beaded","Copper","Silver"],
+  Bracelets:     ["Beaded","Copper","Silver"],
   "Puja samagri":["Incense","Puja Thali","Dhoop"],
   Turtle:       ["Small","Medium","Large"],
   Rudraksha:    ["1 Mukhi","2 Mukhi","3 Mukhi","5 Mukhi","7 Mukhi"],
