@@ -151,7 +151,7 @@ const Navbar = () => {
             />
             <div className="flex flex-col">
               <h1 className="text-yellow-500 font-extrabold text-2xl sm:text-3xl md:text-4xl leading-tight">
-                Siddhivinak Astro
+                Siddhivinayak Astro
               </h1>
               <p className="text-yellow-300 italic text-sm sm:text-base tracking-wide mt-1">
                 Your Stars, Your Story, Your Future
