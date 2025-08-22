@@ -1,4 +1,4 @@
-import SiddhivinayakAstroLogo from './b491975a-9997-4f16-a1ae-cecb73bd11e9-CMttJqCQ.jpeg'
+import SiddhivinayakAstroLogo from './Siddhivinayak watermark.png'
 import GalaxyBackground from './beautiful-7305546_1280.jpg'
 import HeroSelectionBackground from './HeroSectionBackground.jpg'
 import Aquarius from "./Aquarius.jpeg"
