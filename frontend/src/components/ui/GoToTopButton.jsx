@@ -18,10 +18,10 @@ export default function GoToTopButton() {
   return (
     <button
       onClick={scrollToTop}
-      className="fixed bottom-16 right-5 z-50 bg-indigo-700 hover:bg-indigo-900 text-white p-2 rounded-full shadow-lg transition"
+      className="fixed bottom-30 right-55 z-50 bg-indigo-700 hover:bg-indigo-900 text-white p-2 rounded-full shadow-lg transition"
       aria-label="Go to top"
     >
-      <ArrowUp size={22} />
+      <ArrowUp size={30} />
     </button>
   );
 }

@@ -19,9 +19,12 @@ import Poster2 from "./23.jpg";
 import Poster3 from "./24.jpg";
 import Poster4 from "./25.jpg"
 import Poster5 from "./22.jpg"
+import WhatsAppIcon from './utils/icons8-whatsapp-48.png'
+import PhoneIcon from './utils/icons8-phone-48.png'
 
 
 const assets = {
+    WhatsAppIcon,PhoneIcon,
  SiddhivinayakAstroLogo,
  GalaxyBackground,
  HeroSelectionBackground,

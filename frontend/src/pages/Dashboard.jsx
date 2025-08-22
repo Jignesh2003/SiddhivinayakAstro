@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import useAuthStore from "../store/useAuthStore";
 import useWishlistStore from "../store/useWishlistStore";
+import GoToTopButton from "@/components/ui/GoToTopButton";
 
 const Home = () => {
   const [products, setProducts] = useState([]);
@@ -201,9 +202,6 @@ const Home = () => {
     }
   };
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
 const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5];
   return (
     <div className="bg-gradient-to-b from-black via-black to-indigo-900 text-white min-h-screen flex flex-col font-poppins">
@@ -687,18 +685,7 @@ const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5
           Chat with Astrologer
         </button>
       </section>
-
-      {/* Floating Go to Top button */}
-      {showTopBtn && (
-        <button
-          onClick={scrollToTop}
-          className="fixed bottom-16 right-5 z-50 bg-indigo-700 hover:bg-indigo-900 text-white p-3 rounded-full shadow-lg transition"
-          aria-label="Go to top"
-        >
-          <ArrowUp size={22} />
-        </button>
-      )}
-
+<GoToTopButton/>
       {/* Footer */}
       <footer className="bg-black text-gray-400 text-center py-4 mt-auto select-none text-sm">
         © {new Date().getFullYear()} SV ASTRO PRIVATE LIMITED. All rights

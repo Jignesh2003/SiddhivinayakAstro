@@ -7,7 +7,6 @@ import {
   SlidersHorizontal,
   ArrowUpDown,
   X,
-  ArrowUp,
   Search,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -16,6 +15,7 @@ import "react-toastify/dist/ReactToastify.css";
 import useAuthStore from "../store/useAuthStore";
 import useWishlistStore from "../store/useWishlistStore";
 import Footer from "../components/Footer";
+import GoToTopButton from "@/components/ui/GoToTopButton";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -183,15 +183,6 @@ const Products = () => {
       toast.success("❤️ Added to Loved It!");
     }
   };
-
-  // Show/hide Go to Top button based on scroll
-  useEffect(() => {
-    const handleScroll = () => setShowTopBtn(window.scrollY > 250);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   return (
     <>
@@ -604,16 +595,7 @@ const Products = () => {
           </div>
         )}
 
-        {/* Floating Go to Top button */}
-        {showTopBtn && (
-          <button
-            onClick={scrollToTop}
-            className="fixed bottom-16 right-5 z-50 bg-indigo-700 hover:bg-indigo-900 text-white p-3 rounded-full shadow-lg transition"
-            aria-label="Go to top"
-          >
-            <ArrowUp size={22} />
-          </button>
-        )}
+  <GoToTopButton/>
 
         {/* Footer */}
         <Footer />
