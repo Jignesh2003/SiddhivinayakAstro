@@ -21,6 +21,7 @@ const CATEGORY_OPTIONS = [
   "Pyrite",
   "Pendants",
   "Money Magnet",
+  "Pyramids",
   "Customized",
 ];
 
@@ -38,6 +39,7 @@ const SUBCATEGORY_OPTIONS = {
   Yantras: ["Kuber Yantra", "Shree Yantra", "Maha Lakshmi Yantra"],
   "Evil Eye": ["Bracelet", "Necklace", "Keychain"],
   Pyrite: ["Raw", "Tumbled", "Jewelry"],
+  Pyramids: ["Crystal", "Metal", "Decorative"],
   Pendants: ["Gold", "Silver", "Gemstone"],
   "Money Magnet": ["Coins", "Bills", "Charms"],
   Customized: ["Engraving", "Personalized Text", "Photo Print"],

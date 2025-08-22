@@ -58,6 +58,7 @@ const productSchema = new mongoose.Schema(
         "Pyrite",
         "Pendants",
         "Money Magnet",
+        "Pyramids",
         "Customized",
       ],
     },
