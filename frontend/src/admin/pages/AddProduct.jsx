@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import useAuthStore from "../../store/useAuthStore";
-import { Pen } from "lucide-react";
 
 const CATEGORY_OPTIONS = [
   "Gifts",
@@ -10,7 +9,7 @@ const CATEGORY_OPTIONS = [
   "Necklaces",
   "Rings",
   "Bracelets",
-  "Puja samagri",
+  "Puja Samagri",
   "Turtle",
   "Rudraksha",
   "Murti",
@@ -21,7 +20,7 @@ const CATEGORY_OPTIONS = [
   "Combos",
   "Pyrite",
   "Pendants",
-  "Money_Magnet",
+  "Money Magnet",
   "Customized",
 ];
 
@@ -31,16 +30,16 @@ const SUBCATEGORY_OPTIONS = {
   Necklaces: ["Pendant", "Chains", "Choker"],
   Rings: ["Wedding", "Fashion", "Engagement"],
   Bracelets: ["Beaded", "Copper", "Silver"],
-  "Puja samagri": ["Incense", "Puja Thali", "Dhoop"],
+  "Puja Samagri": ["Incense", "Puja Thali", "Dhoop"],
   Turtle: ["Small", "Medium", "Large"],
   Rudraksha: ["1 Mukhi", "2 Mukhi", "3 Mukhi", "5 Mukhi", "7 Mukhi"],
-  Siddh_Rudraksha: ["Gauri Shankar", "Trijuti", "Navratna"],
+  "Siddh Rudraksha": ["Gauri Shankar", "Trijuti", "Navratna"],
   Kavach: ["Gold", "Silver", "Copper"],
   Yantras: ["Kuber Yantra", "Shree Yantra", "Maha Lakshmi Yantra"],
-  Evil_Eye: ["Bracelet", "Necklace", "Keychain"],
+  "Evil Eye": ["Bracelet", "Necklace", "Keychain"],
   Pyrite: ["Raw", "Tumbled", "Jewelry"],
   Pendants: ["Gold", "Silver", "Gemstone"],
-  Money_Magnet: ["Coins", "Bills", "Charms"],
+  "Money Magnet": ["Coins", "Bills", "Charms"],
   Customized: ["Engraving", "Personalized Text", "Photo Print"],
 };
 
