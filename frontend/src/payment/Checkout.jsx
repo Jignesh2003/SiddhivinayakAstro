@@ -115,6 +115,7 @@ export default function Checkout() {
         (sum, item) => sum + item.product.price * Number(item.quantity ?? 1),
         0
       );
+console.log(subTotal);
 
       const gstAmount = Number(((subTotal * 18) / 118).toFixed(2));
       const deliveryCharges = subTotal > 499 ? 0 : 100;
@@ -173,8 +174,7 @@ console.log(subTotal);
       );
 
       const { payment_session_id } = cfRes.data;
-      console.log(payment_session_id);
-      console.log(cfRes);
+    
       
       
       if (!payment_session_id)
