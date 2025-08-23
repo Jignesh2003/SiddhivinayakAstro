@@ -80,6 +80,8 @@ const productSchema = new mongoose.Schema(
     imagePublicId: [{ type: String }],
     reviews: [reviewSchema],
     productNumber: { type: Number, unique: true },
+    featured: { type: Boolean, default: false },
+    priority: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
