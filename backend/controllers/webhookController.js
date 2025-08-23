@@ -3,7 +3,8 @@ import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import PostgresDb from "../config/postgresDb.js";
 import logTransactionToPostgres from "../utils/logTransaction.js";
-
+import dotenv from "dotenv";
+dotenv.config();
 // Helper for clearly tagged logs
 function logWithTS(...args) {
   console.log(`[${new Date().toISOString()}]`, ...args);
