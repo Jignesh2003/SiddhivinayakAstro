@@ -154,6 +154,7 @@ export default function Checkout() {
 
       // ✅ Online Payment (Cashfree)
       if (!cashfreeInstance) throw new Error("Cashfree SDK not ready");
+console.log(subTotal);
 
       const cfRes = await axios.post(
         `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
