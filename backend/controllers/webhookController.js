@@ -60,6 +60,7 @@ export const verifyPayment = async (req, res) => {
       logWithTS(`[${requestId}] ❌ Malformed webhook: missing fields`);
       return res.status(400).send("Malformed webhook");
     }
+    logWithTS(`[${requestId}] Full payload:`, JSON.stringify(payload, null, 2));
 
     // Extract needed values
     const {
