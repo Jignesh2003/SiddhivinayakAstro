@@ -28,7 +28,9 @@ export default function Checkout() {
     script.async = true;
     script.onload = () => {
       if (window.Cashfree) {
-        const instance = window.Cashfree({ mode: "sandbox" });
+        // const instance = window.Cashfree({ mode: "sandbox" });
+                const instance = window.Cashfree({ mode: "production" });
+
         setCashfreeInstance(instance);
       } else {
         toast.error("❌ Failed to initialize Cashfree");
@@ -169,6 +171,8 @@ export default function Checkout() {
       );
 
       const { payment_session_id } = cfRes.data;
+      console.log(payment_session_id);
+      
       if (!payment_session_id)
         throw new Error("No payment session ID received");
 
