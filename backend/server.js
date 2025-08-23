@@ -16,7 +16,6 @@ import astrologyRoutes from "./routes/astrologyRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import webhookRoutes from "./routes/webhookRoutes.js";
 import kundaliPdfRoutes from "./routes/kundaliPdfRoutes.js";
-
 import { setupSocketHandlers } from "./sockets/chatHandler.js";
 import { initializeMinuteBillingCron } from "./jobs/minuteBilling.js";
 import { fetchHoroscopes } from "./jobs/fetchHoroscope.js";
@@ -24,6 +23,7 @@ import { fetchHoroscopes } from "./jobs/fetchHoroscope.js";
 dotenv.config();
 
 const app = express();
+app.use("/api/webhook", webhookRoutes);
 
 // Middleware
 app.use(express.json());
@@ -43,7 +43,6 @@ app.use(helmet());
 app.use(morgan("dev"));
 
 // Routes
-app.use("/api/webhook", webhookRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/astrologers", astroRoutes);
 app.use("/api/chat", chatRoutes);

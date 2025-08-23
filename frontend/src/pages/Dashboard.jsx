@@ -407,14 +407,14 @@ const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5
                       </span>
                     )}
                     {!isOutOfStock && (
-                      <div className="absolute top-2 right-2 flex flex-col space-y-2">
+                      <div className="absolute bottom-2 right-2 flex flex-col space-y-2">
                         <button
                           className="bg-black/80 p-1.5 rounded-full shadow-sm hover:bg-gray-700"
                           onClick={() => handleWishlistToggle(p)}
                           aria-label="Wishlist"
                         >
                           <Heart
-                            size={18}
+                            size={22}
                             className={
                               wishlist.some((w) => w._id === p._id)
                                 ? "text-red-500 fill-red-500"
