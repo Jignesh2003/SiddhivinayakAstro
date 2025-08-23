@@ -7,7 +7,7 @@ export const getProducts = async (req, res) => {
   try {
     const products = await Product.find()
       .select("-reviews")               // omit reviews if you don’t need them here
-      .sort({ createdAt: -1 });         // maybe newest first
+      .sort({ createdAt: 1 });         // maybe newest first
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: "Error fetching products", error: error.message });
