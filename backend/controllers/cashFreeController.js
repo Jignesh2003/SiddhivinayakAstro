@@ -154,7 +154,7 @@ export const createCashfreeOrder = async (req, res) => {
     };
 
     const response = await axios.post(
-      "https://sandbox.cashfree.com/pg/orders",
+      "https://api.cashfree.com/pg/orders",
       payload,
       { headers }
     );
@@ -191,7 +191,7 @@ export const checkPaymentStatus = async (req, res) => {
     const { order_id } = req.query;
     if (!order_id) return res.status(400).json({ message: "Missing order_id" });
 
-    const response = await axios.get(`https://sandbox.cashfree.com/pg/orders/${order_id}`, {
+    const response = await axios.get(`https://api.cashfree.com/pg/orders/${order_id}`, {
       headers: {
         "x-client-id": process.env.CASHFREE_CLIENT_ID,
         "x-client-secret": process.env.CASHFREE_CLIENT_SECRET,

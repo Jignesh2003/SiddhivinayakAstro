@@ -88,7 +88,7 @@ export const premiumKundliOrder = async (req, res) => {
     return res.status(500).json({ message: "Cashfree credentials missing" });
   }
 
-  const CASHFREE_API_URL = "https://sandbox.cashfree.com/pg/orders";
+  const CASHFREE_API_URL = "https://api.cashfree.com/pg/orders";
 
   try {
     const response = await axios.post(
@@ -161,7 +161,7 @@ export const premiumPanchangOrder = async (req, res) => {
     return res.status(500).json({ message: "Cashfree credentials missing !" });
   }
 
-  const CASHFREE_API_URL = "https://sandbox.cashfree.com/pg/orders";
+  const CASHFREE_API_URL = "https://api.cashfree.com/pg/orders";
 
   try {
     const response = await axios.post(CASHFREE_API_URL, {
@@ -231,7 +231,7 @@ export const premiumKundliMatchingOrder = async (req, res) => {
     res.status(500).json({ message: "Cashfree credential missing !" })
   }
 
-  const CASHFREE_API_URL = "https://sandbox.cashfree.com/pg/orders";
+  const CASHFREE_API_URL = "https://api.cashfree.com/pg/orders";
   try {
     const response = await axios.post(CASHFREE_API_URL, {
       order_id: orderId,

@@ -294,7 +294,7 @@ export const initiateWalletTopupOrder = async (req, res) => {
 
     // Call Cashfree to create order
     const response = await axios.post(
-      "https://sandbox.cashfree.com/pg/orders",
+      "https://api.cashfree.com/pg/orders",
       payload,
       { headers }
     );
