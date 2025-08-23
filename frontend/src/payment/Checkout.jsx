@@ -158,7 +158,9 @@ export default function Checkout() {
       const cfRes = await axios.post(
         `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
         {
-          amount: subTotal + deliveryCharges,
+          // amount: subTotal + deliveryCharges,
+          amount: subTotal ,
+
           gstAmount,
           deliveryCharges,
           shippingAddress,
@@ -172,6 +174,8 @@ export default function Checkout() {
 
       const { payment_session_id } = cfRes.data;
       console.log(payment_session_id);
+      console.log(cfRes);
+      
       
       if (!payment_session_id)
         throw new Error("No payment session ID received");
