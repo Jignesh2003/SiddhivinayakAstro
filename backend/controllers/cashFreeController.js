@@ -173,9 +173,9 @@ export const createCashfreeOrder = async (req, res) => {
       customOrderId,
     });
   } catch (err) {
-    console.error(
+    console.log(
       "❌ Cashfree API order creation failed:",
-      err.response?.data || err.message || err
+      err
     );
     return res.status(500).json({
       message: "Failed to create Cashfree order",
