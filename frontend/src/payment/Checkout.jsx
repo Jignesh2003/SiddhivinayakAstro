@@ -160,7 +160,6 @@ export default function Checkout() {
         {
           // amount: subTotal + deliveryCharges,
           amount: subTotal ,
-
           gstAmount,
           deliveryCharges,
           shippingAddress,

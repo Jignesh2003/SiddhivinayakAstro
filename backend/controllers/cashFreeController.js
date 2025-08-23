@@ -68,7 +68,8 @@ export const createCashfreeOrder = async (req, res) => {
         {
           user: userId,
           items,
-          totalAmount: amount + deliveryCharges, // store full payable total
+          // totalAmount: amount + deliveryCharges + gstAmount, // store full payable total
+          totalAmount:amount,
           gstAmount,
           deliveryCharges,
           paymentMethod: "online",
