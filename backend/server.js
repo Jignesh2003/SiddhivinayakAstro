@@ -1,5 +1,6 @@
-import express from "express";
 import dotenv from "dotenv";
+import webhookRoutes from "./routes/webhookRoutes.js";
+import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
@@ -14,7 +15,6 @@ import astroRoutes from "./routes/astroRoutes.js";
 import horoscopeRoutes from "./routes/horoscopeRoutes.js";
 import astrologyRoutes from "./routes/astrologyRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
-import webhookRoutes from "./routes/webhookRoutes.js";
 import kundaliPdfRoutes from "./routes/kundaliPdfRoutes.js";
 import { setupSocketHandlers } from "./sockets/chatHandler.js";
 import { initializeMinuteBillingCron } from "./jobs/minuteBilling.js";
@@ -23,16 +23,23 @@ import { fetchHoroscopes } from "./jobs/fetchHoroscope.js";
 dotenv.config();
 
 const app = express();
-app.use((req, res, next) => {
-  console.log("Global middleware - content-type:", req.headers["content-type"]);
-  console.log(
-    "Global middleware - req.body type:",
-    typeof req.body,
-    Buffer.isBuffer(req.body)
-  );
-  next();
-});
-app.use("/api/webhook", webhookRoutes);
+app.use(
+  "/api/webhook/verify-payment",
+  express.raw({ type: "*/*" }),
+  (req, res, next) => {
+    console.log(
+      "Webhook middleware - content-type:",
+      req.headers["content-type"]
+    );
+    console.log(
+      "Webhook middleware - req.body type:",
+      typeof req.body,
+      Buffer.isBuffer(req.body)
+    );
+    next();
+  }
+);
+app.use("/api/webhook",express.raw(), webhookRoutes);
 
 // Middleware
 app.use(express.json());
