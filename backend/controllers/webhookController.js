@@ -10,17 +10,19 @@ function logWithTS(...args) {
 }
 
 export const verifyPayment = async (req, res) => {
-  logWithTS(`[${requestId}] Headers received:`, {
-    timestamp: req.headers["x-webhook-timestamp"],
-    signature: req.headers["x-webhook-signature"],
-    contentType: req.headers["content-type"],
-  });
-  logWithTS(`[${requestId}] Is body Buffer?`, Buffer.isBuffer(req.body));
-  logWithTS(`[${requestId}] Raw payload length:`, req.body.length);
-
+  
   // Unique id per webhook for trace/debug in logs
   const requestId = crypto.randomBytes(5).toString("hex");
-  logWithTS(`[${requestId}] 🔔 Webhook received`);
+
+ logWithTS(`[${requestId}] 🔔 Webhook received`);
+
+ logWithTS(`[${requestId}] Headers received:`, {
+   timestamp: req.headers["x-webhook-timestamp"],
+   signature: req.headers["x-webhook-signature"],
+   contentType: req.headers["content-type"],
+ });
+ logWithTS(`[${requestId}] Is body Buffer?`, Buffer.isBuffer(req.body));
+ logWithTS(`[${requestId}] Raw payload length:`, req.body.length);
 
   try {
     // 1. Signature and payload validation
