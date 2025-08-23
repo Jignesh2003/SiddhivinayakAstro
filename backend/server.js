@@ -39,7 +39,7 @@ app.use(
     next();
   }
 );
-app.use("/api/webhook",express.raw(), webhookRoutes);
+app.use("/api/webhook", webhookRoutes);
 
 // Middleware
 app.use(express.json());
