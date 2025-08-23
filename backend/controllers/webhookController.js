@@ -14,8 +14,6 @@ export const verifyPayment = async (req, res) => {
   // Unique id per webhook for trace/debug in logs
   const requestId = crypto.randomBytes(5).toString("hex");
 
- logWithTS(`[${requestId}] 🔔 Webhook received`);
-
  logWithTS(`[${requestId}] Headers received:`, {
    timestamp: req.headers["x-webhook-timestamp"],
    signature: req.headers["x-webhook-signature"],

@@ -23,6 +23,15 @@ import { fetchHoroscopes } from "./jobs/fetchHoroscope.js";
 dotenv.config();
 
 const app = express();
+app.use((req, res, next) => {
+  console.log("Global middleware - content-type:", req.headers["content-type"]);
+  console.log(
+    "Global middleware - req.body type:",
+    typeof req.body,
+    Buffer.isBuffer(req.body)
+  );
+  next();
+});
 app.use("/api/webhook", webhookRoutes);
 
 // Middleware

@@ -211,7 +211,7 @@ const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5
         onClick={() => navigate("/astro-list")}
       >
         <img
-          src={assets.ChatWithAstroLogo}
+          src={assets.DashboardPoster}
           alt="Chat With Astrologer"
           className="w-full max-w-screen-xl mx-auto px-0 sm:px-6 md:px-8 py-7 md:py-10"
         />

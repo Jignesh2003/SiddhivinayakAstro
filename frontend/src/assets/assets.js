@@ -21,6 +21,7 @@ import Poster4 from "./25.jpg"
 import Poster5 from "./22.jpg"
 import WhatsAppIcon from './utils/icons8-whatsapp-48.png'
 import PhoneIcon from './utils/icons8-phone-48.png'
+import DashboardPoster from "./utils/dashboardPoster.gif"
 
 
 const assets = {
@@ -29,7 +30,7 @@ const assets = {
  GalaxyBackground,
  HeroSelectionBackground,
 
- Aquarius,Aries,Cancer,Capricorn,ChatWithAstroLogo,Gemini,Leo,Libra,Pisces,Sagittarius,Taurus,Virgo,Scorpio,Poster1,Poster2,Poster3,Poster4,Poster5
+ Aquarius,Aries,Cancer,Capricorn,ChatWithAstroLogo,Gemini,Leo,Libra,Pisces,Sagittarius,Taurus,Virgo,Scorpio,Poster1,Poster2,Poster3,Poster4,Poster5,DashboardPoster
 };
 
 export default assets;
