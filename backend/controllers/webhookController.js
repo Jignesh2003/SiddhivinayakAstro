@@ -161,38 +161,34 @@ export const verifyPayment = async (req, res) => {
           `[${requestId}] ✅ Mongo order ${orderId} status/stock processed: ${paymentStatus}`
         );
       if (updatedOrder) {
-        console.log("Postgres upsert payload:", {
-          order_id: orderId,
-          cf_order_id: cfOrderId || null,
-          cf_payment_id: cfPaymentId,
-          status: paymentStatus,
-          amount: paymentAmount,
-          currency: paymentCurrency,
-          payment_method: JSON.stringify(paymentMethod || {}),
-          payment_time: eventTime,
-          email: customerEmail,
-          phone: customerPhone,
-          signature: incomingSignature,
-        });
 
-        await PostgresDb("productorders_transactions")
-          .insert({
-            order_id: orderId,
-            cf_order_id: cfOrderId || null,
-            cf_payment_id: cfPaymentId,
-            status: paymentStatus,
-            amount: paymentAmount,
-            currency: paymentCurrency,
-            payment_method: JSON.stringify(paymentMethod || {}),
-            payment_time: eventTime,
-            email: customerEmail,
-            phone: customerPhone,
-            signature: incomingSignature,
-            extra_payload: JSON.stringify(payload),
-            audit_logged_at: PostgresDb.fn.now(),
-          })
-          .onConflict("order_id")
-          .merge();
+       await PostgresDb("productorders_transactions")
+         .insert({
+           order_id: orderId,
+           cf_order_id: cfOrderId || null,
+           cf_payment_id: cfPaymentId,
+           status: paymentStatus,
+           amount: paymentAmount,
+           currency: paymentCurrency,
+           payment_method: JSON.stringify(paymentMethod || {}),
+           payment_time: eventTime,
+           email: customerEmail,
+           phone: customerPhone,
+           signature: incomingSignature,
+         })
+         .onConflict("cf_payment_id")
+         .merge([
+           "order_id",
+           "cf_order_id",
+           "status",
+           "amount",
+           "currency",
+           "payment_method",
+           "payment_time",
+           "email",
+           "phone",
+           "signature",
+         ]);
 
         logWithTS(
           `[${requestId}] ✅ Postgres productorders_transactions synced for ${orderId}`
