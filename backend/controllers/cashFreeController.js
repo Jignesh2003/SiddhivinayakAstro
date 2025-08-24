@@ -69,7 +69,7 @@ export const createCashfreeOrder = async (req, res) => {
         {
           user: userId,
           items,
-          totalAmount: amount, // total amount including GST 
+          totalAmount: (amount + deliveryCharges ), // total amount including GST 
           gstAmount,
           deliveryCharges,
           paymentMethod: "online",
@@ -124,8 +124,7 @@ export const createCashfreeOrder = async (req, res) => {
 
     const payload = {
       order_id: customOrderId,
-      // order_amount: Number(amount + (amount > 499 ? 0 : 100)), // total to pay in prod
-      order_amount: Number(amount), // total to pay in prod
+      order_amount: Number(amount + (amount > 499 ? 0 : 100)), // total to pay in prod
       order_currency: "INR",
       customer_details: {
         customer_id: String(userId),
