@@ -61,15 +61,15 @@ export const createCashfreeOrder = async (req, res) => {
 
     // Delivery: Free if >499 else ₹100
     const deliveryCharges = amount > 499 ? 0 : 100;
-
+ const totalAmount = amount +deliveryCharges + gstAmount;
     // === Step 3: Save the pending order in Mongo ===
     const newOrder = await Order.create(
       [
         {
           user: userId,
           items,
-          // totalAmount: amount + deliveryCharges + gstAmount, // store full payable total
-          subtotalAmount: amount, // original subtotal without delivery
+          // totalAmount: totalAmount, // store full payable total
+          totalAmount: amount, // original subtotal without delivery
           gstAmount,
           deliveryCharges,
           paymentMethod: "online",
@@ -101,9 +101,9 @@ export const createCashfreeOrder = async (req, res) => {
       cf_order_id: null,
       cf_payment_id: null,
       status: "INITIATED",
-      amount: amount + deliveryCharges + gstAmount, // original subtotal without delivery
+      amount: totalAmount, // original subtotal without delivery
       currency: "INR",
-      payment_method: "Online failed/cancelled",
+      payment_method: "online",
       payment_time: new Date(),
       email: user.email,
       phone: shippingAddress.phone,
