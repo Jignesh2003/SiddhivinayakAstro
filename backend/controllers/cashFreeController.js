@@ -61,7 +61,7 @@ export const createCashfreeOrder = async (req, res) => {
 
     // Delivery: Free if >499 else ₹100
     const deliveryCharges = amount > 499 ? 0 : 100;
- const totalAmount = Number(amount + gstAmount);
+ const totalAmount = Number(amount + gstAmount).toFixed(2); // total including GST and delivery
     // === Step 3: Save the pending order in Mongo ===
     const newOrder = await Order.create(
       [
@@ -124,7 +124,7 @@ export const createCashfreeOrder = async (req, res) => {
     const payload = {
       order_id: customOrderId,
       // order_amount: Number(amount + (amount > 499 ? 0 : 100)+ gstAmount), // total to pay in prod
-      order_amount: Number(amount  + gstAmount), // total to pay in prod
+      order_amount: Number((amount  + gstAmount.toFixed(2))), // total to pay in prod
 
       order_currency: "INR",
       customer_details: {
