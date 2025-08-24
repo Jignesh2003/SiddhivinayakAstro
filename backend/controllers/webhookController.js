@@ -129,13 +129,14 @@ export const verifyPayment = async (req, res) => {
             logWithTS(
               `[${requestId}] ℹ️ Order ${orderId} already marked Paid, skipping stock deduction`
             );
-                    updatedOrder = existingOrder;
+            updatedOrder = existingOrder;
             return; // exit — already processed successfully
           }
 
           // Update order status
           Object.assign(existingOrder, mongoUpdate);
           await existingOrder.save({ session: mongoSession });
+          updatedOrder = existingOrder; 
 
           // Deduct stock only on first success
           if (paymentStatus === "SUCCESS") {
@@ -176,10 +177,10 @@ export const verifyPayment = async (req, res) => {
            phone: customerPhone,
            signature: incomingSignature,
          })
-         .onConflict("cf_payment_id")
+         .onConflict("order_id")
          .merge([
-           "order_id",
            "cf_order_id",
+           "cf_payment_id",
            "status",
            "amount",
            "currency",
