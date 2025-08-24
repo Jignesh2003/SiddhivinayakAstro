@@ -57,6 +57,8 @@ export const createCashfreeOrder = async (req, res) => {
 
     // === Step 2: Calculate GST and Delivery Charges ===
     // GST is included in amount (18% inclusive) -> extract GST portion
+    console.log(amount);
+    
     const gstAmount = Number(((amount * 0.18) ).toFixed(2));
 
     // Delivery: Free if >499 else ₹100
