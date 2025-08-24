@@ -57,19 +57,18 @@ export const createCashfreeOrder = async (req, res) => {
 
     // === Step 2: Calculate GST and Delivery Charges ===
     // GST is included in amount (18% inclusive) -> extract GST portion
-    const gstAmount = Number(((amount * 18) / 118).toFixed(2));
+    const gstAmount = Number(((amount * 0.18) ).toFixed(2));
 
     // Delivery: Free if >499 else ₹100
     const deliveryCharges = amount > 499 ? 0 : 100;
- const totalAmount = Number(amount + deliveryCharges + gstAmount);
+ const totalAmount = Number(amount + gstAmount);
     // === Step 3: Save the pending order in Mongo ===
     const newOrder = await Order.create(
       [
         {
           user: userId,
           items,
-          // totalAmount: totalAmount, // store full payable total turn it on in prod----------------------------------------------------------------------------
-          totalAmount: amount, 
+          totalAmount: totalAmount, 
           gstAmount,
           deliveryCharges,
           paymentMethod: "online",
