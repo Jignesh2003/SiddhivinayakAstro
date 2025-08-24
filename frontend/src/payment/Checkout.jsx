@@ -160,8 +160,8 @@ console.log(subTotal);
       const cfRes = await axios.post(
         `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
         {
-          // amount: subTotal + deliveryCharges,
-          amount: subTotal ,
+          amount: subTotal + deliveryCharges + gstAmount,
+          // amount: subTotal ,
           gstAmount,
           deliveryCharges,
           shippingAddress,

@@ -68,7 +68,8 @@ export const createCashfreeOrder = async (req, res) => {
         {
           user: userId,
           items,
-          totalAmount: amount + deliveryCharges + gstAmount, // store full payable total
+          // totalAmount: amount + deliveryCharges + gstAmount, // store full payable total
+          subtotalAmount: amount, // original subtotal without delivery
           gstAmount,
           deliveryCharges,
           paymentMethod: "online",
@@ -100,9 +101,9 @@ export const createCashfreeOrder = async (req, res) => {
       cf_order_id: null,
       cf_payment_id: null,
       status: "INITIATED",
-      amount: amount, // original subtotal without delivery
+      amount: amount + deliveryCharges + gstAmount, // original subtotal without delivery
       currency: "INR",
-      payment_method: null,
+      payment_method: "Online failed/cancelled",
       payment_time: new Date(),
       email: user.email,
       phone: shippingAddress.phone,
@@ -122,8 +123,8 @@ export const createCashfreeOrder = async (req, res) => {
 
     const payload = {
       order_id: customOrderId,
-      // order_amount: Number(amount + (amount > 499 ? 0 : 100)), // total to pay
-      order_amount: Number(amount), // total to pay
+      order_amount: Number(amount + (amount > 499 ? 0 : 100),gstAmount), // total to pay
+      // order_amount: Number(amount), // total to pay
 
       order_currency: "INR",
       customer_details: {

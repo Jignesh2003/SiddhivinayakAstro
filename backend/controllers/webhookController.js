@@ -20,8 +20,7 @@ export const verifyPayment = async (req, res) => {
    signature: req.headers["x-webhook-signature"],
    contentType: req.headers["content-type"],
  });
- logWithTS(`[${requestId}] Is body Buffer?`, Buffer.isBuffer(req.body));
- logWithTS(`[${requestId}] Raw payload length:`, req.body.length);
+
 
   try {
     // 1. Signature and payload validation
@@ -130,6 +129,7 @@ export const verifyPayment = async (req, res) => {
             logWithTS(
               `[${requestId}] ℹ️ Order ${orderId} already marked Paid, skipping stock deduction`
             );
+                    updatedOrder = existingOrder;
             return; // exit — already processed successfully
           }
 
@@ -160,6 +160,32 @@ export const verifyPayment = async (req, res) => {
         logWithTS(
           `[${requestId}] ✅ Mongo order ${orderId} status/stock processed: ${paymentStatus}`
         );
+         if (updatedOrder) {
+           await PostgresDb.transaction(async (trx) => {
+             await trx("productorders_transactions")
+               .insert({
+                 order_id: orderId,
+                 cf_order_id: cfOrderId || null,
+                 cf_payment_id: cfPaymentId,
+                 status: paymentStatus,
+                 amount: paymentAmount,
+                 currency: paymentCurrency,
+                 payment_method: JSON.stringify(paymentMethod || {}),
+                 payment_time: eventTime,
+                 email: customerEmail,
+                 phone: customerPhone,
+                 signature: incomingSignature,
+                 extra_payload: JSON.stringify(payload),
+                 audit_logged_at: trx.fn.now(),
+               })
+               .onConflict("order_id")
+               .merge(); // ✅ ensures idempotent insert/update
+           });
+
+           logWithTS(
+             `[${requestId}] ✅ Postgres productorders_transactions synced for ${orderId}`
+           );
+         }
       } catch (err) {
         await mongoSession.abortTransaction();
         mongoSession.endSession();
@@ -223,6 +249,7 @@ export const verifyPayment = async (req, res) => {
         return res.status(500).send("Wallet credit failed.");
       }
     }
+    //kundli
     if (orderId.startsWith("PRE_KUNDLI_") || orderId.startsWith("PRE_K")) {
       try {
         await PostgresDb.transaction(async trx => {
