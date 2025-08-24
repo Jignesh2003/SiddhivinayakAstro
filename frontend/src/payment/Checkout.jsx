@@ -3,6 +3,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import useAuthStore from "../store/useAuthStore";
 import useCartStore from "../store/useCartStore";
+import { Country, State, City } from "country-state-city";
 
 export default function Checkout() {
   const { userId, token, logout } = useAuthStore.getState();
@@ -17,9 +18,15 @@ export default function Checkout() {
     address: "",
     city: "",
     state: "",
+    country: "",
     pincode: "",
     landmark: "",
   });
+
+  // To hold dropdown options
+  const [countryOptions, setCountryOptions] = useState([]);
+  const [stateOptions, setStateOptions] = useState([]);
+  const [cityOptions, setCityOptions] = useState([]);
 
   // Load Cashfree payment SDK
   useEffect(() => {
@@ -28,9 +35,7 @@ export default function Checkout() {
     script.async = true;
     script.onload = () => {
       if (window.Cashfree) {
-        // const instance = window.Cashfree({ mode: "sandbox" });
-                const instance = window.Cashfree({ mode: "production" });
-
+        const instance = window.Cashfree({ mode: "production" });
         setCashfreeInstance(instance);
       } else {
         toast.error("❌ Failed to initialize Cashfree");
@@ -39,6 +44,46 @@ export default function Checkout() {
     script.onerror = () => toast.error("❌ Failed to load Cashfree SDK");
     document.body.appendChild(script);
   }, []);
+
+  // Load countries on mount
+  useEffect(() => {
+    const countries = Country.getAllCountries();
+    setCountryOptions(countries);
+  }, []);
+
+  // Load states when country changes
+  useEffect(() => {
+    if (shippingAddress.country) {
+      const states = State.getStatesOfCountry(shippingAddress.country);
+      setStateOptions(states);
+      setShippingAddress((prev) => ({
+        ...prev,
+        state: "",
+        city: "",
+      }));
+      setCityOptions([]);
+    } else {
+      setStateOptions([]);
+      setCityOptions([]);
+    }
+  }, [shippingAddress.country]);
+
+  // Load cities when state changes
+  useEffect(() => {
+    if (shippingAddress.country && shippingAddress.state) {
+      const cities = City.getCitiesOfState(
+        shippingAddress.country,
+        shippingAddress.state
+      );
+      setCityOptions(cities);
+      setShippingAddress((prev) => ({
+        ...prev,
+        city: "",
+      }));
+    } else {
+      setCityOptions([]);
+    }
+  }, [shippingAddress.state, shippingAddress.country]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -115,7 +160,6 @@ export default function Checkout() {
         (sum, item) => sum + item.product.price * Number(item.quantity ?? 1),
         0
       );
-console.log(subTotal);
 
       const gstAmount = Number(((subTotal * 18) / 118).toFixed(2));
       const deliveryCharges = subTotal > 499 ? 0 : 100;
@@ -126,41 +170,13 @@ console.log(subTotal);
         ...(item.size && { size: item.size }),
       }));
 
-      // COD — commented out for future
-      /*
-      if (selectedMethod === "cod") {
-        const { data } = await axios.post(
-          `${import.meta.env.VITE_BASE_URL}/place-order`,
-          {
-            user: userId,
-            items: orderItems,
-            totalAmount: subTotal + deliveryCharges,
-            gstAmount,
-            deliveryCharges,
-            paymentMethod: "cod",
-            paymentStatus: "Pending",
-            orderStatus: "Pending",
-            shippingAddress,
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        toast.success("✅ Order placed with Cash on Delivery!");
-        clearCart();
-        navigate(
-          `/cod-confirmation?order_id=${data.order._id}&paymentStatus=${data.paymentStatus}`
-        );
-        return;
-      }
-      */
-
       // ✅ Online Payment (Cashfree)
       if (!cashfreeInstance) throw new Error("Cashfree SDK not ready");
-console.log(subTotal);
 
       const cfRes = await axios.post(
         `${import.meta.env.VITE_PAYMENT_URL}/cashfree/create-order`,
         {
-          amount: subTotal ,
+          amount: subTotal,
           gstAmount,
           deliveryCharges,
           shippingAddress,
@@ -173,9 +189,7 @@ console.log(subTotal);
       );
 
       const { payment_session_id } = cfRes.data;
-    
-      
-      
+
       if (!payment_session_id)
         throw new Error("No payment session ID received");
 
@@ -194,39 +208,125 @@ console.log(subTotal);
     }
   };
 
+  // ✅ Compute subtotal, gst, deliveryCharges for UI summary
+  const subTotal = cart.reduce(
+    (sum, item) => sum + item.product.price * Number(item.quantity ?? 1),
+    0
+  );
+  const gstAmount = Number(((subTotal * 18) / 118).toFixed(2));
+  const deliveryCharges = subTotal > 499 ? 0 : 100;
+  const total = subTotal + deliveryCharges;
+
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg">
       <h2 className="text-2xl font-bold text-center mb-5">Checkout</h2>
 
+      {/* Shipping details */}
       <div className="space-y-3">
         <h3 className="font-semibold">Shipping Details</h3>
-        {Object.keys(shippingAddress).map((field) => (
-          <input
-            key={field}
-            name={field}
-            placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
-            value={shippingAddress[field]}
-            onChange={handleChange}
-            className="w-full border p-2 rounded-md mb-2"
-            autoComplete="off"
-          />
-        ))}
+
+        <input
+          name="name"
+          placeholder="Name"
+          value={shippingAddress.name}
+          onChange={handleChange}
+          className="w-full border p-2 rounded-md mb-2"
+          autoComplete="off"
+        />
+
+        <input
+          name="phone"
+          placeholder="Phone"
+          value={shippingAddress.phone}
+          onChange={handleChange}
+          className="w-full border p-2 rounded-md mb-2"
+          autoComplete="off"
+          maxLength={10}
+          type="tel"
+        />
+
+        <input
+          name="address"
+          placeholder="Address"
+          value={shippingAddress.address}
+          onChange={handleChange}
+          className="w-full border p-2 rounded-md mb-2"
+          autoComplete="off"
+        />
+
+        {/* Country dropdown */}
+        <select
+          name="country"
+          value={shippingAddress.country}
+          onChange={handleChange}
+          className="w-full border p-2 rounded-md mb-2 bg-white"
+          required
+        >
+          <option value="">Select Country</option>
+          {countryOptions.map((c) => (
+            <option key={c.isoCode} value={c.isoCode}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+
+        {/* State dropdown */}
+        <select
+          name="state"
+          value={shippingAddress.state}
+          onChange={handleChange}
+          className="w-full border p-2 rounded-md mb-2 bg-white"
+          required
+          disabled={!stateOptions.length}
+        >
+          <option value="">Select State</option>
+          {stateOptions.map((s) => (
+            <option key={s.isoCode} value={s.isoCode}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+
+        {/* City dropdown */}
+        <select
+          name="city"
+          value={shippingAddress.city}
+          onChange={handleChange}
+          className="w-full border p-2 rounded-md mb-2 bg-white"
+          required
+          disabled={!cityOptions.length}
+        >
+          <option value="">Select City</option>
+          {cityOptions.map((c) => (
+            <option key={c.name} value={c.name}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+
+        <input
+          name="pincode"
+          placeholder="Pincode"
+          value={shippingAddress.pincode}
+          onChange={handleChange}
+          className="w-full border p-2 rounded-md mb-2"
+          autoComplete="off"
+          type="text"
+        />
+
+        <input
+          name="landmark"
+          placeholder="Landmark"
+          value={shippingAddress.landmark}
+          onChange={handleChange}
+          className="w-full border p-2 rounded-md mb-2"
+          autoComplete="off"
+        />
       </div>
 
+      {/* Payment Method */}
       <div className="mt-4 space-y-2">
         <h3 className="font-semibold">Payment Method</h3>
-
-        {/* COD kept for future use but hidden for now
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            name="paymentMethod"
-            checked={selectedMethod === "cod"}
-            onChange={() => setSelectedMethod("cod")}
-          /> Cash on Delivery
-        </label>
-        */}
-
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="radio"
@@ -237,6 +337,43 @@ console.log(subTotal);
           />{" "}
           UPI / Card (via Cashfree)
         </label>
+      </div>
+
+      {/* Order Summary */}
+      <div className="mt-6 border-t pt-4">
+        <h3 className="font-semibold mb-2">Order Summary</h3>
+        <div className="space-y-1">
+          {cart.map((item, i) => (
+            <div key={i} className="flex justify-between text-sm border-b py-1">
+              <span>
+                {item.product.name} (x{item.quantity ?? 1})
+              </span>
+              <span>₹{item.product.price * Number(item.quantity ?? 1)}</span>
+            </div>
+          ))}
+
+          <div className="flex justify-between text-sm mt-2">
+            <span>Subtotal</span>
+            <span>₹{subTotal}</span>
+          </div>
+
+          <div className="flex justify-between text-sm">
+            <span>Delivery Charges</span>
+            <span>
+              {deliveryCharges === 0 ? "Free" : `₹${deliveryCharges}`}
+            </span>
+          </div>
+
+          <div className="flex justify-between text-sm">
+            <span>GST (included in price)</span>
+            <span>₹{gstAmount}</span>
+          </div>
+
+          <div className="flex justify-between font-bold text-lg border-t pt-2">
+            <span>Total</span>
+            <span>₹{total}</span>
+          </div>
+        </div>
       </div>
 
       <button
