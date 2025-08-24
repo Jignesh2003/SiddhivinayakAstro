@@ -21,7 +21,7 @@ import Poster4 from "./25.jpg"
 import Poster5 from "./22.jpg"
 import WhatsAppIcon from './utils/icons8-whatsapp-48.png'
 import PhoneIcon from './utils/icons8-phone-48.png'
-import DashboardPoster from "./utils/dashboardPoster.png"
+import DashboardPoster from "./utils//dashboardPoster.GIF"
 
 
 const assets = {
