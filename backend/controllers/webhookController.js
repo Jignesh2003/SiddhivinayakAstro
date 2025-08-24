@@ -160,34 +160,30 @@ export const verifyPayment = async (req, res) => {
         logWithTS(
           `[${requestId}] ✅ Mongo order ${orderId} status/stock processed: ${paymentStatus}`
         );
-       if (updatedOrder) {
-  await PostgresDb("productorders_transactions")
-    .insert({
-      order_id: orderId,
-      cf_order_id: cfOrderId || null,
-      cf_payment_id: cfPaymentId,
-      status: paymentStatus,
-      amount: paymentAmount,
-      currency: paymentCurrency,
-      payment_method: JSON.stringify(paymentMethod || {}),
-      payment_time: eventTime,
-      email: customerEmail,
-      phone: customerPhone,
-      signature: incomingSignature,
-    })
-    .onConflict("order_id")
-    .merge();
+      if (updatedOrder) {
+        await PostgresDb("productorders_transactions")
+          .insert({
+            order_id: orderId,
+            cf_order_id: cfOrderId || null,
+            cf_payment_id: cfPaymentId,
+            status: paymentStatus,
+            amount: paymentAmount,
+            currency: paymentCurrency,
+            payment_method: JSON.stringify(paymentMethod || {}),
+            payment_time: eventTime,
+            email: customerEmail,
+            phone: customerPhone,
+            signature: incomingSignature,
+            extra_payload: JSON.stringify(payload),
+            audit_logged_at: PostgresDb.fn.now(),
+          })
+          .onConflict("order_id")
+          .merge();
 
-  logWithTS(
-    `[${requestId}] ✅ Postgres productorders_transactions synced for ${orderId}`
-  );
-}
-
-
-           logWithTS(
-             `[${requestId}] ✅ Postgres productorders_transactions synced for ${orderId}`
-           );
-         }
+        logWithTS(
+          `[${requestId}] ✅ Postgres productorders_transactions synced for ${orderId}`
+        );
+      }
       } catch (err) {
         await mongoSession.abortTransaction();
         mongoSession.endSession();
