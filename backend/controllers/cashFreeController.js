@@ -103,7 +103,7 @@ export const createCashfreeOrder = async (req, res) => {
       status: "INITIATED",
       amount: amount, // original subtotal and store gst and dilivery seprate
       currency: "INR",
-      payment_method: "online",
+      payment_method: null,
       payment_time: new Date(),
       email: user.email,
       phone: shippingAddress.phone,
@@ -120,12 +120,11 @@ export const createCashfreeOrder = async (req, res) => {
     if (!clientId || !clientSecret) {
       return res.status(500).json({ message: "Cashfree credentials missing" });
     }
+    const gstAmount = Number(((amount * 18) / 118).toFixed(2));
 
     const payload = {
       order_id: customOrderId,
       order_amount: Number(amount + (amount > 499 ? 0 : 100),gstAmount), // total to pay
-      // order_amount: Number(amount), // total to pay
-
       order_currency: "INR",
       customer_details: {
         customer_id: String(userId),
