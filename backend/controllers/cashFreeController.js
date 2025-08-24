@@ -124,7 +124,7 @@ export const createCashfreeOrder = async (req, res) => {
     const payload = {
       order_id: customOrderId,
       // order_amount: Number(amount + (amount > 499 ? 0 : 100)+ gstAmount), // total to pay in prod
-      order_amount: Number((amount  + gstAmount.toFixed(2))), // total to pay in prod
+      order_amount: Number(amount  + gstAmount), // total to pay in prod
 
       order_currency: "INR",
       customer_details: {
