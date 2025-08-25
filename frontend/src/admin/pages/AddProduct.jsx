@@ -45,46 +45,96 @@ const SUBCATEGORY_OPTIONS = {
   Customized: ["Engraving", "Personalized Text", "Photo Print"],
 };
 
-const SIZE_TYPE_OPTIONS = ["Ring","Quantity","Mukhi","Gemstone"];
+const SIZE_TYPE_OPTIONS = ["Ring", "Quantity", "Mukhi", "Gemstone"];
 const SIZE_OPTIONS = {
-  Ring:       ["3","3.5","4","4.5","5","5.5","6","6.5","7","7.5","8","8.5","9","9.5","10","10.5","11","11.5","12","12.5","13"],
-  Quantity:   [],
-  Mukhi:      ["1 Mukhi","2 Mukhi","3 Mukhi","4 Mukhi","5 Mukhi","6 Mukhi","7 Mukhi","8 Mukhi","9 Mukhi","10 Mukhi","11 Mukhi","12 Mukhi","13 Mukhi","14 Mukhi"],
-  Gemstone:   ["Amethyst","Rose Quartz","Citrine","Emerald","Ruby","Sapphire","Garnet","Turquoise","Topaz","Peridot"],
+  Ring: [
+    "3",
+    "3.5",
+    "4",
+    "4.5",
+    "5",
+    "5.5",
+    "6",
+    "6.5",
+    "7",
+    "7.5",
+    "8",
+    "8.5",
+    "9",
+    "9.5",
+    "10",
+    "10.5",
+    "11",
+    "11.5",
+    "12",
+    "12.5",
+    "13",
+  ],
+  Quantity: [],
+  Mukhi: [
+    "1 Mukhi",
+    "2 Mukhi",
+    "3 Mukhi",
+    "4 Mukhi",
+    "5 Mukhi",
+    "6 Mukhi",
+    "7 Mukhi",
+    "8 Mukhi",
+    "9 Mukhi",
+    "10 Mukhi",
+    "11 Mukhi",
+    "12 Mukhi",
+    "13 Mukhi",
+    "14 Mukhi",
+  ],
+  Gemstone: [
+    "Amethyst",
+    "Rose Quartz",
+    "Citrine",
+    "Emerald",
+    "Ruby",
+    "Sapphire",
+    "Garnet",
+    "Turquoise",
+    "Topaz",
+    "Peridot",
+  ],
 };
 
 export default function AddProduct() {
-  const token = useAuthStore(s => s.token);
+  const token = useAuthStore((s) => s.token);
 
   const [form, setForm] = useState({
-    name:        "",
-    price:       "",
+    name: "",
+    price: "",
     description: "",
-    miniDesc:    "",
-    tags:        "",
-    category:    CATEGORY_OPTIONS[0],
+    miniDesc: "",
+    tags: "",
+    category: CATEGORY_OPTIONS[0],
     subcategory: SUBCATEGORY_OPTIONS[CATEGORY_OPTIONS[0]][0],
-    brand:       "",
-    sizeType:    SIZE_TYPE_OPTIONS[0],
-    stockRows:   [{ size: "", quantity: "" }],
+    brand: "",
+    sizeType: SIZE_TYPE_OPTIONS[0],
+    stockRows: [{ size: "", quantity: "" }],
+    howToWear: "",
+    benefits: "",
+    bestDayToWear: "",
   });
-  const [files, setFiles]       = useState([]);       // File[]
-  const [previews, setPreviews] = useState([]);       // data URIs
-  const [loading, setLoading]   = useState(false);
+  const [files, setFiles] = useState([]); // File[]
+  const [previews, setPreviews] = useState([]); // data URIs
+  const [loading, setLoading] = useState(false);
 
-  // whenever category changes, reset subcategory to first option
   useEffect(() => {
     const subs = SUBCATEGORY_OPTIONS[form.category] || [];
-    setForm(f => ({ ...f, subcategory: subs[0] || "" }));
+    setForm((f) => ({ ...f, subcategory: subs[0] || "" }));
   }, [form.category]);
 
-  const handleChange = e => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(f => ({ ...f, [name]: value }));
+    setForm((f) => ({ ...f, [name]: value }));
   };
 
   const handleStockChange = (idx, field, val) => {
-    setForm(f => {
+    setForm((f) => {
       const rows = [...f.stockRows];
       rows[idx][field] = val;
       return { ...f, stockRows: rows };
@@ -92,27 +142,28 @@ export default function AddProduct() {
   };
 
   const addStockRow = () =>
-    setForm(f => ({
+    setForm((f) => ({
       ...f,
       stockRows: [...f.stockRows, { size: "", quantity: "" }],
     }));
 
-  const removeStockRow = idx =>
-    setForm(f => ({
+  const removeStockRow = (idx) =>
+    setForm((f) => ({
       ...f,
       stockRows: f.stockRows.filter((_, i) => i !== idx),
     }));
 
-  const handleFileSelect = e => {
+  const handleFileSelect = (e) => {
     const selected = Array.from(e.target.files).slice(0, 5);
     setFiles(selected);
     Promise.all(
-      selected.map(file =>
-        new Promise(res => {
-          const reader = new FileReader();
-          reader.onloadend = () => res(reader.result);
-          reader.readAsDataURL(file);
-        })
+      selected.map(
+        (file) =>
+          new Promise((res) => {
+            const reader = new FileReader();
+            reader.onloadend = () => res(reader.result);
+            reader.readAsDataURL(file);
+          })
       )
     ).then(setPreviews);
   };
@@ -120,22 +171,25 @@ export default function AddProduct() {
   const resetForm = () => {
     const defaultCat = CATEGORY_OPTIONS[0];
     setForm({
-      name:        "",
-      price:       "",
+      name: "",
+      price: "",
       description: "",
-      miniDesc:    "",
-      tags:        "",
-      category:    defaultCat,
+      miniDesc: "",
+      tags: "",
+      category: defaultCat,
       subcategory: SUBCATEGORY_OPTIONS[defaultCat][0],
-      brand:       "",
-      sizeType:    SIZE_TYPE_OPTIONS[0],
-      stockRows:   [{ size: "", quantity: "" }],
+      brand: "",
+      sizeType: SIZE_TYPE_OPTIONS[0],
+      stockRows: [{ size: "", quantity: "" }],
+      howToWear: "",
+      benefits: "",
+      bestDayToWear: "",
     });
     setFiles([]);
     setPreviews([]);
   };
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
     setLoading(true);
@@ -159,21 +213,24 @@ export default function AddProduct() {
       return;
     }
 
+    // Helper to parse comma-separated string to array safely
+    const parseToArray = (str) =>
+      str
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+
     // build FormData
     const fd = new FormData();
-    fd.append("name",        form.name);
-    fd.append("price",       form.price);
+    fd.append("name", form.name);
+    fd.append("price", form.price);
     fd.append("description", form.description);
-    fd.append("miniDesc",    form.miniDesc);
-    const tagsArray = form.tags
-      .split(",")
-      .map(t => t.trim())
-      .filter(Boolean);
-    fd.append("tags",        JSON.stringify(tagsArray));
-    fd.append("category",    form.category);
+    fd.append("miniDesc", form.miniDesc);
+    fd.append("tags", JSON.stringify(parseToArray(form.tags)));
+    fd.append("category", form.category);
     fd.append("subcategory", form.subcategory);
-    fd.append("brand",       form.brand);
-    fd.append("sizeType",    form.sizeType);
+    fd.append("brand", form.brand);
+    fd.append("sizeType", form.sizeType);
     fd.append(
       "stock",
       JSON.stringify(
@@ -183,16 +240,21 @@ export default function AddProduct() {
         }))
       )
     );
-    files.forEach(file => fd.append("image", file));
+
+    // Append new fields as JSON array strings
+    fd.append("howToWear", JSON.stringify(parseToArray(form.howToWear)));
+    fd.append("benefits", JSON.stringify(parseToArray(form.benefits)));
+    fd.append(
+      "bestDayToWear",
+      JSON.stringify(parseToArray(form.bestDayToWear))
+    );
+
+    files.forEach((file) => fd.append("image", file));
 
     try {
-      await axios.post(
-        `${import.meta.env.VITE_BASE_URL}/add-product`,
-        fd,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await axios.post(`${import.meta.env.VITE_BASE_URL}/add-product`, fd, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       toast.success("✅ Product added successfully!");
       resetForm();
     } catch (err) {
@@ -234,8 +296,10 @@ export default function AddProduct() {
             onChange={handleChange}
             className="flex-1 border p-2 rounded"
           >
-            {CATEGORY_OPTIONS.map(opt => (
-              <option key={opt} value={opt}>{opt}</option>
+            {CATEGORY_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
             ))}
           </select>
           <select
@@ -244,8 +308,10 @@ export default function AddProduct() {
             onChange={handleChange}
             className="flex-1 border p-2 rounded"
           >
-            {(SUBCATEGORY_OPTIONS[form.category] || []).map(opt => (
-              <option key={opt} value={opt}>{opt}</option>
+            {(SUBCATEGORY_OPTIONS[form.category] || []).map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
             ))}
           </select>
         </div>
@@ -264,8 +330,10 @@ export default function AddProduct() {
           onChange={handleChange}
           className="w-full border p-2 rounded"
         >
-          {SIZE_TYPE_OPTIONS.map(opt => (
-            <option key={opt} value={opt}>{opt}</option>
+          {SIZE_TYPE_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
           ))}
         </select>
 
@@ -277,13 +345,17 @@ export default function AddProduct() {
               {form.sizeType !== "Quantity" && (
                 <select
                   value={row.size}
-                  onChange={e => handleStockChange(idx, "size", e.target.value)}
+                  onChange={(e) =>
+                    handleStockChange(idx, "size", e.target.value)
+                  }
                   className="flex-1 border p-2 rounded"
                   required
                 >
                   <option value="">Select size</option>
-                  {SIZE_OPTIONS[form.sizeType].map(opt => (
-                    <option key={opt} value={opt}>{opt}</option>
+                  {SIZE_OPTIONS[form.sizeType].map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
                   ))}
                 </select>
               )}
@@ -291,7 +363,9 @@ export default function AddProduct() {
                 type="number"
                 placeholder="Quantity"
                 value={row.quantity}
-                onChange={e => handleStockChange(idx, "quantity", e.target.value)}
+                onChange={(e) =>
+                  handleStockChange(idx, "quantity", e.target.value)
+                }
                 className="w-24 border p-2 rounded"
                 required
               />
@@ -311,8 +385,8 @@ export default function AddProduct() {
             onClick={addStockRow}
             className="text-sm text-blue-600"
           >
-            + Add another{" "}
-            {form.sizeType === "Quantity" ? "quantity" : "size"} row
+            + Add another {form.sizeType === "Quantity" ? "quantity" : "size"}{" "}
+            row
           </button>
         </div>
 
@@ -332,6 +406,33 @@ export default function AddProduct() {
           value={form.tags}
           onChange={handleChange}
           placeholder="Tags (comma-separated)"
+          className="w-full border p-2 rounded"
+        />
+
+        {/* How to Wear */}
+        <input
+          name="howToWear"
+          value={form.howToWear}
+          onChange={handleChange}
+          placeholder="How to Wear (comma-separated)"
+          className="w-full border p-2 rounded"
+        />
+
+        {/* Benefits */}
+        <input
+          name="benefits"
+          value={form.benefits}
+          onChange={handleChange}
+          placeholder="Benefits (comma-separated)"
+          className="w-full border p-2 rounded"
+        />
+
+        {/* Best Day to Wear */}
+        <input
+          name="bestDayToWear"
+          value={form.bestDayToWear}
+          onChange={handleChange}
+          placeholder="Best Day to Wear (comma-separated)"
           className="w-full border p-2 rounded"
         />
 

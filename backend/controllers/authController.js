@@ -281,58 +281,59 @@ export const deleteReview = async (req, res) => {
 
 export const addProduct = async (req, res) => {
   try {
-    // ensure files
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ message: "At least one image is required." });
+      return res
+        .status(400)
+        .json({ message: "At least one image is required." });
     }
-    // basic fields
     const {
       name,
       price,
       description,
-      miniDesc,        // ← new
-      tags,            // ← new
+      miniDesc,
+      tags,
       category,
       subcategory,
       brand,
       sizeType,
-      stock: stockRaw
+      stock: stockRaw,
+      howToWear,
+      benefits,
+      bestDayToWear,
     } = req.body;
 
     if (!name || !price || !description || !category || !stockRaw) {
       return res.status(400).json({
-        message: "name, price, description, category and stock are required."
+        message: "name, price, description, category and stock are required.",
       });
     }
 
-    // parse & validate stock
     let stock;
     try {
       stock = JSON.parse(stockRaw);
       if (!Array.isArray(stock) || stock.length === 0) throw new Error();
-      stock.forEach(entry => {
-        if (typeof entry.quantity !== "number") throw new Error("Quantity must be numeric");
-        if (sizeType !== "Quantity" && !entry.size) throw new Error("Size is required");
+      stock.forEach((entry) => {
+        if (typeof entry.quantity !== "number")
+          throw new Error("Quantity must be numeric");
+        if (sizeType !== "Quantity" && !entry.size)
+          throw new Error("Size is required");
       });
     } catch {
       return res.status(400).json({ message: "Invalid stock format." });
     }
 
-    // map files → arrays
-    const image         = req.files.map(f => f.path);
-    const imagePublicId = req.files.map(f => f.filename);
+    const image = req.files.map((f) => f.path);
+    const imagePublicId = req.files.map((f) => f.filename);
 
-    // build tags array if provided as comma-string or JSON
     let tagsArray = [];
     if (tags) {
       if (typeof tags === "string") {
         try {
-          // allow JSON-encoded or comma-separated
           tagsArray = JSON.parse(tags);
         } catch {
           tagsArray = tags
             .split(",")
-            .map(t => t.trim())
+            .map((t) => t.trim())
             .filter(Boolean);
         }
       } else if (Array.isArray(tags)) {
@@ -340,19 +341,40 @@ export const addProduct = async (req, res) => {
       }
     }
 
+    // Utility to handle the new fields (accept comma-separated, JSON, or arrays)
+    function parseMultiField(val) {
+      if (!val) return [];
+      if (typeof val === "string") {
+        try {
+          return JSON.parse(val);
+        } catch {
+          return val
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean);
+        }
+      } else if (Array.isArray(val)) {
+        return val;
+      }
+      return [];
+    }
+
     const product = await Product.create({
       name,
       price,
       description,
-      miniDesc: miniDesc ?? "",    // ensure it’s present
-      tags:     tagsArray,
+      miniDesc: miniDesc ?? "",
+      tags: tagsArray,
       category,
       subcategory,
       brand,
       sizeType,
       stock,
       image,
-      imagePublicId
+      imagePublicId,
+      howToWear: parseMultiField(howToWear),
+      benefits: parseMultiField(benefits),
+      bestDayToWear: parseMultiField(bestDayToWear),
     });
 
     res.status(201).json({ message: "Product added!", product });
@@ -361,6 +383,7 @@ export const addProduct = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
 
 export const getPendingKycAstrologers = async (req, res) => {
   const userId = req.user.id;
