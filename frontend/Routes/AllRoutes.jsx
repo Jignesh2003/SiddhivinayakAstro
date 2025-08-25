@@ -1,8 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoutes";
 import Layout from "./Layout"; // Import the Layout component
-import DailyPrediction from "../src/pages/DailyPrediction"
-import Invoice from "../src/admin/pages/Invoice"
+import DailyPrediction from "../src/pages/DailyPrediction";
+import Invoice from "../src/admin/pages/Invoice";
 
 // Import all your pages
 import Dashboard from "../src/pages/Dashboard";
@@ -44,18 +44,19 @@ import AstrologerChatRequests from "../src/astrologer/AstrologerChatRequests";
 import AstrologerProfile from "../src/astrologer/AstrologerProfile";
 import AdminVerifyAstrologers from "../src/admin/pages/AdminVerifyAstrologers";
 import ChatRequestTimer from "../src/pages/ChatRequestTimer";
-import KundliForm from "../src/astrology/KundliForm"
+import KundliForm from "../src/astrology/KundliForm";
 import KundliResult from "../src/astrology/KundliResult";
 import MatchingForm from "../src/astrology/MatchingForm";
 import MatchingCompatiblityResult from "../src/astrology/MatchingCompatiblityResult";
 import PanchangForm from "@/astrology/PanchangForm";
 import PanchangResult from "@/astrology/PanchangResult";
-import LifePathNumber from '../src/astrology/LifePathNumber';
+import LifePathNumber from "../src/astrology/LifePathNumber";
 import CancellationRefundPolicy from "@/pages/CancellationRefundPolicy";
 import ShippingDeliveryPolicy from "@/pages/ShippingDeliveryPolicy";
 import CodOrderConfirmation from "../src/pages/CodOrderConfirmation";
 import Wallet from "@/payment/wallet/Wallet";
-import AdminWithdrawalRequests from '../src/admin/pages/AdminWithdrawalRequests'
+import AdminWithdrawalRequests from "../src/admin/pages/AdminWithdrawalRequests";
+import  HowToWear  from "@/pages/HowToWear";
 
 const AppRoutes = () => {
   return (
@@ -76,6 +77,8 @@ const AppRoutes = () => {
         <Route path="/partners" element={<Partners />} />
         <Route path="/daily-prediction" element={<DailyPrediction />} />
         <Route path="/life-path-number" element={<LifePathNumber />} />
+        <Route path="/how-to-wear" element={<HowToWear />} />
+
         <Route
           path="/cancellation-policy"
           element={<CancellationRefundPolicy />}

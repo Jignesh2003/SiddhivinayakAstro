@@ -386,7 +386,6 @@ console.log(product);
   }
 };
 
-
 export const getPendingKycAstrologers = async (req, res) => {
   const userId = req.user.id;
 

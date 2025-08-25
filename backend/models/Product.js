@@ -82,7 +82,7 @@ const productSchema = new mongoose.Schema(
     productNumber: { type: Number, unique: true },
     featured: { type: Boolean, default: false },
     priority: { type: Number, default: 0 },
-    howToUse: [{ type: String }], // Instructions for using the product
+    howToWear: [{ type: String }], // Instructions for using the product
     benefits: [{ type: String }], // List of benefits for the product
     bestDayToWear: [{ type: String }], // List of best days to wear the product
   },

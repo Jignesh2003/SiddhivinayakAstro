@@ -353,6 +353,20 @@ const Navbar = () => {
             >
               Life Path Number
             </Link>
+            <Link
+              to="/astro-list"
+              className="text-yellow-400 text-lg font-medium hover:text-yellow-300"
+              onClick={() => setIsOpen(false)}
+            >
+              Chat With Astrologer
+            </Link>
+            <Link
+              to="/how-to-wear"
+              className="text-yellow-400 text-lg font-medium hover:text-yellow-300"
+              onClick={() => setIsOpen(false)}
+            >
+              How to wear ?
+            </Link>
 
             {isAuthenticated ? (
               role !== "astrologer" ? (

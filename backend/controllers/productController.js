@@ -29,7 +29,6 @@ export const getSingleProductDetail = async (req, res) => {
   }
 };
 
-
 export const editAdminProduct = async (req, res) => {
   const { id } = req.params;
   const {
@@ -43,6 +42,9 @@ export const editAdminProduct = async (req, res) => {
     brand,
     sizeType,
     stock: stockRaw,
+    howToWear,
+    benefits,
+    bestDayToWear,
   } = req.body;
 
   try {
@@ -79,6 +81,25 @@ export const editAdminProduct = async (req, res) => {
       return { size, quantity };
     });
 
+    // Parse tags, howToWear, benefits, bestDayToWear
+    // If string, parse JSON or fallback to empty array
+    function parseArrayField(field) {
+      if (!field) return [];
+      if (Array.isArray(field)) return field;
+      try {
+        return JSON.parse(field);
+      } catch {
+        return [];
+      }
+    }
+
+    const parsedTags = parseArrayField(tags) || product.tags;
+    const parsedHowToWear =
+      parseArrayField(howToWear) || product.howToWear || [];
+    const parsedBenefits = parseArrayField(benefits) || product.benefits || [];
+    const parsedBestDayToWear =
+      parseArrayField(bestDayToWear) || product.bestDayToWear || [];
+
     // Handle image replacement
     let newImages = product.image.slice();
     let newPublicIds = product.imagePublicId.slice();
@@ -97,12 +118,15 @@ export const editAdminProduct = async (req, res) => {
       price: price ?? product.price,
       description: description ?? product.description,
       miniDesc: miniDesc ?? product.miniDesc,
-      tags: Array.isArray(tags) ? tags : product.tags,
+      tags: parsedTags,
       category: category ?? product.category,
       subcategory: subcategory ?? product.subcategory,
       brand: brand ?? product.brand,
       sizeType: sizeType ?? product.sizeType,
       stock: finalStock,
+      howToWear: parsedHowToWear,
+      benefits: parsedBenefits,
+      bestDayToWear: parsedBestDayToWear,
       image: newImages,
       imagePublicId: newPublicIds,
     };
@@ -118,10 +142,11 @@ export const editAdminProduct = async (req, res) => {
     if (err.name === "ValidationError") {
       return res.status(400).json({ message: err.message });
     }
-    return res.status(500).json({ message: "Internal server error", error: err.message });
+    return res
+      .status(500)
+      .json({ message: "Internal server error", error: err.message });
   }
 };
-
 
 
 // delete a product (admin)
