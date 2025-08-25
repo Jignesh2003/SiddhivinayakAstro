@@ -301,10 +301,11 @@ export const addProduct = async (req, res) => {
       benefits,
       bestDayToWear,
     } = req.body;
+console.log(howToWear, benefits, bestDayToWear);
 
-    if (!name || !price || !description || !category || !stockRaw) {
+    if (!name || !price || !description || !category || !stockRaw || !howToWear || !benefits || !bestDayToWear) {
       return res.status(400).json({
-        message: "name, price, description, category and stock are required.",
+        message: "name, price, description, category, stock, howToWear, benefits, and bestDayToWear are required.",
       });
     }
 
@@ -376,6 +377,7 @@ export const addProduct = async (req, res) => {
       benefits: parseMultiField(benefits),
       bestDayToWear: parseMultiField(bestDayToWear),
     });
+console.log(product);
 
     res.status(201).json({ message: "Product added!", product });
   } catch (err) {
