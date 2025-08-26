@@ -110,7 +110,7 @@ export const verifyPayment = async (req, res) => {
             { customOrderId: orderId },
             null,
             { session: mongoSession }
-          );
+          ).populate("user")
 
           if (!existingOrder) {
             throw new Error(`No order found with customOrderId=${orderId}`);
