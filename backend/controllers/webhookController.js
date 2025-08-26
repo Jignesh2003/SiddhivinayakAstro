@@ -3,7 +3,8 @@ import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import PostgresDb from "../config/postgresDb.js";
 import logTransactionToPostgres from "../utils/logTransaction.js";
-import dotenv from "dotenv";
+import dotenv from "dotenv"; 
+import sendEmail from "../utils/sendEmail.js"
 dotenv.config();
 // Helper for clearly tagged logs
 function logWithTS(...args) {
