@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import assets from "@/assets/assets";
+import GoToTopButton from "@/components/ui/GoToTopButton";
 
 function HowToWearList() {
   const [products, setProducts] = useState([]);
@@ -121,6 +122,7 @@ function HowToWearList() {
           </Link>
         </div>
       ))}
+      <GoToTopButton />
     </div>
   );
 }
