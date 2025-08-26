@@ -20,13 +20,17 @@ const userSchema = new mongoose.Schema(
     pincode: { type: String },
     city: { type: String },
     state: { type: String },
-    country:{type:String},
+    country: { type: String },
 
     // OTP Verification
     otp: { type: String, default: "" },
     otpExpiry: { type: Date, default: "" },
     isVerified: { type: Boolean, default: false },
-    kyc:{type:String,default:"notYet" , enum:["pending", "rejected","approved","notYet"]},
+    kyc: {
+      type: String,
+      default: "notYet",
+      enum: ["pending", "rejected", "approved", "notYet"],
+    },
 
     // Password Reset
     resetPasswordToken: String,
@@ -52,11 +56,11 @@ const userSchema = new mongoose.Schema(
     },
     yearsOfExperience: { type: Number },
     documents: {
-    aadhaar: String,
-    pan: String,
-    education: String,
-    bank: String
-  },
+      aadhaar: String,
+      pan: String,
+      education: String,
+      bank: String,
+    },
     bio: { type: String },
     languagesSpoken: [{ type: String }],
     pricePerMinute: { type: Number },
@@ -66,6 +70,7 @@ const userSchema = new mongoose.Schema(
     isOnline: { type: Boolean, default: false }, // 🟢 Astrologer status
     averageRating: { type: Number, default: 0 }, // 🟢 Updated after reviews
     totalSessions: { type: Number, default: 0 }, // 🟢 Increment after each completed session
+    agreeToTmc: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

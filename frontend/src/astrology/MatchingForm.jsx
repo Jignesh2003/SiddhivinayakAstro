@@ -38,7 +38,7 @@ export default function MatchForm() {
   // Load Cashfree SDK once
   useEffect(() => {
     if (window.Cashfree) {
-      setCashfreeInstance(window.Cashfree({ mode: "production" }));
+      setCashfreeInstance(window.Cashfree({ mode:`${import.meta.env.PROD}` }));
       return;
     }
     const script = document.createElement("script");
@@ -46,7 +46,7 @@ export default function MatchForm() {
     script.async = true;
     script.onload = () => {
       if (window.Cashfree) {
-        setCashfreeInstance(window.Cashfree({ mode: "production" }));
+        setCashfreeInstance(window.Cashfree({ mode:`${import.meta.env.PROD}` }));
       } else {
         toast.error("❌ Failed to initialize payment SDK");
       }

@@ -28,7 +28,7 @@ const isAstrologer = role === "astrologer";
   // Load Cashfree SDK one time
   useEffect(() => {
     if (window.Cashfree) {
-      setCashfreeInstance(window.Cashfree({ mode: "production" }));
+      setCashfreeInstance(window.Cashfree({ mode:`${import.meta.env.PROD}` }));
       return;
     }
     const script = document.createElement("script");
@@ -36,7 +36,7 @@ const isAstrologer = role === "astrologer";
     script.async = true;
     script.onload = () => {
       if (window.Cashfree) {
-        setCashfreeInstance(window.Cashfree({ mode: "production" }));
+        setCashfreeInstance(window.Cashfree({ mode:`${import.meta.env.PROD}` }));
       }
     };
     script.onerror = () => alert("Failed to load Cashfree SDK");

@@ -9,21 +9,30 @@ export const signupValidation = Joi.object({
 
   phone: Joi.string()
     .pattern(/^[0-9]{10}$/)
-    .messages({ 'string.pattern.base': 'Phone number must be 10 digits' })
-    .allow('', null),  // optional with empty string allowed
+    .messages({ "string.pattern.base": "Phone number must be 10 digits" })
+    .allow("", null), // optional with empty string allowed
 
-  address: Joi.string().max(1000).allow('', null),
+  address: Joi.string().max(1000).allow("", null),
 
   pincode: Joi.string()
     .pattern(/^[0-9]{6}$/)
-    .messages({ 'string.pattern.base': 'Pincode must be 6 digits' })
-    .allow('', null),
+    .messages({ "string.pattern.base": "Pincode must be 6 digits" })
+    .allow("", null),
 
-  city: Joi.string().max(30).allow('', null),
-  state: Joi.string().max(30).allow('', null),
-  country: Joi.string().max(30).allow('', null),
+  city: Joi.string().max(30).allow("", null),
+  state: Joi.string().max(30).allow("", null),
+  country: Joi.string().max(30).allow("", null),
 
-  password: Joi.string().min(6).max(30).required().messages({ 'string.pattern.base': 'Password must be minimum 6 characters !' }),
+  password: Joi.string()
+    .min(6)
+    .max(30)
+    .required()
+    .messages({
+      "string.pattern.base": "Password must be minimum 6 characters !",
+    }),
+  agreedToTerms: Joi.boolean().valid(true).required().messages({
+    "any.only": "You must agree to the terms and conditions",
+  }),
 });
 
 //done

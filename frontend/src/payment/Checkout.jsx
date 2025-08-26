@@ -35,8 +35,10 @@ export default function Checkout() {
     script.async = true;
     script.onload = () => {
       if (window.Cashfree) {
-        const instance = window.Cashfree({ mode: "production" });
+        const instance = window.Cashfree({ mode:`${import.meta.env.PROD}` });
         setCashfreeInstance(instance);
+        console.log(instance);
+        
       } else {
         toast.error("❌ Failed to initialize Cashfree");
       }
@@ -192,11 +194,14 @@ export default function Checkout() {
 
       if (!payment_session_id)
         throw new Error("No payment session ID received");
+console.log("starting checkout");
 
       cashfreeInstance.checkout({
         paymentSessionId: payment_session_id,
         redirectTarget: "_self",
       });
+      console.log("ended checkout");
+
     } catch (err) {
       console.error("❌ Checkout error:", err);
       toast.error(

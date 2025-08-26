@@ -124,8 +124,7 @@ export const createCashfreeOrder = async (req, res) => {
 
     const payload = {
       order_id: customOrderId,
-      // order_amount: Number(amount + (amount >= 499 ? 0 : 100)), // total to pay in prod
-      order_amount: Number(amount ), // total to pay in dev
+      order_amount: Number(amount + (amount >= 499 ? 0 : 100)), // total to pay in prod
       order_currency: "INR",
       customer_details: {
         customer_id: String(userId),
@@ -157,7 +156,7 @@ export const createCashfreeOrder = async (req, res) => {
     };
 
     const response = await axios.post(
-      "https://api.cashfree.com/pg/orders",
+      `${process.env.CASHFREE_CREATE_ORDER}`,
       payload,
       { headers }
     );
@@ -194,13 +193,16 @@ export const checkPaymentStatus = async (req, res) => {
     const { order_id } = req.query;
     if (!order_id) return res.status(400).json({ message: "Missing order_id" });
 
-    const response = await axios.get(`https://api.cashfree.com/pg/orders/${order_id}`, {
-      headers: {
-        "x-client-id": process.env.CASHFREE_CLIENT_ID,
-        "x-client-secret": process.env.CASHFREE_CLIENT_SECRET,
-        "x-api-version": "2023-08-01",
-      },
-    });
+    const response = await axios.get(
+      `${process.env.CASHFREE_CREATE_ORDER}/${order_id}`,
+      {
+        headers: {
+          "x-client-id": process.env.CASHFREE_CLIENT_ID,
+          "x-client-secret": process.env.CASHFREE_CLIENT_SECRET,
+          "x-api-version": "2023-08-01",
+        },
+      }
+    );
 
     return res.json({ status: response.data.order_status });
   } catch (err) {

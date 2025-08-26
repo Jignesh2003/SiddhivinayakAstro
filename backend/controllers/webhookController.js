@@ -167,7 +167,7 @@ export const verifyPayment = async (req, res) => {
                     "New Paid Order: #" + updatedOrder._id,
                     `New order received!\nOrder ID: ${
                       updatedOrder._id
-                    }\nUser: ${updatedOrder?.user?.email}\nAmount: ₹${
+                    }\nUser: ${updatedOrder?.user?.firstName}\nAmount: ₹${
                       updatedOrder.totalAmount || paymentAmount
                     }`
                   );

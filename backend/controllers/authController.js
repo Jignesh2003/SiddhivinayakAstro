@@ -18,7 +18,19 @@ export const signupUser = async (req, res) => {
     }
 
     // 2. Normalize email to lowercase for consistency
-    let { email, firstName, lastName, phone, address, pincode, city, state, password, country } = value;
+    let {
+      email,
+      firstName,
+      lastName,
+      phone,
+      address,
+      pincode,
+      city,
+      state,
+      password,
+      country,
+      agreedToTerms,
+    } = value;
     email = email.trim().toLowerCase();
 
     // 3. Check for duplicate email (in lowercase)
@@ -43,6 +55,7 @@ export const signupUser = async (req, res) => {
       country,
       password: hashedPassword,
       isVerified: false,
+      agreeToTmc: agreedToTerms,
     });
 
     await newUser.save();
