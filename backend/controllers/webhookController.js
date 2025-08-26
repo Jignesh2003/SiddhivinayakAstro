@@ -15,12 +15,6 @@ export const verifyPayment = async (req, res) => {
   // Unique id per webhook for trace/debug in logs
   const requestId = crypto.randomBytes(5).toString("hex");
 
- logWithTS(`[${requestId}] Headers received:`, {
-   timestamp: req.headers["x-webhook-timestamp"],
-   signature: req.headers["x-webhook-signature"],
-   contentType: req.headers["content-type"],
- });
-
 
   try {
     // 1. Signature and payload validation
@@ -156,6 +150,34 @@ export const verifyPayment = async (req, res) => {
               }
             }
           }
+                try {
+                  //user mail
+                  await sendEmail(
+                    updatedOrder?.user?.email,
+                    "Order Confirmation: #" + updatedOrder._id,
+                    `Thank you for your purchase! Your payment was successful. Your order ID is ${updatedOrder._id}.\nWe are processing your order.`
+                  );
+                  //admin mail
+                  await sendEmail(
+                    [
+                      "shruti@siddhivinayakastroworld.com",
+                      "siddhivinayakastroworld@gmail.com",
+                    ],
+                    "New Paid Order: #" + updatedOrder._id,
+                    `New order received!\nOrder ID: ${
+                      updatedOrder._id
+                    }\nUser: ${updatedOrder?.user?.email}\nAmount: ₹${
+                      updatedOrder.totalAmount || paymentAmount
+                    }`
+                  );
+                  logWithTS(
+                    `[${requestId}] 📧 Order confirmation emails sent.`
+                  );
+                } catch (e) {
+                  logWithTS(
+                    `[${requestId}] ❌ Error sending emails: ${e.message}`
+                  );
+                }
         });
         mongoSession.endSession();
         logWithTS(

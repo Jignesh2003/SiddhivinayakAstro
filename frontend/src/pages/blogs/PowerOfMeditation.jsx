@@ -16,7 +16,7 @@ const PowerOfMeditation = () => {
             The Power of Meditation
           </h1>
           <img
-            src={assets.girlAstro}
+            src={assets.Virgo}
             alt="Meditation"
             className="w-full h-64 object-cover rounded-lg mb-6"
           />
@@ -62,7 +62,7 @@ const PowerOfMeditation = () => {
           <p className="mb-4">
             Regular meditation helps release past traumas, fosters self-love, and strengthens emotional resilience.
             By incorporating meditation into your daily routine, you can cultivate inner peace and gain a deeper
-            understanding of yourself and your life's purpose.
+            understanding of yourself and your life&apos;s purpose.
           </p>
           <h2 className="text-2xl font-semibold text-yellow-300 mb-3">
             Getting Started with Meditation

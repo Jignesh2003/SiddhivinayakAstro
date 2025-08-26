@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -25,6 +26,18 @@ const Navbar = () => {
   const menuRef = useRef(null);
   const audioRef = useRef(null);
   const navigate = useNavigate();
+
+useEffect(() => {
+  if (isOpen) {
+    document.body.style.overflow = "hidden";
+  } else {
+    document.body.style.overflow = "auto";
+  }
+  // Cleanup in case of unmount
+  return () => {
+    document.body.style.overflow = "auto";
+  };
+}, [isOpen]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -302,7 +315,11 @@ const Navbar = () => {
         {isOpen && (
           <div
             ref={menuRef}
-            className="absolute top-24 left-0 w-full bg-black/90 backdrop-blur-md flex flex-col items-center space-y-4 py-6 lg:hidden"
+            className="fixed top-24 left-0 w-full h-screen bg-black/90 backdrop-blur-md flex flex-col items-center space-y-4 py-6 lg:hidden overflow-y-auto z-50"
+            style={{
+              // Extra mobile-friendly touch scroll support
+              WebkitOverflowScrolling: "touch",
+            }}
           >
             <Link
               to="/"

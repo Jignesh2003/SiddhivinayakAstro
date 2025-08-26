@@ -16,7 +16,7 @@ const SacredYantras = () => {
             The Power of Sacred Mantras
           </h1>
           <img
-            src={assets.gifts}
+            src={assets.Cancer}
             alt="Sacred Mantras"
             className="w-full h-64 object-cover rounded-lg mb-6"
           />

@@ -16,7 +16,7 @@ const PlanetaryInfluence = () => {
             Planetary Influence in Astrology
           </h1>
           <img
-            src={assets.GalaxyBackground}
+            src={assets.Capricorn}
             alt="Planets"
             className="w-full h-64 object-cover rounded-lg mb-6"
           />
