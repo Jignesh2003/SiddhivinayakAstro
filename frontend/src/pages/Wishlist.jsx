@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import useWishlistStore from "../store/useWishlistStore";
+import assets from "@/assets/assets";
 // import useAuthStore from "../store/useAuthStore";
 
 const Wishlist = () => {
@@ -13,7 +14,14 @@ const Wishlist = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 py-10 px-4">
+    <div
+      className="min-h-screen bg-gray-100 py-10 px-4"
+      style={{
+        backgroundImage: `url(${assets.GalaxyBackground})`,
+        // filter: "blur(8px)",
+        zIndex: -1,
+      }}
+    >
       <div className="max-w-5xl mx-auto bg-white shadow-lg rounded-lg p-6">
         <h2 className="text-2xl font-bold mb-4">Your Wishlist</h2>
 
@@ -26,13 +34,23 @@ const Wishlist = () => {
 
         {wishlist.length === 0 ? (
           <p className="text-gray-600">
-            Your wishlist is empty. <Link to="/products" className="text-blue-500">Start Shopping</Link>
+            Your wishlist is empty.{" "}
+            <Link to="/products" className="text-blue-500">
+              Start Shopping
+            </Link>
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {wishlist.map((product) => (
-              <div key={product._id} className="bg-white p-4 rounded-lg shadow-md">
-                <img src={product?.image?.[0]} alt={product.name} className="w-full h-40 object-cover rounded" />
+              <div
+                key={product._id}
+                className="bg-white p-4 rounded-lg shadow-md"
+              >
+                <img
+                  src={product?.image?.[0]}
+                  alt={product.name}
+                  className="w-full h-40 object-cover rounded"
+                />
                 <h3 className="text-lg font-semibold mt-2">{product.name}</h3>
                 <p className="text-gray-600">Rs {product.price}</p>
                 <div className="flex mt-3 gap-2">

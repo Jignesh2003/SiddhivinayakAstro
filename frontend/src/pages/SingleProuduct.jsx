@@ -8,12 +8,8 @@ import { toast } from "react-toastify";
 import ImageGallery from "react-image-gallery";
 import "react-image-gallery/styles/css/image-gallery.css";
 import assets from "../assets/assets";
-
-// Swiper React components
 import { Swiper, SwiperSlide } from "swiper/react";
-// Swiper modules (for v11+)
 import { Navigation, Pagination } from "swiper/modules";
-// Swiper styles
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
@@ -31,7 +27,6 @@ const SingleProduct = () => {
   const addToCart = useCartStore((state) => state.addToCart);
   const { userId, token, logout } = useAuthStore();
 
-  // Fetch single product & reviews
   useEffect(() => {
     (async () => {
       try {
@@ -57,7 +52,6 @@ const SingleProduct = () => {
     })();
   }, [id, token]);
 
-  // Fetch all products for "You Might Also Like" carousel
   useEffect(() => {
     (async () => {
       try {
@@ -89,7 +83,6 @@ const SingleProduct = () => {
   const variant = product.stock.find((v) => v.size === selectedSize);
   const selectedStock = variant?.quantity || 0;
 
-  // Add product to cart handler
   const handleAddToCart = async () => {
     if (!userId) {
       toast.error("Please log in first!");
@@ -117,7 +110,6 @@ const SingleProduct = () => {
     }
   };
 
-  // Buy Now handler calls AddToCart then navigates to cart page
   const handleBuyNow = async () => {
     await handleAddToCart();
     navigate("/cart");
@@ -148,7 +140,6 @@ const SingleProduct = () => {
       {/* Main Content */}
       <div className="relative z-10 text-white py-10 px-4 md:px-10">
         <div className="max-w-6xl mx-auto bg-black bg-opacity-70 backdrop-blur-md rounded-lg shadow-xl p-6">
-          {/* Product Details */}
           <div className="flex flex-col md:flex-row gap-8">
             <div className="w-full md:w-1/2">
               <ImageGallery
@@ -248,6 +239,48 @@ const SingleProduct = () => {
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* How to Wear, Benefits, Best Day to Wear */}
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-gray-300">
+            {product.howToWear && product.howToWear.length > 0 && (
+              <section>
+                <h3 className="text-xl font-semibold mb-3 border-b border-yellow-400 pb-1">
+                  How to Wear
+                </h3>
+                <ul className="list-disc list-inside space-y-1">
+                  {product.howToWear.map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {product.benefits && product.benefits.length > 0 && (
+              <section>
+                <h3 className="text-xl font-semibold mb-3 border-b border-yellow-400 pb-1">
+                  Benefits
+                </h3>
+                <ul className="list-disc list-inside space-y-1">
+                  {product.benefits.map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {product.bestDayToWear && product.bestDayToWear.length > 0 && (
+              <section>
+                <h3 className="text-xl font-semibold mb-3 border-b border-yellow-400 pb-1">
+                  Best Day to Wear
+                </h3>
+                <ul className="list-disc list-inside space-y-1">
+                  {product.bestDayToWear.map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </div>
 
           {/* Reviews Section */}

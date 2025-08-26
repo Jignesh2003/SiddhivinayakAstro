@@ -12,17 +12,15 @@ const MyOrders = () => {
 
   useEffect(() => {
     if (userId) {
-      console.log("Fetching orders for user:", userId);
       fetchUserOrders();
     } else {
       logout();
-      console.log("User ID not found, cannot fetch orders.");
     }
   }, [userId]);
 
   if (loading)
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen bg-gray-900">
         <ClipLoader size={50} color="#FACC15" />
       </div>
     );
@@ -33,47 +31,43 @@ const MyOrders = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center p-6 bg-cover bg-center"
-      style={{
-        backgroundImage: `url(${assets.HeroSelectionBackground})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-      }}
+      className="min-h-screen flex flex-col items-center p-6 bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `url(${assets.HeroSelectionBackground})` }}
     >
-      <h2 className="text-3xl font-bold text-yellow-500 mb-6 text-center">My Orders</h2>
+      <h2 className="text-4xl font-extrabold text-yellow-500 mb-8 text-center drop-shadow-lg">
+        My Orders
+      </h2>
 
       {sortedOrders?.length === 0 ? (
-        <p className="text-center text-gray-500 text-lg">No orders found.</p>
+        <p className="text-center text-gray-400 text-lg">No orders found.</p>
       ) : (
-        <div className="grid gap-6 w-full max-w-4xl">
+        <div className="grid gap-8 w-full max-w-5xl">
           {sortedOrders.map((order) => (
             <div
               key={order._id}
-              className="shadow-lg border border-gray-700 bg-gray-900 text-white p-5 rounded-lg"
+              className="shadow-lg border border-gray-700 bg-gray-900 text-white p-6 rounded-lg hover:shadow-yellow-500 transition-shadow duration-300"
             >
-              <div className="border-b border-gray-700 pb-3 mb-3 flex justify-between items-center">
+              <div className="border-b border-gray-700 pb-3 mb-4 flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <Package className="text-yellow-500 w-6 h-6" />
-                  <h3 className="text-xl font-semibold">Order #{order._id.slice(-6)}</h3>
+                  <h3 className="text-2xl font-semibold">Order #{order._id.slice(-6)}</h3>
                 </div>
                 <span
-                  className={`px-3 py-1 rounded-md text-sm text-white ${
+                  className={`px-3 py-1 rounded-md text-sm font-semibold ${
                     order.orderStatus === "delivered"
                       ? "bg-green-600"
                       : order.orderStatus === "pending"
                       ? "bg-yellow-500"
                       : order.orderStatus === "shipped"
                       ? "bg-blue-500"
-                      : "bg-gray-500"
+                      : "bg-gray-600"
                   }`}
                 >
-                  {order.orderStatus}
+                  {order.orderStatus.charAt(0).toUpperCase() + order.orderStatus.slice(1)}
                 </span>
               </div>
 
-              {/* Display Product Details */}
-              <div className="space-y-3 mb-4">
+              <div className="space-y-4 mb-6">
                 {order.items.map((item, index) => (
                   <div
                     key={item?.product?._id || index}
@@ -84,17 +78,17 @@ const MyOrders = () => {
                         <img
                           src={item.product?.image?.[0]}
                           alt={item.product.name}
-                          className="w-16 h-16 object-cover rounded-lg"
+                          className="w-20 h-20 object-cover rounded-lg border border-gray-700"
                         />
                         <div>
-                          <p className="text-lg font-medium">{item.product.name}</p>
-                          <p className="text-sm text-gray-400">Quantity: {item.quantity}</p>
+                          <p className="text-xl font-semibold">{item.product.name}</p>
+                          <p className="text-gray-400 text-sm">Quantity: {item.quantity}</p>
                         </div>
                       </>
                     ) : (
                       <div className="text-red-400">
-                        <p className="font-medium">Product not found (may have been deleted)</p>
-                        <p className="text-sm text-gray-400">Quantity: {item.quantity}</p>
+                        <p className="font-semibold">Product not found (may have been deleted)</p>
+                        <p className="text-gray-400 text-sm">Quantity: {item.quantity}</p>
                       </div>
                     )}
                   </div>
@@ -103,12 +97,12 @@ const MyOrders = () => {
 
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  <IndianRupee className="text-yellow-400 w-5 h-5" />
-                  <p className="text-lg font-medium">₹{order.totalAmount}</p>
+                  <IndianRupee className="text-yellow-400 w-6 h-6" />
+                  <p className="text-2xl font-bold">₹{order.totalAmount}</p>
                 </div>
                 <Link
                   to={`/orders/${order._id}`}
-                  className="text-yellow-500 hover:underline text-sm font-medium"
+                  className="text-yellow-500 hover:underline font-semibold text-base"
                 >
                   View Details →
                 </Link>

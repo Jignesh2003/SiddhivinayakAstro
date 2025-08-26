@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import useAuthStore from "@/store/useAuthStore";
+import assets from "@/assets/assets";
 
 function Wallet() {
   const [balance, setBalance] = useState(0);
@@ -174,156 +175,171 @@ const isAstrologer = role === "astrologer";
     );
 
   return (
-    <div className="w-full max-w-md mx-auto mt-8 bg-white rounded-lg shadow-md p-6 relative">
-      <h2 className="text-2xl font-bold mb-6 text-indigo-700">My Wallet</h2>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <div className="text-3xl font-semibold text-gray-900">
-            {currency} {Number(balance).toFixed(2)}
+    <div
+      className="absolute inset-0 bg-cover bg-center pt-30"
+      style={{
+        backgroundImage: `url(${assets.GalaxyBackground})`,
+        // filter: "blur(8px)",
+        zIndex: -1,
+      }}
+    >
+      <div className="w-full max-w-md mx-auto mt-8 bg-white rounded-lg shadow-md p-6 relative">
+        <h2 className="text-2xl font-bold mb-6 text-indigo-700">My Wallet</h2>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="text-3xl font-semibold text-gray-900">
+              {currency} {Number(balance).toFixed(2)}
+            </div>
+            <div className="text-sm text-gray-500">Available Balance</div>
+            {isAstrologer && (
+              <div className="text-xs text-gray-400 mt-1">
+                (Min. withdrawal is ₹500)
+              </div>
+            )}
           </div>
-          <div className="text-sm text-gray-500">Available Balance</div>
-          {isAstrologer && (
-            <div className="text-xs text-gray-400 mt-1">(Min. withdrawal is ₹500)</div>
-          )}
-        </div>
-        <div className="space-x-3 flex">
-          <button
-            onClick={handleOpenAddModal}
-            className="px-4 py-2 rounded bg-green-500 text-white font-medium hover:bg-green-600 transition"
-          >
-            Add Money
-          </button>
-          {isAstrologer && (
+          <div className="space-x-3 flex">
             <button
-              onClick={handleOpenWithdrawModal}
-              className="px-4 py-2 rounded bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
+              onClick={handleOpenAddModal}
+              className="px-4 py-2 rounded bg-green-500 text-white font-medium hover:bg-green-600 transition"
             >
-              Withdraw Money
+              Add Money
             </button>
-          )}
-        </div>
-      </div>
-
-      {/* Add Money Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-          <div className="bg-white rounded shadow-lg p-6 min-w-[300px]">
-            <h4 className="text-lg font-bold mb-2">Add Money to Wallet</h4>
-            <form onSubmit={handleSubmitAddMoney}>
-              <label className="block mb-2">Amount (INR)</label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                className="border rounded px-3 py-2 w-full mb-4"
-                value={addAmount}
-                onChange={e => setAddAmount(e.target.value)}
-                required
-                disabled={addLoading}
-                placeholder="Enter amount (e.g. 100)"
-              />
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-gray-700 border rounded hover:bg-gray-50"
-                  disabled={addLoading}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                  disabled={addLoading}
-                >
-                  {addLoading ? "Processing..." : "Proceed"}
-                </button>
-              </div>
-            </form>
+            {isAstrologer && (
+              <button
+                onClick={handleOpenWithdrawModal}
+                className="px-4 py-2 rounded bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
+              >
+                Withdraw Money
+              </button>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Withdraw Money Modal (Astrologer Only) */}
-      {showWithdrawModal && isAstrologer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-          <div className="bg-white rounded shadow-lg p-6 min-w-[300px]">
-            <h4 className="text-lg font-bold mb-2">Withdraw Money</h4>
-            <form onSubmit={handleSubmitWithdraw}>
-              <label className="block mb-2">Withdrawal Amount (INR)</label>
-              <input
-                type="number"
-                min="500"
-                step="1"
-                max={Math.floor(balance)}
-                className="border rounded px-3 py-2 w-full mb-4"
-                value={withdrawAmount}
-                onChange={e => setWithdrawAmount(e.target.value)}
-                required
-                disabled={withdrawLoading}
-                placeholder="Minimum ₹500"
-              />
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowWithdrawModal(false)}
-                  className="px-4 py-2 text-gray-700 border rounded hover:bg-gray-50"
-                  disabled={withdrawLoading}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                  disabled={withdrawLoading}
-                >
-                  {withdrawLoading ? "Processing..." : "Withdraw"}
-                </button>
-              </div>
-            </form>
+        {/* Add Money Modal */}
+        {showAddModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+            <div className="bg-white rounded shadow-lg p-6 min-w-[300px]">
+              <h4 className="text-lg font-bold mb-2">Add Money to Wallet</h4>
+              <form onSubmit={handleSubmitAddMoney}>
+                <label className="block mb-2">Amount (INR)</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  className="border rounded px-3 py-2 w-full mb-4"
+                  value={addAmount}
+                  onChange={(e) => setAddAmount(e.target.value)}
+                  required
+                  disabled={addLoading}
+                  placeholder="Enter amount (e.g. 100)"
+                />
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="px-4 py-2 text-gray-700 border rounded hover:bg-gray-50"
+                    disabled={addLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    disabled={addLoading}
+                  >
+                    {addLoading ? "Processing..." : "Proceed"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <hr className="my-4" />
-      <h3 className="text-lg font-semibold mb-3 text-gray-800">Recent Transactions</h3>
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm text-left">
-          <thead>
-            <tr className="text-gray-600 bg-gray-100">
-              <th className="py-2 px-2">Date</th>
-              <th className="py-2 px-2">Label</th>
-              <th className="py-2 px-2 text-right">Amount</th>
-              <th className="py-2 px-2">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {transactions.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="text-center text-gray-400 py-4">
-                  No transactions
-                </td>
+        {/* Withdraw Money Modal (Astrologer Only) */}
+        {showWithdrawModal && isAstrologer && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+            <div className="bg-white rounded shadow-lg p-6 min-w-[300px]">
+              <h4 className="text-lg font-bold mb-2">Withdraw Money</h4>
+              <form onSubmit={handleSubmitWithdraw}>
+                <label className="block mb-2">Withdrawal Amount (INR)</label>
+                <input
+                  type="number"
+                  min="500"
+                  step="1"
+                  max={Math.floor(balance)}
+                  className="border rounded px-3 py-2 w-full mb-4"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  required
+                  disabled={withdrawLoading}
+                  placeholder="Minimum ₹500"
+                />
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowWithdrawModal(false)}
+                    className="px-4 py-2 text-gray-700 border rounded hover:bg-gray-50"
+                    disabled={withdrawLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    disabled={withdrawLoading}
+                  >
+                    {withdrawLoading ? "Processing..." : "Withdraw"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        <hr className="my-4" />
+        <h3 className="text-lg font-semibold mb-3 text-gray-800">
+          Recent Transactions
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm text-left">
+            <thead>
+              <tr className="text-gray-600 bg-gray-100">
+                <th className="py-2 px-2">Date</th>
+                <th className="py-2 px-2">Label</th>
+                <th className="py-2 px-2 text-right">Amount</th>
+                <th className="py-2 px-2">Status</th>
               </tr>
-            ) : (
-              transactions.map((txn) => (
-                <tr key={txn.id} className="border-b last:border-b-0">
-                  <td className="py-2 px-2">
-                    {new Date(txn.created_at).toLocaleDateString("en-IN")}
-                  </td>
-                  <td className="py-2 px-2">
-                    <span className="capitalize">{txnLabel(txn)}</span>
-                  </td>
-                  <td className={`py-2 px-2 text-right font-mono ${txnClass(txn)}`}>
-                    {txnSign(txn)} {currency} {Number(txn.amount).toFixed(2)}
-                  </td>
-                  <td className="py-2 px-2 capitalize">
-                    {txn.status}
+            </thead>
+            <tbody>
+              {transactions.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="text-center text-gray-400 py-4">
+                    No transactions
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                transactions.map((txn) => (
+                  <tr key={txn.id} className="border-b last:border-b-0">
+                    <td className="py-2 px-2">
+                      {new Date(txn.created_at).toLocaleDateString("en-IN")}
+                    </td>
+                    <td className="py-2 px-2">
+                      <span className="capitalize">{txnLabel(txn)}</span>
+                    </td>
+                    <td
+                      className={`py-2 px-2 text-right font-mono ${txnClass(
+                        txn
+                      )}`}
+                    >
+                      {txnSign(txn)} {currency} {Number(txn.amount).toFixed(2)}
+                    </td>
+                    <td className="py-2 px-2 capitalize">{txn.status}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

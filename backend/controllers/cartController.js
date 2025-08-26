@@ -124,10 +124,6 @@ export const removeFromCart = async (req, res) => {
 // 📌 Update item quantity in cart
 export const updateCart = async (req, res) => {
   try {
-    const { error } = updateCartSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({ message: error.details[0].message });
-    }
 
     const { productId, quantity } = req.body;
     const userId = req.user.id;
