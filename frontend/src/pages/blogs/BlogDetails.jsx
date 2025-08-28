@@ -26,11 +26,6 @@ const BlogDetail = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white rounded-md shadow-lg prose">
-      <h2 className="text-3xl font-bold mb-4 text-indigo-700">{blog.title}</h2>
-      <p className="text-sm text-gray-500 mb-6">
-        By {blog.author || "Unknown"} |{" "}
-        {new Date(blog.publishedAt).toLocaleDateString()}
-      </p>
       {blog.featuredImage && (
         <img
           src={blog.featuredImage}
@@ -38,6 +33,12 @@ const BlogDetail = () => {
           className="rounded-md mb-6 w-full max-h-96 object-contain"
         />
       )}
+      <h2 className="text-3xl font-bold mb-4 text-indigo-700">{blog.title}</h2>
+      <p className="text-sm text-gray-500 mb-6">
+        By {blog.author || "Unknown"} |{" "}
+        {new Date(blog.publishedAt).toLocaleDateString()}
+      </p>
+
       <div
         className="blog-content"
         dangerouslySetInnerHTML={{ __html: blog.content }}

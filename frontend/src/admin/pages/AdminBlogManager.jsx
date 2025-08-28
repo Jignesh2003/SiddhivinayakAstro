@@ -5,10 +5,10 @@ import useAuthStore from "@/store/useAuthStore";
 // Tiptap imports
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Image from "@tiptap/extension-image";
 
 const AdminBlogManager = () => {
   const { token } = useAuthStore.getState();
+
   const [posts, setPosts] = useState([]);
   const [form, setForm] = useState({
     title: "",
@@ -19,16 +19,17 @@ const AdminBlogManager = () => {
     categories: "",
   });
   const [editingId, setEditingId] = useState(null);
-  const [images, setImages] = useState([]); // optional extra images
+  const [selectedFiles, setSelectedFiles] = useState([]); // hold File objects for upload
   const [previewUrls, setPreviewUrls] = useState([]);
 
   // Tiptap editor setup
   const editor = useEditor({
-    extensions: [StarterKit, Image],
+    extensions: [StarterKit],
     content: form.content,
     onUpdate: ({ editor }) => setForm({ ...form, content: editor.getHTML() }),
   });
 
+  // Fetch posts
   const fetchPosts = async () => {
     try {
       const res = await axios.get(`${import.meta.env.VITE_BLOG_URL}/posts`);
@@ -46,39 +47,33 @@ const AdminBlogManager = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Optional extra images for the post
-  const handleImageChange = (e) => {
+  // Handle file selection and preview generation
+  const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    setImages(files);
+    setSelectedFiles(files);
+
+    // Generate previews for images
     const urls = files.map((file) => URL.createObjectURL(file));
     setPreviewUrls(urls);
   };
 
-  // Upload image from local files to editor as base64
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (readerEvent) => {
-        const base64 = readerEvent.target.result;
-        editor.chain().focus().setImage({ src: base64 }).run();
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
+  // Form submit: send files and fields to backend
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const formData = new FormData();
+
       formData.append("title", form.title);
-      formData.append("content", form.content); // HTML from Tiptap
+      formData.append("content", form.content);
       formData.append("description", form.description);
       formData.append("author", form.author);
       formData.append("tags", form.tags);
       formData.append("categories", form.categories);
 
-      images.forEach((file) => formData.append("images", file));
+      // Append files as formData (key 'image' to match backend)
+      selectedFiles.forEach((file) => {
+        formData.append("images", file);
+      });
 
       if (editingId) {
         await axios.put(
@@ -109,9 +104,9 @@ const AdminBlogManager = () => {
         tags: "",
         categories: "",
       });
-      setImages([]);
+      setSelectedFiles([]);
       setPreviewUrls([]);
-      editor.commands.setContent(""); // clear editor
+      editor.commands.setContent("");
       fetchPosts();
     } catch (err) {
       console.error("Failed to submit", err);
@@ -128,10 +123,11 @@ const AdminBlogManager = () => {
       tags: post.tags?.join(", ") || "",
       categories: post.categories?.join(", ") || "",
     });
-    setImages([]);
-    setPreviewUrls(post.images || []);
+    // We cannot generate files from URLs, so previews must come from URLs if desired
+    setPreviewUrls(post.image || []);
     editor.commands.setContent(post.content || "");
     window.scrollTo({ top: 0, behavior: "smooth" });
+    setSelectedFiles([]); // Clear selected files, no actual file blobs here
   };
 
   const handleDelete = async (id) => {
@@ -153,7 +149,11 @@ const AdminBlogManager = () => {
         Admin Blog Manager
       </h2>
 
-      <form onSubmit={handleSubmit} className="mb-10 space-y-6">
+      <form
+        onSubmit={handleSubmit}
+        className="mb-10 space-y-6"
+        encType="multipart/form-data"
+      >
         <input
           type="text"
           name="title"
@@ -164,21 +164,31 @@ const AdminBlogManager = () => {
           className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
 
+        {/* Image Upload */}
+        <div>
+          <label className="block mb-2 font-semibold">Upload Images</label>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileChange}
+          />
+          <div className="flex gap-2 mt-2 flex-wrap">
+            {previewUrls.map((url, i) => (
+              <img
+                key={i}
+                src={url}
+                alt={`preview-${i}`}
+                className="w-40 h-40 object-cover rounded"
+              />
+            ))}
+          </div>
+        </div>
+
         {/* Tiptap editor */}
         <div>
           <label className="block mb-2 font-semibold">Content</label>
           <div className="flex gap-2 mb-2 items-center">
-            {/* Image upload button */}
-            <label className="px-2 py-1 bg-indigo-600 text-white rounded cursor-pointer">
-              Upload Image
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-            </label>
-
             <button
               type="button"
               onClick={() => editor.chain().focus().toggleBold().run()}
@@ -216,7 +226,6 @@ const AdminBlogManager = () => {
           onChange={handleChange}
           className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
-
         <input
           type="text"
           name="author"
@@ -225,7 +234,6 @@ const AdminBlogManager = () => {
           onChange={handleChange}
           className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
-
         <input
           type="text"
           name="tags"
@@ -234,7 +242,6 @@ const AdminBlogManager = () => {
           onChange={handleChange}
           className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
-
         <input
           type="text"
           name="categories"
@@ -264,9 +271,9 @@ const AdminBlogManager = () => {
                   tags: "",
                   categories: "",
                 });
-                editor.commands.setContent("");
-                setImages([]);
+                setSelectedFiles([]);
                 setPreviewUrls([]);
+                editor.commands.setContent("");
               }}
               className="px-6 py-3 bg-gray-300 text-gray-700 font-semibold rounded-md hover:bg-gray-400 transition"
             >
@@ -292,7 +299,6 @@ const AdminBlogManager = () => {
                 By: {post.author || "Unknown"}
               </small>
             </div>
-
             <div className="mt-3 sm:mt-0 flex space-x-3">
               <button
                 onClick={() => handleEdit(post)}
