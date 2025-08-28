@@ -192,6 +192,10 @@ useEffect(() => {
                 aria-haspopup="true"
                 aria-expanded={isAstroDropdownOpen}
                 type="button"
+                onMouseEnter={() => setIsAstroDropdownOpen(true)}
+                onMouseLeave={() => setIsAstroDropdownOpen(false)}
+                onFocus={() => setIsAstroDropdownOpen(true)}
+                onBlur={() => setIsAstroDropdownOpen(false)}
                 onClick={() => setIsAstroDropdownOpen((prev) => !prev)}
               >
                 Astrology
@@ -212,50 +216,37 @@ useEffect(() => {
                   />
                 </svg>
               </button>
-
               <div
+                onMouseEnter={() => setIsAstroDropdownOpen(true)}
+                onMouseLeave={() => setIsAstroDropdownOpen(false)}
                 className={`absolute top-full left-0 mt-2 w-48 bg-black bg-opacity-90 rounded shadow-lg ring-1 ring-black ring-opacity-5 z-50
-      transition-opacity duration-300
-      ${isAstroDropdownOpen ? "opacity-100 visible" : "opacity-0 invisible"}
+      transition-all duration-200 origin-top
+      ${
+        isAstroDropdownOpen
+          ? "opacity-100 scale-y-100 visible"
+          : "opacity-0 scale-y-95 invisible"
+      }
     `}
               >
-                <Link
-                  to="/daily-prediction"
-                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
-                  onClick={() => setIsAstroDropdownOpen(false)}
-                >
-                  Daily Prediction
-                </Link>
-                <Link
-                  to="/kundli-details"
-                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
-                  onClick={() => setIsAstroDropdownOpen(false)}
-                >
-                  Kundli
-                </Link>
-                <Link
-                  to="/matching-form"
-                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
-                  onClick={() => setIsAstroDropdownOpen(false)}
-                >
-                  Kundli Matching
-                </Link>
-                <Link
-                  to="/panchang-form"
-                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
-                  onClick={() => setIsAstroDropdownOpen(false)}
-                >
-                  Panchang
-                </Link>
-                <Link
-                  to="/life-path-number"
-                  className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
-                  onClick={() => setIsAstroDropdownOpen(false)}
-                >
-                  Life Path
-                </Link>
+                {[
+                  { to: "/daily-prediction", label: "Daily Prediction" },
+                  { to: "/kundli-details", label: "Kundli" },
+                  { to: "/matching-form", label: "Kundli Matching" },
+                  { to: "/panchang-form", label: "Panchang" },
+                  { to: "/life-path-number", label: "Life Path" },
+                ].map(({ to, label }) => (
+                  <Link
+                    key={to}
+                    to={to}
+                    className="block px-4 py-2 text-yellow-400 hover:bg-yellow-500 hover:text-black cursor-pointer"
+                    onClick={() => setIsAstroDropdownOpen(false)}
+                  >
+                    {label}
+                  </Link>
+                ))}
               </div>
             </div>
+
             {/* Other links are removed from desktop that now appear in dropdown */}
 
             {isAuthenticated
@@ -316,12 +307,12 @@ useEffect(() => {
         {isOpen && (
           <div
             ref={menuRef}
-            className="fixed top-24 left-0 w-full h-screen bg-black/90 backdrop-blur-md flex flex-col items-center space-y-4 py-6 lg:hidden overflow-y-auto z-50"
+            className="fixed top-24 left-0 w-full bg-black/90 backdrop-blur-md flex flex-col items-center space-y-4 pb-25 lg:hidden overflow-y-auto z-50 max-h-[calc(100vh-6rem)]"
             style={{
-              // Extra mobile-friendly touch scroll support
               WebkitOverflowScrolling: "touch",
             }}
           >
+            <div className="w-full h-px bg-yellow-600 my-2" />
             <Link
               to="/"
               className="text-white text-lg hover:text-purple-500"
@@ -385,7 +376,6 @@ useEffect(() => {
             >
               How to wear ?
             </Link>
-
             {isAuthenticated ? (
               role !== "astrologer" ? (
                 <>
@@ -451,7 +441,6 @@ useEffect(() => {
                 </>
               )
             ) : null}
-
             {isAuthenticated ? (
               <>
                 <button
@@ -482,11 +471,15 @@ useEffect(() => {
                 </Link>
               </>
             )}
-            <button onClick={toggleMusic} className="text-white text-lg">
+            <button
+              onClick={toggleMusic}
+              className="text-white text-lg flex items-center gap-1"
+            >
               <Music
-                size={20}
+                size={25}
                 className={`${isPlaying ? "text-yellow-400" : "text-white"}`}
               />
+               Turn ON/OFF Music
             </button>
           </div>
         )}
