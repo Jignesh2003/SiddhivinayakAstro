@@ -44,7 +44,7 @@ const BlogList = () => {
             >
               {blog.featuredImage ? (
                 <img
-                  src={blog.featuredImage}
+                  src={blog.image}
                   alt={blog.title}
                   className="h-48 w-full object-cover border-b border-amber-400"
                 />
