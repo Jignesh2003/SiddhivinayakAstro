@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import useAuthStore from "@/store/useAuthStore";
 
+// Tiptap imports
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Image from "@tiptap/extension-image";
+
 const AdminBlogManager = () => {
+  const { token } = useAuthStore.getState();
   const [posts, setPosts] = useState([]);
   const [form, setForm] = useState({
     title: "",
@@ -12,12 +18,17 @@ const AdminBlogManager = () => {
     tags: "",
     categories: "",
   });
-  const { token } = useAuthStore.getState();
   const [editingId, setEditingId] = useState(null);
-  const [images, setImages] = useState([]); // For file inputs
-  const [previewUrls, setPreviewUrls] = useState([]); // For image previews
+  const [images, setImages] = useState([]); // optional extra images
+  const [previewUrls, setPreviewUrls] = useState([]);
 
-  // Fetch all posts
+  // Tiptap editor setup
+  const editor = useEditor({
+    extensions: [StarterKit, Image],
+    content: form.content,
+    onUpdate: ({ editor }) => setForm({ ...form, content: editor.getHTML() }),
+  });
+
   const fetchPosts = async () => {
     try {
       const res = await axios.get(`${import.meta.env.VITE_BLOG_URL}/posts`);
@@ -35,37 +46,42 @@ const AdminBlogManager = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Handle image file selection and preview
+  // Optional extra images for the post
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     setImages(files);
-
-    // Create array of preview URLs
     const urls = files.map((file) => URL.createObjectURL(file));
     setPreviewUrls(urls);
+  };
+
+  // Upload image from local files to editor as base64
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (readerEvent) => {
+        const base64 = readerEvent.target.result;
+        editor.chain().focus().setImage({ src: base64 }).run();
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Prepare form data for multipart/form-data upload
       const formData = new FormData();
       formData.append("title", form.title);
-      formData.append("content", form.content);
+      formData.append("content", form.content); // HTML from Tiptap
       formData.append("description", form.description);
       formData.append("author", form.author);
       formData.append("tags", form.tags);
       formData.append("categories", form.categories);
 
-      // Append image files to form data
-      images.forEach((file) => {
-        formData.append("images", file);
-      });
-
-      let response;
+      images.forEach((file) => formData.append("images", file));
 
       if (editingId) {
-        response = await axios.put(
+        await axios.put(
           `${import.meta.env.VITE_BLOG_URL}/posts/${editingId}`,
           formData,
           {
@@ -77,19 +93,14 @@ const AdminBlogManager = () => {
         );
         setEditingId(null);
       } else {
-        response = await axios.post(
-          `${import.meta.env.VITE_BLOG_URL}/posts`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
+        await axios.post(`${import.meta.env.VITE_BLOG_URL}/posts`, formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        });
       }
 
-      // Reset form and images after success
       setForm({
         title: "",
         content: "",
@@ -100,7 +111,7 @@ const AdminBlogManager = () => {
       });
       setImages([]);
       setPreviewUrls([]);
-
+      editor.commands.setContent(""); // clear editor
       fetchPosts();
     } catch (err) {
       console.error("Failed to submit", err);
@@ -118,12 +129,13 @@ const AdminBlogManager = () => {
       categories: post.categories?.join(", ") || "",
     });
     setImages([]);
-    setPreviewUrls(post.image || []); // Show existing images if any
+    setPreviewUrls(post.images || []);
+    editor.commands.setContent(post.content || "");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this post?")) {
+    if (window.confirm("Are you sure?")) {
       try {
         await axios.delete(`${import.meta.env.VITE_BLOG_URL}/posts/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -141,11 +153,7 @@ const AdminBlogManager = () => {
         Admin Blog Manager
       </h2>
 
-      <form
-        onSubmit={handleSubmit}
-        className="mb-10 space-y-6"
-        encType="multipart/form-data"
-      >
+      <form onSubmit={handleSubmit} className="mb-10 space-y-6">
         <input
           type="text"
           name="title"
@@ -156,15 +164,49 @@ const AdminBlogManager = () => {
           className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
 
-        <textarea
-          name="content"
-          placeholder="Content (HTML supported)"
-          value={form.content}
-          onChange={handleChange}
-          required
-          rows={6}
-          className="w-full px-4 py-3 border rounded-md resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
+        {/* Tiptap editor */}
+        <div>
+          <label className="block mb-2 font-semibold">Content</label>
+          <div className="flex gap-2 mb-2 items-center">
+            {/* Image upload button */}
+            <label className="px-2 py-1 bg-indigo-600 text-white rounded cursor-pointer">
+              Upload Image
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </label>
+
+            <button
+              type="button"
+              onClick={() => editor.chain().focus().toggleBold().run()}
+              className="px-2 py-1 bg-gray-300 rounded"
+            >
+              Bold
+            </button>
+            <button
+              type="button"
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+              className="px-2 py-1 bg-gray-300 rounded"
+            >
+              Italic
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 2 }).run()
+              }
+              className="px-2 py-1 bg-gray-300 rounded"
+            >
+              H2
+            </button>
+          </div>
+          <div className="border rounded-md p-2">
+            <EditorContent editor={editor} />
+          </div>
+        </div>
 
         <input
           type="text"
@@ -202,32 +244,6 @@ const AdminBlogManager = () => {
           className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
 
-        {/* Image upload input */}
-        <div>
-          <label className="block mb-2 font-semibold">
-            Upload Images (max 1)
-          </label>
-          <input
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={handleImageChange}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-          />
-        </div>
-
-        {/* Image previews */}
-        <div className="flex flex-wrap mt-4 gap-3">
-          {previewUrls.map((url, index) => (
-            <img
-              key={index}
-              src={url}
-              alt="Preview"
-              className="h-24 w-24 rounded-md object-cover border border-gray-300"
-            />
-          ))}
-        </div>
-
         <div className="flex space-x-4">
           <button
             type="submit"
@@ -235,7 +251,6 @@ const AdminBlogManager = () => {
           >
             {editingId ? "Update Post" : "Create Post"}
           </button>
-
           {editingId && (
             <button
               type="button"
@@ -249,6 +264,7 @@ const AdminBlogManager = () => {
                   tags: "",
                   categories: "",
                 });
+                editor.commands.setContent("");
                 setImages([]);
                 setPreviewUrls([]);
               }}
@@ -260,19 +276,20 @@ const AdminBlogManager = () => {
         </div>
       </form>
 
+      {/* Posts list */}
       <div>
         {posts?.map((post) => (
           <div
-            key={post?._id}
+            key={post._id}
             className="border-b border-gray-200 py-4 flex flex-col sm:flex-row sm:justify-between sm:items-center"
           >
             <div>
               <h3 className="text-xl font-semibold text-gray-900">
-                {post?.title}
+                {post.title}
               </h3>
-              <p className="text-gray-600 my-1">{post?.description}</p>
+              <p className="text-gray-600 my-1">{post.description}</p>
               <small className="text-gray-500">
-                By: {post?.author || "Unknown"}
+                By: {post.author || "Unknown"}
               </small>
             </div>
 
