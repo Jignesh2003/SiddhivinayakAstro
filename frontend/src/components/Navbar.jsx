@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   Wallet,
   Heart,
+  LucideBadgePoundSterling,
 } from "lucide-react";
 import assets from "../assets/assets";
 import useAuthStore from "../store/useAuthStore";
@@ -415,6 +416,13 @@ useEffect(() => {
                     onClick={() => setIsOpen(false)}
                   >
                     <Wallet size={20} /> Wallet
+                  </Link>
+                  <Link
+                    to="/blog-list"
+                    className="flex items-center gap-1 text-white hover:text-purple-500 text-lg"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <LucideBadgePoundSterling size={20} /> Blogs
                   </Link>
                 </>
               ) : (

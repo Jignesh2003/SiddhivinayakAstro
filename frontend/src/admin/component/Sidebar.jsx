@@ -67,7 +67,13 @@ const Sidebar = () => {
           >
             Astologer Withdrawal Requests
           </Link>
-          
+          <Link
+            to="/admin/blog-manager"
+            className="block p-2 hover:bg-gray-700 rounded"
+            onClick={handleLinkClick}
+          >
+            Blog Manager
+          </Link>
         </nav>
       )}
 
@@ -97,7 +103,10 @@ const Sidebar = () => {
             </Link>
           </li>
           <li>
-            <Link to="/admin/orders" className="block p-2 hover:bg-gray-700 rounded">
+            <Link
+              to="/admin/orders"
+              className="block p-2 hover:bg-gray-700 rounded"
+            >
               Orders
             </Link>
           </li>
@@ -108,11 +117,17 @@ const Sidebar = () => {
             >
               Verify Astrologers
             </Link>
-               <Link
+            <Link
               to="/admin/withdrawal-requests"
               className="block p-2 hover:bg-gray-700 rounded"
             >
               Astologer Withdrawal Requests
+            </Link>
+            <Link
+              to="/admin/blog-manager"
+              className="block p-2 hover:bg-gray-700 rounded"
+            >
+              Blog Manager
             </Link>
           </li>
         </ul>

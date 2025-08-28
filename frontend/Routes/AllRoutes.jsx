@@ -29,11 +29,6 @@ import Checkout from "../src/payment/Checkout";
 import OrderConfirmation from "../src/pages/OrderConfirmation";
 import SingleOrderDetails from "../src/pages/SingleOrderDetails";
 import Wishlist from "../src/pages/Wishlist";
-import DailyBlog from "../src/pages/blogs/DailyBlog";
-import AstrologyAndYou from "../src/pages/blogs/AstrologyAndYou";
-import PowerOfMeditation from "../src/pages/blogs/PowerOfMeditation";
-import SacredYantras from "../src/pages/blogs/SacredYantras";
-import PlanetaryInfluence from "../src/pages/blogs/PlanetaryInfluence";
 import SingleProduct from "../src/pages/SingleProuduct";
 import ReviewPage from "../src/pages/ReviewPage";
 import AstrologerSignup from "../src/astrologer/AstrologerSigup";
@@ -57,6 +52,9 @@ import CodOrderConfirmation from "../src/pages/CodOrderConfirmation";
 import Wallet from "@/payment/wallet/Wallet";
 import AdminWithdrawalRequests from "../src/admin/pages/AdminWithdrawalRequests";
 import  HowToWear  from "@/pages/HowToWear";
+import AdminBlogManager from "@/admin/pages/AdminBlogManager";
+import BlogList from "@/pages/blogs/BlogList";
+import BlogDetail from "@/pages/blogs/BlogDetails";
 
 const AppRoutes = () => {
   return (
@@ -85,18 +83,7 @@ const AppRoutes = () => {
         />
         <Route path="/shipping-policy" element={<ShippingDeliveryPolicy />} />
 
-        {/* ✅ Blog Pages */}
-        <Route path="/blogs-astrology-and-you" element={<AstrologyAndYou />} />
-        <Route path="/blogs-daily" element={<DailyBlog />} />
-        <Route
-          path="/blogs-power-of-meditation"
-          element={<PowerOfMeditation />}
-        />
-        <Route path="/blogs-sacred-yantras" element={<SacredYantras />} />
-        <Route
-          path="/blogs-planetary-influence"
-          element={<PlanetaryInfluence />}
-        />
+  
         <Route path="/products" element={<Products />} />
         <Route path="/single-product/:id" element={<SingleProduct />} />
 
@@ -141,6 +128,8 @@ const AppRoutes = () => {
           <Route path="/panchang-result" element={<PanchangResult />} />
           <Route path="/cod-confirmation" element={<CodOrderConfirmation />} />
           <Route path="/wallet" element={<Wallet />} />
+          <Route path="/blog-list" element={<BlogList />} />
+          <Route path="/blog-details/:id" element={<BlogDetail />} />
         </Route>
 
         {/* ✅ Admin Panel */}
@@ -155,6 +144,8 @@ const AppRoutes = () => {
             <Route path="add-product" element={<AddProduct />} />
             <Route path="manage-products" element={<ManageProducts />} />
             <Route path="orders" element={<AdminOrders />} />
+            <Route path="blog-manager" element={<AdminBlogManager />} />
+
             <Route
               path="withdrawal-requests"
               element={<AdminWithdrawalRequests />}

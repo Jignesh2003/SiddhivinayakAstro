@@ -3,8 +3,8 @@ import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import PostgresDb from "../config/postgresDb.js";
 import logTransactionToPostgres from "../utils/logTransaction.js";
-import dotenv from "dotenv"; 
-import sendEmail from "../utils/sendEmail.js"
+import dotenv from "dotenv";
+import sendEmail from "../utils/sendEmail.js";
 dotenv.config();
 // Helper for clearly tagged logs
 function logWithTS(...args) {
@@ -12,10 +12,8 @@ function logWithTS(...args) {
 }
 
 export const verifyPayment = async (req, res) => {
-  
   // Unique id per webhook for trace/debug in logs
   const requestId = crypto.randomBytes(5).toString("hex");
-
 
   try {
     // 1. Signature and payload validation
@@ -78,7 +76,9 @@ export const verifyPayment = async (req, res) => {
       return res.status(200).send("Skipped: Incomplete payment data");
     }
 
-    logWithTS(`[${requestId}] 📝 Handling orderId=${orderId} status=${paymentStatus} amount=${paymentAmount}`);
+    logWithTS(
+      `[${requestId}] 📝 Handling orderId=${orderId} status=${paymentStatus} amount=${paymentAmount}`
+    );
 
     // --- Handle PREORDER_xxx payments in Mongo ---
     const statusMap = {
@@ -110,7 +110,7 @@ export const verifyPayment = async (req, res) => {
             { customOrderId: orderId },
             null,
             { session: mongoSession }
-          ).populate("user")
+          ).populate("user");
 
           if (!existingOrder) {
             throw new Error(`No order found with customOrderId=${orderId}`);
@@ -131,7 +131,7 @@ export const verifyPayment = async (req, res) => {
           // Update order status
           Object.assign(existingOrder, mongoUpdate);
           await existingOrder.save({ session: mongoSession });
-          updatedOrder = existingOrder; 
+          updatedOrder = existingOrder;
 
           // Deduct stock only on first success
           if (paymentStatus === "SUCCESS") {
@@ -151,73 +151,74 @@ export const verifyPayment = async (req, res) => {
               }
             }
           }
-                try {
-                  //user mail
-                  await sendEmail(
-                    updatedOrder?.user?.email,
-                    "Order Confirmation: #" + updatedOrder._id,
-                    `Thank you for your purchase! Your payment was successful. Your order ID is ${updatedOrder._id}.\nWe are processing your order.`
-                  );
-                  //admin mail
-                  await sendEmail(
-                    [
-                      "shruti@siddhivinayakastroworld.com",
-                      "siddhivinayakastroworld@gmail.com",
-                    ],
-                    "New Paid Order: #" + updatedOrder._id,
-                    `New order received!\nOrder ID: ${
-                      updatedOrder._id
-                    }\nUser: ${updatedOrder?.user?.firstName}\nAmount: ₹${
-                      updatedOrder.totalAmount || paymentAmount
-                    }`
-                  );
-                  logWithTS(
-                    `[${requestId}] 📧 Order confirmation emails sent.`
-                  );
-                } catch (e) {
-                  logWithTS(
-                    `[${requestId}] ❌ Error sending emails: ${e.message}`
-                  );
-                }
+          try {
+            console.log("USER  EMAIL Sending .....");
+
+            //user mail
+            await sendEmail(
+              updatedOrder?.user?.email,
+              "Order Confirmation: #" + updatedOrder._id,
+              `Thank you for your purchase! Your payment was successful. Your order ID is ${updatedOrder._id}.\nWe are processing your order.`
+            );
+            console.log("USER  EMAIL SENDED .....");
+
+            //admin mail
+            console.log("admin  EMAIL SENDED .....");
+
+            await sendEmail(
+              [
+                "shruti@siddhivinayakastroworld.com",
+                "siddhivinayakastroworld@gmail.com",
+              ],
+              "New Paid Order: #" + updatedOrder._id,
+              `New order received!\nOrder ID: ${updatedOrder._id}\nUser: ${
+                updatedOrder?.user?.email
+              }\nAmount: ₹${updatedOrder.totalAmount || paymentAmount}`
+            );
+            console.log("admin  EMAIL SENDED .....");
+
+            logWithTS(`[${requestId}] 📧 Order confirmation emails sent.`);
+          } catch (e) {
+            logWithTS(`[${requestId}] ❌ Error sending emails: ${e.message}`);
+          }
         });
         mongoSession.endSession();
         logWithTS(
           `[${requestId}] ✅ Mongo order ${orderId} status/stock processed: ${paymentStatus}`
         );
-      if (updatedOrder) {
+        if (updatedOrder) {
+          await PostgresDb("productorders_transactions")
+            .insert({
+              order_id: orderId,
+              cf_order_id: cfOrderId || null,
+              cf_payment_id: cfPaymentId,
+              status: paymentStatus,
+              amount: paymentAmount,
+              currency: paymentCurrency,
+              payment_method: JSON.stringify(paymentMethod || {}),
+              payment_time: eventTime,
+              email: customerEmail,
+              phone: customerPhone,
+              signature: incomingSignature,
+            })
+            .onConflict("order_id")
+            .merge([
+              "cf_order_id",
+              "cf_payment_id",
+              "status",
+              "amount",
+              "currency",
+              "payment_method",
+              "payment_time",
+              "email",
+              "phone",
+              "signature",
+            ]);
 
-       await PostgresDb("productorders_transactions")
-         .insert({
-           order_id: orderId,
-           cf_order_id: cfOrderId || null,
-           cf_payment_id: cfPaymentId,
-           status: paymentStatus,
-           amount: paymentAmount,
-           currency: paymentCurrency,
-           payment_method: JSON.stringify(paymentMethod || {}),
-           payment_time: eventTime,
-           email: customerEmail,
-           phone: customerPhone,
-           signature: incomingSignature,
-         })
-         .onConflict("order_id")
-         .merge([
-           "cf_order_id",
-           "cf_payment_id",
-           "status",
-           "amount",
-           "currency",
-           "payment_method",
-           "payment_time",
-           "email",
-           "phone",
-           "signature",
-         ]);
-
-        logWithTS(
-          `[${requestId}] ✅ Postgres productorders_transactions synced for ${orderId}`
-        );
-      }
+          logWithTS(
+            `[${requestId}] ✅ Postgres productorders_transactions synced for ${orderId}`
+          );
+        }
       } catch (err) {
         await mongoSession.abortTransaction();
         mongoSession.endSession();
@@ -232,21 +233,29 @@ export const verifyPayment = async (req, res) => {
     // --- Handle WALLET_xxx wallet top-ups ---
     if (orderId.startsWith("WALLET_")) {
       try {
-        await PostgresDb.transaction(async trx => {
-          logWithTS(`[${requestId}] 🔒 Checking/locking wallet transaction for '${orderId}'`);
+        await PostgresDb.transaction(async (trx) => {
+          logWithTS(
+            `[${requestId}] 🔒 Checking/locking wallet transaction for '${orderId}'`
+          );
           const updatedTxnRows = await trx("wallet_transaction")
             .where({ payment_reference: orderId })
             .andWhere("status", "!=", "completed")
             .update({
-              status: paymentStatus === "SUCCESS" ? "completed" : paymentStatus.toLowerCase(),
-              business_type: paymentStatus === "SUCCESS" ? "wallet_topup" : undefined,
+              status:
+                paymentStatus === "SUCCESS"
+                  ? "completed"
+                  : paymentStatus.toLowerCase(),
+              business_type:
+                paymentStatus === "SUCCESS" ? "wallet_topup" : undefined,
               updated_at: trx.fn.now(),
-              description: `PG webhook: ${paymentStatus.toLowerCase()}`
+              description: `PG webhook: ${paymentStatus.toLowerCase()}`,
             })
             .returning("*");
 
           if (!updatedTxnRows.length) {
-            logWithTS(`[${requestId}] ℹ️ Already completed/skipped wallet transaction for ${orderId}.`);
+            logWithTS(
+              `[${requestId}] ℹ️ Already completed/skipped wallet transaction for ${orderId}.`
+            );
             return;
           }
 
@@ -258,7 +267,8 @@ export const verifyPayment = async (req, res) => {
               .where({ id: txn.wallet_id })
               .forUpdate()
               .first();
-            if (!wallet) throw new Error(`Wallet not found for id=${txn.wallet_id}`);
+            if (!wallet)
+              throw new Error(`Wallet not found for id=${txn.wallet_id}`);
 
             const newBalance = Number(wallet.balance) + Number(paymentAmount);
             logWithTS(
@@ -267,13 +277,15 @@ export const verifyPayment = async (req, res) => {
 
             await trx("wallet").where({ id: wallet.id }).update({
               balance: newBalance,
-              updated_at: trx.fn.now()
+              updated_at: trx.fn.now(),
             });
             await trx("wallet_transaction").where({ id: txn.id }).update({
-              balance_after: newBalance
+              balance_after: newBalance,
             });
 
-            logWithTS(`[${requestId}] ✅ WALLET UPDATED/CREATED: user ${wallet.user_id}, orderId=${orderId} @${newBalance}`);
+            logWithTS(
+              `[${requestId}] ✅ WALLET UPDATED/CREATED: user ${wallet.user_id}, orderId=${orderId} @${newBalance}`
+            );
           }
         });
       } catch (err) {
@@ -284,91 +296,111 @@ export const verifyPayment = async (req, res) => {
     //kundli
     if (orderId.startsWith("PRE_KUNDLI_") || orderId.startsWith("PRE_K")) {
       try {
-        await PostgresDb.transaction(async trx => {
+        await PostgresDb.transaction(async (trx) => {
           // Insert payment event into premium_services_payment table
-          await trx("premium_services_payment").insert({
-            order_id: orderId,
-            cf_order_id: cfOrderId || null,
-            cf_payment_id: cfPaymentId,
-            status: paymentStatus,
-            amount: paymentAmount,
-            currency: paymentCurrency,
-            payment_method: JSON.stringify(paymentMethod || {}),
-            payment_time: eventTime,  // convert epoch seconds to JS Date
-            customer_email: customerEmail,
-            customer_phone: customerPhone,
-            signature: incomingSignature,
-            extra_payload: JSON.stringify(payload),
-            audit_logged_at: trx.fn.now(),
-          }).onConflict("order_id")
+          await trx("premium_services_payment")
+            .insert({
+              order_id: orderId,
+              cf_order_id: cfOrderId || null,
+              cf_payment_id: cfPaymentId,
+              status: paymentStatus,
+              amount: paymentAmount,
+              currency: paymentCurrency,
+              payment_method: JSON.stringify(paymentMethod || {}),
+              payment_time: eventTime, // convert epoch seconds to JS Date
+              customer_email: customerEmail,
+              customer_phone: customerPhone,
+              signature: incomingSignature,
+              extra_payload: JSON.stringify(payload),
+              audit_logged_at: trx.fn.now(),
+            })
+            .onConflict("order_id")
             .merge(); // Ensures only one row per order_id, always latest status
         });
-        logWithTS(`[${requestId}] 📝 PG audit log: premium services payment event for ${orderId}`);
+        logWithTS(
+          `[${requestId}] 📝 PG audit log: premium services payment event for ${orderId}`
+        );
       } catch (pgErr) {
-        logWithTS(`[${requestId}] ❌ PG audit log failed for premium services:`, pgErr.message || pgErr);
+        logWithTS(
+          `[${requestId}] ❌ PG audit log failed for premium services:`,
+          pgErr.message || pgErr
+        );
         return res.status(500).send("Postgres insert failed.");
       }
     }
 
     if (orderId.startsWith("PRE_PANCH_") || orderId.startsWith("PRE_P")) {
       try {
-        await PostgresDb.transaction(async trx => {
+        await PostgresDb.transaction(async (trx) => {
           // Insert payment event into premium_services_payment table
-          await trx("premium_services_payment").insert({
-            order_id: orderId,
-            cf_order_id: cfOrderId || null,
-            cf_payment_id: cfPaymentId,
-            status: paymentStatus,
-            amount: paymentAmount,
-            currency: paymentCurrency,
-            payment_method: JSON.stringify(paymentMethod || {}),
-            payment_time: eventTime,  // convert epoch seconds to JS Date
-            customer_email: customerEmail,
-            customer_phone: customerPhone,
-            signature: incomingSignature,
-            extra_payload: JSON.stringify(payload),
-            audit_logged_at: trx.fn.now(),
-          }).onConflict("order_id")
+          await trx("premium_services_payment")
+            .insert({
+              order_id: orderId,
+              cf_order_id: cfOrderId || null,
+              cf_payment_id: cfPaymentId,
+              status: paymentStatus,
+              amount: paymentAmount,
+              currency: paymentCurrency,
+              payment_method: JSON.stringify(paymentMethod || {}),
+              payment_time: eventTime, // convert epoch seconds to JS Date
+              customer_email: customerEmail,
+              customer_phone: customerPhone,
+              signature: incomingSignature,
+              extra_payload: JSON.stringify(payload),
+              audit_logged_at: trx.fn.now(),
+            })
+            .onConflict("order_id")
             .merge(); // Ensures only one row per order_id, always latest status
         });
 
-     
-        logWithTS(`[${requestId}] 📝 PG audit log: premium services payment event for ${orderId}`);
+        logWithTS(
+          `[${requestId}] 📝 PG audit log: premium services payment event for ${orderId}`
+        );
       } catch (pgErr) {
-        logWithTS(`[${requestId}] ❌ PG audit log failed for premium services:`, pgErr.message || pgErr);
+        logWithTS(
+          `[${requestId}] ❌ PG audit log failed for premium services:`,
+          pgErr.message || pgErr
+        );
         return res.status(500).send("Postgres insert failed.");
       }
     }
-       if (orderId.startsWith("PRE_MATCH_") || orderId.startsWith("PRE_M")) {
-          try {
-            await PostgresDb.transaction(async trx => {
-              // Insert payment event into premium_services_payment table
-              await trx("premium_services_payment").insert({
-                order_id: orderId,
-                cf_order_id: cfOrderId || null,
-                cf_payment_id: cfPaymentId,
-                status: paymentStatus,
-                amount: paymentAmount,
-                currency: paymentCurrency,
-                payment_method: JSON.stringify(paymentMethod || {}),
-                payment_time: eventTime,  // convert epoch seconds to JS Date
-                customer_email: customerEmail,
-                customer_phone: customerPhone,
-                signature: incomingSignature,
-                extra_payload: JSON.stringify(payload),
-                audit_logged_at: trx.fn.now(),
-              }).onConflict("order_id")
-                .merge(); // Ensures only one row per order_id, always latest status
-            });
-            logWithTS(`[${requestId}] 📝 PG audit log: premium services payment event for ${orderId}`);
-          } catch (pgErr) {
-            logWithTS(`[${requestId}] ❌ PG audit log failed for premium services:`, pgErr.message || pgErr);
-            return res.status(500).send("Postgres insert failed.");
-          }
-        }
+    if (orderId.startsWith("PRE_MATCH_") || orderId.startsWith("PRE_M")) {
+      try {
+        await PostgresDb.transaction(async (trx) => {
+          // Insert payment event into premium_services_payment table
+          await trx("premium_services_payment")
+            .insert({
+              order_id: orderId,
+              cf_order_id: cfOrderId || null,
+              cf_payment_id: cfPaymentId,
+              status: paymentStatus,
+              amount: paymentAmount,
+              currency: paymentCurrency,
+              payment_method: JSON.stringify(paymentMethod || {}),
+              payment_time: eventTime, // convert epoch seconds to JS Date
+              customer_email: customerEmail,
+              customer_phone: customerPhone,
+              signature: incomingSignature,
+              extra_payload: JSON.stringify(payload),
+              audit_logged_at: trx.fn.now(),
+            })
+            .onConflict("order_id")
+            .merge(); // Ensures only one row per order_id, always latest status
+        });
+        logWithTS(
+          `[${requestId}] 📝 PG audit log: premium services payment event for ${orderId}`
+        );
+      } catch (pgErr) {
+        logWithTS(
+          `[${requestId}] ❌ PG audit log failed for premium services:`,
+          pgErr.message || pgErr
+        );
+        return res.status(500).send("Postgres insert failed.");
+      }
+    }
     // --- Audit payment event in Postgres ---
     try {
-      await PostgresDb.transaction(async trx => {
+      await PostgresDb.transaction(async (trx) => {
         await logTransactionToPostgres(
           {
             order_id: orderId,
@@ -388,7 +420,10 @@ export const verifyPayment = async (req, res) => {
       });
       logWithTS(`[${requestId}] 📝 PG audit log: payment event for ${orderId}`);
     } catch (pgErr) {
-      logWithTS(`[${requestId}] ❌ PG audit log failed:`, pgErr.message || pgErr);
+      logWithTS(
+        `[${requestId}] ❌ PG audit log failed:`,
+        pgErr.message || pgErr
+      );
     }
 
     logWithTS(`[${requestId}] ✅ Webhook processing finished, ok.`);

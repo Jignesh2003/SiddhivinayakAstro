@@ -19,7 +19,7 @@ import kundaliPdfRoutes from "./routes/kundaliPdfRoutes.js";
 import { setupSocketHandlers } from "./sockets/chatHandler.js";
 import { initializeMinuteBillingCron } from "./jobs/minuteBilling.js";
 import { fetchHoroscopes } from "./jobs/fetchHoroscope.js";
-
+import blogRoutes from "./routes/blogRoutes.js"
 dotenv.config();
 
 const app = express();
@@ -66,7 +66,7 @@ app.use("/api/horoscope", horoscopeRoutes);
 app.use("/api/astrology", astrologyRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/kundali", kundaliPdfRoutes);
-
+app.use("/api/blog", blogRoutes);
 // 404 Handler
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });

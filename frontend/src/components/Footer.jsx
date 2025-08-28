@@ -43,7 +43,7 @@ const Footer = () => {
             Contact
           </Link>
           <Link
-            to="/blogs-astrology-and-you"
+            to="/blog-list"
             className="text-white hover:text-yellow-400 transition"
           >
             Blogs

@@ -28,7 +28,7 @@ const isAstrologer = role === "astrologer";
   // Load Cashfree SDK one time
   useEffect(() => {
     if (window.Cashfree) {
-      setCashfreeInstance(window.Cashfree({ mode:`${import.meta.env.PROD}` }));
+      setCashfreeInstance(window.Cashfree({ mode:`${import.meta.env.VITE_PROD}` }));
       return;
     }
     const script = document.createElement("script");
@@ -36,12 +36,13 @@ const isAstrologer = role === "astrologer";
     script.async = true;
     script.onload = () => {
       if (window.Cashfree) {
-        setCashfreeInstance(window.Cashfree({ mode:`${import.meta.env.PROD}` }));
+        setCashfreeInstance(window.Cashfree({ mode:`${import.meta.env.VITE_PROD}` }));
       }
     };
     script.onerror = () => alert("Failed to load Cashfree SDK");
     document.body.appendChild(script);
   }, []);
+console.log(`Is production? ${import.meta.env.VITE_PROD}`);
 
   // Load wallet and transactions
   async function fetchWalletData() {
@@ -177,11 +178,6 @@ const isAstrologer = role === "astrologer";
   return (
     <div
       className="absolute inset-0 bg-cover bg-center pt-30"
-      style={{
-        backgroundImage: `url(${assets.GalaxyBackground})`,
-        // filter: "blur(8px)",
-        zIndex: -1,
-      }}
     >
       <div className="w-full max-w-md mx-auto mt-8 bg-white rounded-lg shadow-md p-6 relative">
         <h2 className="text-2xl font-bold mb-6 text-indigo-700">My Wallet</h2>

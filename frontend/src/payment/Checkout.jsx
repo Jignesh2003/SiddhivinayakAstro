@@ -35,7 +35,7 @@ export default function Checkout() {
     script.async = true;
     script.onload = () => {
       if (window.Cashfree) {
-        const instance = window.Cashfree({ mode:`${import.meta.env.PROD}` });
+        const instance = window.Cashfree({ mode:`${import.meta.env.VITE_PROD}` });
         setCashfreeInstance(instance);
         console.log(instance);
         
@@ -194,13 +194,12 @@ export default function Checkout() {
 
       if (!payment_session_id)
         throw new Error("No payment session ID received");
-console.log("starting checkout");
 
       cashfreeInstance.checkout({
         paymentSessionId: payment_session_id,
         redirectTarget: "_self",
       });
-      console.log("ended checkout");
+      console.log(payment_session_id);
 
     } catch (err) {
       console.error("❌ Checkout error:", err);
@@ -221,6 +220,7 @@ console.log("starting checkout");
   const gstAmount = Number(((subTotal * 18) / 118).toFixed(2));
   const deliveryCharges = subTotal > 499 ? 0 : 100;
   const total = subTotal + deliveryCharges;
+console.log(`Is production? ${import.meta.env.VITE_PROD}`);
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg">

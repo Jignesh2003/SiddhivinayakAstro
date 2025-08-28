@@ -69,7 +69,7 @@ export default function KundliForm() {
   // Load Cashfree SDK
   useEffect(() => {
     if (window.Cashfree) {
-      setCashfreeInstance(window.Cashfree({ mode:`${import.meta.env.PROD}` }));
+      setCashfreeInstance(window.Cashfree({ mode:`${import.meta.env.VITE_PROD}` }));
       return;
     }
     const script = document.createElement("script");
@@ -77,7 +77,7 @@ export default function KundliForm() {
     script.async = true;
     script.onload = () => {
       if (window.Cashfree) {
-        setCashfreeInstance(window.Cashfree({ mode:`${import.meta.env.PROD}` }));
+        setCashfreeInstance(window.Cashfree({ mode:`${import.meta.env.VITE_PROD}` }));
       } else {
         toast.error("❌ Failed to initialize payment SDK");
       }

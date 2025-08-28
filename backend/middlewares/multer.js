@@ -34,6 +34,21 @@ const kycStorage = new CloudinaryStorage({
   },
 });
 
+const blogStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "blog",
+    format: async () => "png",
+    public_id: (req, file) => `${Date.now()}-${file.originalname.replace(/\s+/g, "_")}`,
+  },
+});
+
+export const uploadBlogImages = multer({
+  storage: blogStorage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB max file size
+}).array("images", 1); // accepts up to 1 images under form field "images"
+
+
 const kycUpload = multer({ 
   storage: kycStorage,
   limits: {
