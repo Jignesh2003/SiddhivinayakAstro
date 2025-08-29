@@ -50,13 +50,16 @@ const BlogDetail = () => {
   const relatedBlogs = blogs.filter((b) => b._id !== id).slice(0, 3);
 
   return (
+    // <div
+    //   className="max-w-5xl mx-auto p-10 bg-white rounded-2xl shadow-2xl prose prose-indigo prose-lg xl:prose-xl 2xl:prose-2xl dark:prose-invert"
+    //   style={{
+    //     backgroundImage: `url(${assets.HeroSelectionBackground})`,
+    //     backgroundSize: "cover",backgroundRepeat: "no-repeat", backgroundPosition: "center",
+    //   }}
+    // >
     <div
       className="max-w-5xl mx-auto p-10 bg-white rounded-2xl shadow-2xl prose prose-indigo prose-lg xl:prose-xl 2xl:prose-2xl dark:prose-invert"
-      style={{
-        backgroundImage: `url(${assets.HeroSelectionBackground})`,
-        backgroundSize: "cover",backgroundRepeat: "no-repeat", backgroundPosition: "center",
-      }}
-    >
+>
       {/* Featured Image */}
       {blog.featuredImage && (
         <div className="overflow-hidden rounded-2xl shadow-lg mb-12 ">
@@ -69,7 +72,7 @@ const BlogDetail = () => {
       )}
 
       {/* Title */}
-      <h1 className="text-5xl font-extrabold tracking-tight mb-8 text-amber-50 drop-shadow-md">
+      <h1 className="text-5xl font-extrabold tracking-tight mb-8  drop-shadow-md">
         {blog.title}
       </h1>
 
@@ -96,7 +99,7 @@ const BlogDetail = () => {
 
       {/* Content */}
       <article
-        className="prose max-w-none text-amber-50 dark:text-gray-100"
+        className="prose max-w-none  dark:text-gray-100"
         dangerouslySetInnerHTML={{ __html: blog.content }}
       />
 
