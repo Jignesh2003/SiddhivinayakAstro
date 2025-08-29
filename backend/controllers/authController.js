@@ -314,7 +314,7 @@ export const addProduct = async (req, res) => {
       benefits,
       bestDayToWear,
     } = req.body;
-console.log(howToWear, benefits, bestDayToWear);
+console.log(category);
 
     if (!name || !price || !description || !category || !stockRaw || !howToWear || !benefits || !bestDayToWear) {
       return res.status(400).json({
