@@ -22,6 +22,7 @@ const CATEGORY_OPTIONS = [
   "Pendants",
   "Money Magnet",
   "Pyramids",
+  "Home Decor",
   "Customized",
 ];
 
@@ -42,6 +43,7 @@ const SUBCATEGORY_OPTIONS = {
   Pyramids: ["Crystal", "Metal", "Decorative"],
   Pendants: ["Gold", "Silver", "Gemstone"],
   "Money Magnet": ["Coins", "Bills", "Charms"],
+  "Home Decor": ["Wall Hangings", "Statues", "Feng Shui"],
   Customized: ["Engraving", "Personalized Text", "Photo Print"],
 };
 

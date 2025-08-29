@@ -1,5 +1,4 @@
 import express from "express";
-import Blog from "../models/blog.js";
 import { createBlog, deleteBlog, getBlog, getSingleBlog, updateBlog } from "../controllers/blogController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import { uploadBlogImages } from "../middlewares/multer.js";
