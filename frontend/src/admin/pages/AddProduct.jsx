@@ -43,7 +43,7 @@ const SUBCATEGORY_OPTIONS = {
   Pyramids: ["Crystal", "Metal", "Decorative"],
   Pendants: ["Gold", "Silver", "Gemstone"],
   "Money Magnet": ["Coins", "Bills", "Charms"],
-  "Home Decor": ["Wall Hangings", "Statues", "Feng Shui"],
+  "Home Decor": ["Wall Hangings", "Statues", "Feng Shui","Tree"],
   Customized: ["Engraving", "Personalized Text", "Photo Print"],
 };
 
@@ -229,10 +229,10 @@ export default function AddProduct() {
     fd.append("description", form.description);
     fd.append("miniDesc", form.miniDesc);
     fd.append("tags", JSON.stringify(parseToArray(form.tags)));
-    fd.append("category", form.category);
-    fd.append("subcategory", form.subcategory);
-    fd.append("brand", form.brand);
-    fd.append("sizeType", form.sizeType);
+fd.append("category", form.category.trim());
+    fd.append("subcategory", form.subcategory.trim());
+    fd.append("brand", form.brand.trim());
+    fd.append("sizeType", form.sizeType.trim());
     fd.append(
       "stock",
       JSON.stringify(
