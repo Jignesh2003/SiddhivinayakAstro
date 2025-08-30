@@ -25,6 +25,7 @@ import "swiper/css/navigation";
 
 // Zodiac images & basic info
 import assets from "../assets/assets";
+import { useNavigate } from "react-router-dom";
 const SIGN_IMAGES = {
   aries: assets.Aries,
   taurus: assets.Taurus,
@@ -60,6 +61,7 @@ export default function DailyPrediction() {
   const [selectedSign, setSelectedSign] = useState("");
   const [knowledgeSign, setKnowledgeSign] = useState("");
   const cardRefs = useRef({});
+  const navigate = useNavigate();
 
   // Fetch the full daily_predictions array
   useEffect(() => {
@@ -125,7 +127,7 @@ export default function DailyPrediction() {
               return (
                 <SwiperSlide key={key}>
                   <button
-                    onClick={() => setSelectedSign(key)}
+                    onClick={() => navigate(`/daily-prediction/${key}`)}
                     className={`w-full h-24 sm:h-28 flex items-center justify-center rounded-xl overflow-hidden transition ${
                       key === selectedSign
                         ? "ring-4 ring-yellow-400"

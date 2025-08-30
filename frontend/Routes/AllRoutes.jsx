@@ -55,6 +55,7 @@ import  HowToWear  from "@/pages/HowToWear";
 import AdminBlogManager from "@/admin/pages/AdminBlogManager";
 import BlogList from "@/pages/blogs/BlogList";
 import BlogDetail from "@/pages/blogs/BlogDetails";
+import DailyPredictionBySign from "@/pages/dailyPrediction/DailyPredictionBySign";
 
 const AppRoutes = () => {
   return (
@@ -83,7 +84,6 @@ const AppRoutes = () => {
         />
         <Route path="/shipping-policy" element={<ShippingDeliveryPolicy />} />
 
-  
         <Route path="/products" element={<Products />} />
         <Route path="/single-product/:id" element={<SingleProduct />} />
 
@@ -130,6 +130,10 @@ const AppRoutes = () => {
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/blog-list" element={<BlogList />} />
           <Route path="/blog-details/:id" element={<BlogDetail />} />
+          <Route
+            path="/daily-prediction/:sign"
+            element={<DailyPredictionBySign />}
+          />
         </Route>
 
         {/* ✅ Admin Panel */}

@@ -177,7 +177,7 @@ console.log(`Is production? ${import.meta.env.VITE_PROD}`);
 
   return (
     <div
-      className="absolute inset-0 bg-cover bg-center pt-30"
+      className="absolute inset-0 bg-cover bg-center pt-30 "
     >
       <div className="w-full max-w-md mx-auto mt-8 bg-white rounded-lg shadow-md p-6 relative">
         <h2 className="text-2xl font-bold mb-6 text-indigo-700">My Wallet</h2>

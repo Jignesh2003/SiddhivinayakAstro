@@ -6,23 +6,30 @@ import PostgresDb from "../config/postgresDb.js";
 
 export const endSession = async (sessionId, io = null) => {
   try {
-    console.log(`========== [endSession] Starting for session ${sessionId} ==========`);
+    console.log(
+      `========== [endSession] Starting for session ${sessionId} ==========`
+    );
 
-    // 1. Fetch session
-    const session = await ChatSession.findById(sessionId);
-    if (!session) {
-      console.warn(`[endSession] NOT FOUND: Session ${sessionId}`);
-      return { success: false, message: "Session not found." };
-    }
-    if (session.status === "ended") {
-      console.log(`[endSession] ALREADY ENDED: Session ${sessionId}`);
+    // 1. Atomically end session (only if not already ended)
+    const atomicSession = await ChatSession.findOneAndUpdate(
+      { _id: sessionId, status: { $ne: "ended" } },
+      { $set: { status: "ended", endTime: new Date() } },
+      { new: true }
+    );
+
+    if (!atomicSession) {
+      console.warn(`[endSession] ALREADY ENDED: Session ${sessionId}`);
       return { success: false, message: "Session already ended." };
     }
+    const session = atomicSession;
+    // Defensive: update amountCharged later after payout/refund branch
 
     // 2. Prepare user & astro IDs
     const userIdStr = session.userId.toString();
     const astroIdStr = session.astrologerId.toString();
-    console.log(`[endSession] userId: ${userIdStr}, astrologerId: ${astroIdStr}, minutesDebited: ${session.minutesDebited}`);
+    console.log(
+      `[endSession] userId: ${userIdStr}, astrologerId: ${astroIdStr}, minutesDebited: ${session.minutesDebited}`
+    );
 
     // 3. Check if astrologer replied
     const astroMsgCount = await Message.countDocuments({
@@ -33,16 +40,21 @@ export const endSession = async (sessionId, io = null) => {
 
     // 4. REFUND PATH IF NO ASTRO REPLY
     if (astroMsgCount === 0) {
-      console.log(`[endSession][REFUND] Astrologer never replied. Processing refund...`);
+      console.log(
+        `[endSession][REFUND] Astrologer never replied. Processing refund...`
+      );
       let refundError = null;
       let refundedAmount = 0;
       let minutesRefunded = 0;
 
       try {
-        // Defensive reload (to ensure mongo has latest debits if race):
+        // Defensive reload (in case debits changed during race)
         const latestSession = await ChatSession.findById(sessionId);
         const minutes = latestSession.minutesDebited ?? 0;
-        console.log(`[endSession][REFUND] Fresh minutesDebited from DB:`, minutes);
+        console.log(
+          `[endSession][REFUND] Fresh minutesDebited from DB:`,
+          minutes
+        );
 
         if (minutes > 0) {
           const astrologer = await User.findById(session.astrologerId);
@@ -52,17 +64,35 @@ export const endSession = async (sessionId, io = null) => {
           const rate = astrologer.pricePerMinute;
           refundedAmount = minutes * rate;
           minutesRefunded = minutes;
-          console.log(`[endSession][REFUND] Will refund ₹${refundedAmount} for ${minutes} minute(s).`);
+          console.log(
+            `[endSession][REFUND] Will refund ₹${refundedAmount} for ${minutes} minute(s).`
+          );
 
           await PostgresDb.transaction(async (trx) => {
-            const wallet = await trx("wallet").where({ user_id: userIdStr }).forUpdate().first();
-            console.log(`[endSession][REFUND] User wallet ${wallet ? "found" : "NOT FOUND"}:`, wallet ? wallet.id : null, `(balance: ${wallet ? wallet.balance : "n/a"})`);
+            // Prevent double wallet payout/refund
+            const existingRefund = await trx("wallet_transaction")
+              .where({
+                chat_session_id: session._id.toString(),
+                business_type: "chat_session_refund",
+              })
+              .first();
+            if (existingRefund)
+              throw new Error("[REFUND] Refund already processed for session.");
 
+            const wallet = await trx("wallet")
+              .where({ user_id: userIdStr })
+              .forUpdate()
+              .first();
+            console.log(
+              `[endSession][REFUND] User wallet ${
+                wallet ? "found" : "NOT FOUND"
+              }:`,
+              wallet ? wallet.id : null,
+              `(balance: ${wallet ? wallet.balance : "n/a"})`
+            );
             if (!wallet) throw new Error("[REFUND] Wallet not found for user.");
 
             const newBalance = Number(wallet.balance) + refundedAmount;
-            console.log(`[endSession][REFUND] Previous balance: ${wallet.balance}, After refund: ${newBalance}`);
-
             await trx("wallet_transaction").insert({
               wallet_id: wallet.id,
               chat_session_id: session._id.toString(),
@@ -84,28 +114,29 @@ export const endSession = async (sessionId, io = null) => {
               }),
               created_at: trx.fn.now(),
             });
-
             await trx("wallet")
               .where({ id: wallet.id })
               .update({ balance: newBalance, updated_at: trx.fn.now() });
-
             console.log(`[endSession][REFUND] WALLET CREDITED successfully.`);
           });
 
-          console.log(`[endSession][REFUND] Refund SUCCESSFUL for user ${userIdStr}, session ${sessionId}, amount ₹${refundedAmount}`);
+          console.log(
+            `[endSession][REFUND] Refund SUCCESSFUL for user ${userIdStr}, session ${sessionId}, amount ₹${refundedAmount}`
+          );
         } else {
-          console.warn(`[endSession][REFUND] No minutes debited (minutesDebited=0); nothing to refund.`);
+          console.warn(
+            `[endSession][REFUND] No minutes debited (minutesDebited=0); nothing to refund.`
+          );
         }
       } catch (error) {
         refundError = error;
-        console.error(`[endSession][REFUND][ERROR] during refund for user ${userIdStr}:`, error);
+        console.error(
+          `[endSession][REFUND][ERROR] during refund for user ${userIdStr}:`,
+          error
+        );
       }
 
-      // End the session in Mongo
-      session.status = "ended";
-      session.endTime = new Date();
-      await session.save();
-      console.log(`[endSession][REFUND] Session status set to 'ended' in Mongo`);
+      // Session status already marked ended by atomic update above
 
       if (io) {
         const payload = {
@@ -139,10 +170,10 @@ export const endSession = async (sessionId, io = null) => {
     const minutes = latestSession.minutesDebited ?? 1;
     const astrologer = await User.findById(session.astrologerId);
     if (!astrologer || typeof astrologer.pricePerMinute !== "number") {
-      console.error(`[endSession][PAYOUT] Astrologer not found or rate missing`);
-      session.status = "ended";
-      session.endTime = new Date();
-      await session.save();
+      console.error(
+        `[endSession][PAYOUT] Astrologer not found or rate missing`
+      );
+      // Status already set to ended by atomic update above
       if (io) {
         const payload = {
           sessionId,
@@ -162,29 +193,44 @@ export const endSession = async (sessionId, io = null) => {
     const rate = astrologer.pricePerMinute;
     const amountCharged = minutes * rate;
 
-    session.status = "ended";
-    session.endTime = new Date();
+    // Defensive Postgres: prevent double payout with wallet_transaction check
+    let walletError = null;
+    try {
+      await PostgresDb.transaction(async (trx) => {
+        const existingPayout = await trx("wallet_transaction")
+          .where({
+            chat_session_id: session._id.toString(),
+            business_type: "chat_session_payout",
+          })
+          .first();
+        if (existingPayout)
+          throw new Error("[PAYOUT] Payout already processed for session.");
+
+        // Call domain payout handler (still add check there ideally!)
+        await createTransaction({
+          _id: session._id,
+          userId: session.userId,
+          astrologerId: session.astrologerId,
+          amountCharged,
+          minutes,
+          rate,
+        });
+      });
+      console.log(`[endSession][PAYOUT] Astrologer payout SUCCESS`);
+    } catch (error) {
+      walletError = error;
+      console.error(
+        `[endSession][PAYOUT][ERROR] Astrologer payout error:`,
+        error
+      );
+    }
+
+    // Update session amountCharged (Mongo)
     session.amountCharged = amountCharged;
     await session.save();
     console.log(
       `[endSession][PAYOUT] Marked session ended. Minutes: ${minutes}, Rate: ₹${rate}, Total Charged: ₹${amountCharged}`
     );
-
-    let walletError = null;
-    try {
-      await createTransaction({
-        _id: session._id,
-        userId: session.userId,
-        astrologerId: session.astrologerId,
-        amountCharged,
-        minutes,
-        rate,
-      });
-      console.log(`[endSession][PAYOUT] Astrologer payout SUCCESS`);
-    } catch (error) {
-      walletError = error;
-      console.error(`[endSession][PAYOUT][ERROR] Astrologer payout error:`, error);
-    }
 
     if (io) {
       const payload = {
