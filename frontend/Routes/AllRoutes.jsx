@@ -82,10 +82,16 @@ const AppRoutes = () => {
           path="/cancellation-policy"
           element={<CancellationRefundPolicy />}
         />
+        <Route
+          path="/daily-prediction/:sign"
+          element={<DailyPredictionBySign />}
+        />
         <Route path="/shipping-policy" element={<ShippingDeliveryPolicy />} />
 
         <Route path="/products" element={<Products />} />
         <Route path="/single-product/:id" element={<SingleProduct />} />
+        <Route path="/blog-list" element={<BlogList />} />
+        <Route path="/blog-details/:id" element={<BlogDetail />} />
 
         {/* ✅ 404 Not Found Page */}
         <Route path="*" element={<NotFound />} />
@@ -128,12 +134,6 @@ const AppRoutes = () => {
           <Route path="/panchang-result" element={<PanchangResult />} />
           <Route path="/cod-confirmation" element={<CodOrderConfirmation />} />
           <Route path="/wallet" element={<Wallet />} />
-          <Route path="/blog-list" element={<BlogList />} />
-          <Route path="/blog-details/:id" element={<BlogDetail />} />
-          <Route
-            path="/daily-prediction/:sign"
-            element={<DailyPredictionBySign />}
-          />
         </Route>
 
         {/* ✅ Admin Panel */}
