@@ -2,7 +2,7 @@ import SiddhivinayakAstroLogo from './Siddhivinayak watermark.png'
 import GalaxyBackground from './beautiful-7305546_1280.jpg'
 import HeroSelectionBackground from './HeroSectionBackground.jpg'
 import Aquarius from "./Aquarius.jpeg"
-import Aries from "./Capricorn.jpeg"
+import Aries from "./Aries.jpeg"
 import Cancer from "./Cancer.jpeg"
 import Capricorn from "./Capricorn.jpeg"
 import ChatWithAstroLogo from "./ChatWithAstro.jpeg"
