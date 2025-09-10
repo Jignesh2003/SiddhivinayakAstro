@@ -15,7 +15,13 @@ const TermsAndConditions = () => {
 
         {/* Intro */}
         <p className="text-gray-600 text-lg text-center">
-          Welcome to <span className="text-yellow-500 font-semibold">SiddhiVinayak Astro</span>, your spiritual partner for astrology insights and sacred products. Please read these Terms of Service carefully before using our platform.
+          Welcome to{" "}
+          <span className="text-yellow-500 font-semibold">
+            SiddhiVinayak Astro
+          </span>
+          , your spiritual partner for astrology insights and sacred products.
+          Please read these Terms of Service carefully before using our
+          platform.
         </p>
 
         {/* Sections */}
@@ -119,10 +125,12 @@ const TermsAndConditions = () => {
           </p>
           <p className="text-gray-600 mt-2">
             📧 Email:{" "}
-            <span className="text-yellow-500">siddhivinayakastroworld@gmail.com</span>
+            <span className="text-yellow-500">
+              siddhivinayakastroworld@gmail.com
+            </span>
           </p>
           <p className="text-gray-600">
-            📞 Phone: <span className="text-yellow-500">+91 ************</span>
+            📞 Phone: <span className="text-yellow-500">+912269010407</span>
           </p>
         </div>
 

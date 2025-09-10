@@ -30,7 +30,7 @@ export const allGeneralPredictions = async (req, res) => {
     const url = new URL(baseUrl);
     url.searchParams.set("sign", "all");
     url.searchParams.set("type", "general");
-    url.searchParams.set("datetime", now.toISOString());
+    url.searchParams.set("datetime", ist.toISOString()); // ✅ correct
 
     // 3) Fetch from Prokerala
     const token = await getProkeralaToken();
@@ -56,9 +56,12 @@ export const allGeneralPredictions = async (req, res) => {
 
     // Optional: return stale cache if available
     try {
-      const cached = await redisClient.get(
-        `horoscope:all:general:${new Date().toISOString().slice(0, 10)}`
-      );
+       const istFallback = new Date(Date.now() + 5.5 * 60 * 60000)
+         .toISOString()
+         .slice(0, 10);
+          const cached = await redisClient.get(
+            `horoscope:all:general:${istFallback}`
+          );
       if (cached) {
         console.warn("Returning stale cache due to Prokerala fetch failure");
         return res.json(JSON.parse(cached));

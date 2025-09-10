@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { LogIn, Sun } from "lucide-react";
+import { Sun } from "lucide-react";
 import assets from "../../assets/assets";
 
 const SIGN_IMAGES = {
