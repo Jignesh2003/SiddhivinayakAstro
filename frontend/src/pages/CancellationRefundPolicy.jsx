@@ -84,12 +84,12 @@ const CancellationRefundPolicy = () => {
           </h3>
           <p className="text-gray-700 mb-3">
             When you're certain you want to return a product, WhatsApp us on{" "}
-            <strong className="text-yellow-600">+91 ************</strong>{" "}
-            immediately. Include your order number, the product's
-            specifications, and a brief explanation for the return. All return
-            requests must be made within 3 days after product delivery and must
-            meet all return parameters. Our Customer Care team will respond
-            within 24 hours and arrange reverse pickup of the product.
+            <strong className="text-yellow-600">+917738067976</strong>{" "}
+            immediately. Include your order number, the products specifications,
+            and a brief explanation for the return. All return requests must be
+            made within 3 days after product delivery and must meet all return
+            parameters. Our Customer Care team will respond within 24 hours and
+            arrange reverse pickup of the product.
           </p>
         </section>
 
@@ -116,8 +116,8 @@ const CancellationRefundPolicy = () => {
             exchanged as long as they are new, unopened, and in original
             packaging with tags. We charge a fee of ₹80 for exchanges and
             reverse logistics. For further information, contact us on WhatsApp
-            at <strong className="text-yellow-600">+91 ************</strong>. (Avg``
-            reply time: 3h)
+            at <strong className="text-yellow-600">+91 ************</strong>.
+            (Avg`` reply time: 3h)
           </p>
         </section>
 
@@ -135,8 +135,8 @@ const CancellationRefundPolicy = () => {
           <p className="text-gray-700">
             For any issues using the gift card code, contact our customer
             service team on WhatsApp at{" "}
-            <strong className="text-yellow-600">+91 ************</strong> between
-            10 AM to 6 PM (Monday to Saturday).
+            <strong className="text-yellow-600">+91 ************</strong>{" "}
+            between 10 AM to 6 PM (Monday to Saturday).
           </p>
         </section>
 
