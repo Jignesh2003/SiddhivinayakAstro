@@ -6,9 +6,10 @@ import useAuthStore from "@/store/useAuthStore";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
+
 const AdminBlogManager = () => {
   const { token } = useAuthStore.getState();
-
+  const [submitting, setSubmitting] = useState(false);
   const [posts, setPosts] = useState([]);
   const [form, setForm] = useState({
     title: "",
@@ -60,6 +61,8 @@ const AdminBlogManager = () => {
   // Form submit: send files and fields to backend
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return; // prevent double clicks
+    setSubmitting(true);
     try {
       const formData = new FormData();
 
@@ -92,7 +95,7 @@ const AdminBlogManager = () => {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "multipart/form-data",
-          },
+          }, timeout: 60000, // 60 seconds
         });
       }
 
@@ -110,6 +113,8 @@ const AdminBlogManager = () => {
       fetchPosts();
     } catch (err) {
       console.error("Failed to submit", err);
+    } finally {
+      setSubmitting(false); // always re-enable
     }
   };
 
@@ -254,10 +259,19 @@ const AdminBlogManager = () => {
         <div className="flex space-x-4">
           <button
             type="submit"
-            className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700 transition"
+            disabled={submitting}
+            className={`px-6 py-3 font-semibold rounded-md transition ${submitting
+                ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                : "bg-indigo-600 text-white hover:bg-indigo-700"
+              }`}
           >
-            {editingId ? "Update Post" : "Create Post"}
+            {submitting
+              ? "Submitting..."
+              : editingId
+                ? "Update Post"
+                : "Create Post"}
           </button>
+
           {editingId && (
             <button
               type="button"
