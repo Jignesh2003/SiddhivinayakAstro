@@ -56,6 +56,7 @@ import AdminBlogManager from "@/admin/pages/AdminBlogManager";
 import BlogList from "@/pages/blogs/BlogList";
 import BlogDetail from "@/pages/blogs/BlogDetails";
 import DailyPredictionBySign from "@/pages/dailyPrediction/DailyPredictionBySign";
+import AdminCreateCoupon from "@/admin/pages/AdminCreateCoupon";
 
 const AppRoutes = () => {
   return (
@@ -149,6 +150,9 @@ const AppRoutes = () => {
             <Route path="manage-products" element={<ManageProducts />} />
             <Route path="orders" element={<AdminOrders />} />
             <Route path="blog-manager" element={<AdminBlogManager />} />
+            <Route path="create-coupon" element={<AdminCreateCoupon />} />
+
+
 
             <Route
               path="withdrawal-requests"

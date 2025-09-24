@@ -119,7 +119,7 @@ const SingleProduct = () => {
     ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
     : null;
 
-  const galleryImages = product.image.map((img) => ({
+  const galleryImages = product?.image?.map((img) => ({
     original: img,
     thumbnail: img,
   }));
@@ -183,7 +183,7 @@ const SingleProduct = () => {
                     onChange={(e) => setSelectedSize(e.target.value)}
                     className="bg-white text-black border rounded p-2 w-full"
                   >
-                    {product.stock.map((v) => (
+                    {product?.stock?.map((v) => (
                       <option key={v._id} value={v.size}>
                         {v.size}
                       </option>
@@ -197,7 +197,7 @@ const SingleProduct = () => {
                 <div className="flex items-center mb-6">
                   <span className="text-xl font-medium mr-2">{avgRating}</span>
                   <div className="flex">
-                    {[1, 2, 3, 4, 5].map((val) => (
+                    {[1, 2, 3, 4, 5]?.map((val) => (
                       <Star
                         key={val}
                         size={20}
@@ -249,7 +249,7 @@ const SingleProduct = () => {
                   How to Wear
                 </h3>
                 <ul className="list-disc list-inside space-y-1">
-                  {product.howToWear.map((item, idx) => (
+                  {product?.howToWear?.map((item, idx) => (
                     <li key={idx}>{item}</li>
                   ))}
                 </ul>

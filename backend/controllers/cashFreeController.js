@@ -4,79 +4,102 @@ import Order from "../models/Order.js"; // Make sure this is imported
 import { v4 as uuidv4 } from "uuid";
 import Product from "../models/Product.js";
 import PostgresDb from "../config/postgresDb.js"
+import { validateCouponForUser } from "../utils/couponServices.js";
+import Coupon from "../models/Coupon.js";
 
 export const createCashfreeOrder = async (req, res) => {
-  // === MONGO SESSION: CREATE ORDER ===
   const session = await Order.startSession();
   session.startTransaction();
-  let customOrderId, user, amount, shippingAddress, items, userId;
+
+  let customOrderId, user, amount, shippingAddress, items, userId, totalAmount, discount = 0;
 
   try {
-    ({ amount, shippingAddress, items } = req.body);
+    ({ shippingAddress, items } = req.body);
     userId = req.user?.id;
 
-    if (!userId || !amount || !shippingAddress || !items?.length) {
+    if (!userId || !shippingAddress || !items?.length) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
+    // ✅ Fetch user
     user = await User.findById(userId);
     if (!user || !user.email) {
-      return res
-        .status(400)
-        .json({ message: "User not found or missing email" });
+      return res.status(400).json({ message: "User not found or missing email" });
     }
 
-    // Validate phone format
+    // ✅ Validate phone
     if (!shippingAddress.phone || !/^\d{10}$/.test(shippingAddress.phone)) {
       return res.status(400).json({ message: "Invalid phone number" });
     }
 
     customOrderId = `PREORDER_${userId}_${Date.now()}`;
 
-    // Step 1: Validate items, DO NOT update stock here
+    // ✅ Validate items & stock
+    let subTotal = 0;
     for (const item of items) {
       const product = await Product.findById(item.product);
-      if (!product) {
-        await session.abortTransaction();
-        session.endSession();
-        return res
-          .status(400)
-          .json({ message: `Product not found: ${item.product}` });
+      if (!product) throw new Error(`Product not found: ${item.product}`);
+
+      const qty = Number(item.quantity ?? 1);
+      if (product.sizeType !== "Quantity" && item.size) {
+        const variant = product.stock.find((v) => v.size === item.size);
+        if (!variant || variant.quantity < qty) {
+          throw new Error(`Not enough stock for ${product.name} (${item.size})`);
+        }
+      } else {
+        const availableQty = Array.isArray(product.stock)
+          ? product.stock.reduce((sum, s) => sum + Number(s.quantity || 0), 0)
+          : Number(product.stock?.quantity ?? 0);
+        if (availableQty < qty) throw new Error(`Not enough stock for ${product.name}`);
       }
-      const stockEntry = product.stock?.find(
-        (s) => s.quantity >= item.quantity
-      );
-      if (!stockEntry) {
-        await session.abortTransaction();
-        session.endSession();
-        return res
-          .status(400)
-          .json({ message: `Not enough stock for product ${item.product}` });
-      }
+
+      subTotal += product.price * qty;
     }
 
-    // === Step 2: Calculate GST and Delivery Charges ===
-    // GST is included in amount (18% inclusive) -> extract GST portion
-    console.log(amount);
-    
-    const gstAmount = Number(((amount * 0.18) ).toFixed(2));
+    // ✅ Calculate GST & Delivery
+    const gstAmount = Number(((subTotal * 18) / 118).toFixed(2));
+    const deliveryCharges = subTotal > 499 ? 0 : 100;
 
-    // Delivery: Free if >499 else ₹100
-    const deliveryCharges = amount > 499 ? 0 : 100;
-    // === Step 3: Save the pending order in Mongo ===
+    // ✅ Validate coupon from server
+    let couponId = null;
+    const couponCode = req.body.couponCode;
+    if (couponCode) {
+      const couponResult = await validateCouponForUser({
+        code: couponCode,
+        userId,
+        cartValue: subTotal,
+        cartItems: items.map(i => ({
+          productId: i.product,
+          categoryId: i.categoryId || null,
+        })),
+      });
+      if (couponResult.valid) {
+        discount =couponResult.discount;
+        const couponDoc = await Coupon.findOne({ code: couponCode });
+        if (couponDoc) {
+          couponId = couponDoc._id;
+        }
+      } 
+    }
+
+    totalAmount = subTotal + deliveryCharges - discount;
+
+    // ✅ Save order in MongoDB
     const newOrder = await Order.create(
       [
         {
           user: userId,
           items,
-          totalAmount: (amount + deliveryCharges ), // total amount including GST 
+          totalAmount,
           gstAmount,
           deliveryCharges,
+          discountAmount:discount,
           paymentMethod: "online",
           paymentStatus: "Initiated",
           orderStatus: "Pending",
           shippingAddress,
           customOrderId,
+          coupon: couponId,
         },
       ],
       { session }
@@ -88,20 +111,17 @@ export const createCashfreeOrder = async (req, res) => {
     await session.abortTransaction();
     session.endSession();
     console.error("❌ Mongo order creation failed:", err);
-    return res.status(500).json({
-      message: "Failed to create order in MongoDB",
-      details: err.message || err,
-    });
+    return res.status(500).json({ message: err.message || "Failed to create order" });
   }
 
-  // === POSTGRES: CREATE INITIATED PAYMENT RECORD ===
+  // ✅ Log transaction in Postgres
   try {
     await PostgresDb("productorders_transactions").insert({
       order_id: customOrderId,
       cf_order_id: null,
       cf_payment_id: null,
       status: "INITIATED",
-      amount: amount, //  store gst and dilivery seprate but gst will be includent in amount 
+      amount: totalAmount,
       currency: "INR",
       payment_method: null,
       payment_time: new Date(),
@@ -113,18 +133,17 @@ export const createCashfreeOrder = async (req, res) => {
     console.error("❌ Failed to log initiated payment in Postgres:", pgErr);
   }
 
-  // === CALL CASHFREE API ===
+  // ✅ Call Cashfree API
   try {
     const clientId = process.env.CASHFREE_CLIENT_ID;
     const clientSecret = process.env.CASHFREE_CLIENT_SECRET;
     if (!clientId || !clientSecret) {
       return res.status(500).json({ message: "Cashfree credentials missing" });
     }
-    const gstAmount = Number(((amount * 0.18)).toFixed(2));
 
     const payload = {
       order_id: customOrderId,
-      order_amount: Number(amount + (amount >= 499 ? 0 : 100)), // total to pay in prod
+      order_amount: totalAmount,
       order_currency: "INR",
       customer_details: {
         customer_id: String(userId),
@@ -143,10 +162,6 @@ export const createCashfreeOrder = async (req, res) => {
       },
     };
 
-    if (process.env.NODE_ENV !== "production") {
-      console.log("📦 Cashfree Payload:", JSON.stringify(payload, null, 2));
-    }
-
     const headers = {
       "x-client-id": clientId,
       "x-client-secret": clientSecret,
@@ -155,34 +170,17 @@ export const createCashfreeOrder = async (req, res) => {
       "Content-Type": "application/json",
     };
 
-    const response = await axios.post(
-      `${process.env.CASHFREE_CREATE_ORDER}`,
-      payload,
-      { headers }
-    );
-
+    const response = await axios.post(process.env.CASHFREE_CREATE_ORDER, payload, { headers });
     const { payment_session_id, payment_link, checkout_url } = response.data;
+
     if (!payment_session_id) {
-      return res
-        .status(500)
-        .json({ message: "Missing session ID in Cashfree response" });
+      return res.status(500).json({ message: "Missing session ID in Cashfree response" });
     }
 
-    return res.status(200).json({
-      payment_session_id,
-      payment_link,
-      checkout_url,
-      customOrderId,
-    });
+    return res.status(200).json({ payment_session_id, payment_link, checkout_url, customOrderId });
   } catch (err) {
-    console.log(
-      "❌ Cashfree API order creation failed:",
-      err
-    );
-    return res.status(500).json({
-      message: "Failed to create Cashfree order",
-      details: err.response?.data || err.message || err,
-    });
+    console.error("❌ Cashfree API order creation failed:", err.response?.data || err.message || err);
+    return res.status(500).json({ message: "Failed to create Cashfree order", details: err.response?.data || err.message });
   }
 };
 

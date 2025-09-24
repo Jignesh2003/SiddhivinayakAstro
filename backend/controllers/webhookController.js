@@ -5,6 +5,8 @@ import PostgresDb from "../config/postgresDb.js";
 import logTransactionToPostgres from "../utils/logTransaction.js";
 import dotenv from "dotenv";
 import sendEmail from "../utils/sendEmail.js";
+import CouponRedemption from "../models/CouponRedemption.js";
+import Coupon from "../models/Coupon.js";
 dotenv.config();
 // Helper for clearly tagged logs
 function logWithTS(...args) {
@@ -151,6 +153,94 @@ export const verifyPayment = async (req, res) => {
               }
             }
           }
+          // ----------------- COUPON REDEMPTION (idempotent & atomic) -----------------
+          // Only attempt on SUCCESS and when a coupon exists on the order
+          try {
+            if (paymentStatus === "SUCCESS" && existingOrder.coupon) {
+              const couponId = existingOrder.coupon; // assume ObjectId
+              const userId = existingOrder.user?._id || null;
+              const orderIdMongo = existingOrder._id;
+
+              // Idempotency: check redemption already exists for this order
+              const alreadyRedeemed = await CouponRedemption.findOne(
+                { orderId: orderIdMongo },
+                null,
+                { session: mongoSession }
+              );
+
+              if (!alreadyRedeemed) {
+                // compute discount snapshot (if you want to store what was given)
+                let discountGiven = existingOrder.discountAmount || 0;
+                // If discountAmount not set for some reason, try to compute safely:
+                if (typeof discountGiven !== "number") discountGiven = 0;
+
+                // Create redemption record (snapshot)
+                await CouponRedemption.create(
+                  [
+                    {
+                      couponId,
+                      userId,
+                      email: existingOrder.email || existingOrder.user?.email || null,
+                      orderId: orderIdMongo,
+                      discountGiven,
+                      cartValue: existingOrder.totalAmount || 0,
+                      redeemedAt: new Date(),
+                      metadata: {
+                        source: "cashfree_webhook",
+                        requestId,
+                      },
+                    },
+                  ],
+                  { session: mongoSession }
+                );
+
+                // Atomically increment coupon usage and possibly deactivate
+                const coupon = await Coupon.findOneAndUpdate(
+                  { _id: couponId },
+                  { $inc: { usageCount: 1 } },
+                  { session: mongoSession, new: true }
+                );
+
+                if (coupon) {
+                  // If usageLimit is defined and reached -> deactivate
+                  if (
+                    typeof coupon.usageLimit === "number" &&
+                    (coupon.usageCount || 0) >= coupon.usageLimit
+                  ) {
+                    coupon.isActive = false;
+                    await coupon.save({ session: mongoSession });
+                  }
+                } else {
+                  // Log: coupon record missing (shouldn't happen normally)
+                  logWithTS(
+                    `[${requestId}] ⚠️ Coupon ${couponId} referenced by order ${orderId} not found`
+                  );
+                }
+
+                logWithTS(
+                  `[${requestId}] 🎟️ Coupon redeemed: coupon=${couponId} order=${orderIdMongo} user=${userId}`
+                );
+              } else {
+                logWithTS(
+                  `[${requestId}] ℹ️ Coupon already redeemed for order ${existingOrder._id}, skipping`
+                );
+              }
+            }
+          } catch (couponErr) {
+            // Don't abort the whole transaction for a redemption logging failure,
+            // but surface the error and continue: you can decide if you want to throw instead.
+            logWithTS(
+              `[${requestId}] ⚠️ Coupon redemption failed (inside transaction):`,
+              couponErr.message || couponErr
+            );
+            // If you want strict atomicity (i.e., redeeming must succeed), uncomment next line:
+            // throw couponErr;
+          }
+
+          // optional: final save if you changed anything else
+          await existingOrder.save({ session: mongoSession });
+          // ---------------------------------------------------------------------------
+
           try {
             console.log("USER  EMAIL Sending .....");
 
@@ -219,8 +309,28 @@ export const verifyPayment = async (req, res) => {
             `[${requestId}] ✅ Postgres productorders_transactions synced for ${orderId}`
           );
         }
+        // ✅ Redeem coupon if used
+        const alreadyRedeemed = await CouponRedemption.findOne({
+          userId: updatedOrder.user,
+          couponId: updatedOrder.coupon,
+          orderId: updatedOrder._id,
+        });
+        if (!alreadyRedeemed) {
+          if (updatedOrder?.coupon && updatedOrder?.user) {
+            try {
+              await CouponRedemption.create({
+                userId: updatedOrder.user,
+                couponId: updatedOrder.coupon,
+                orderId: updatedOrder._id,
+                redeemedAt: new Date(),
+              });
+              logWithTS(`[${requestId}] 🎟️ Coupon redeemed for user ${updatedOrder.user}`);
+            } catch (couponErr) {
+              logWithTS(`[${requestId}] ⚠️ Coupon redemption error:`, couponErr.message);
+            }
+          }
+        }
       } catch (err) {
-        await mongoSession.abortTransaction();
         mongoSession.endSession();
         logWithTS(
           `[${requestId}] ❌ MongoDB order/stock update failed:`,

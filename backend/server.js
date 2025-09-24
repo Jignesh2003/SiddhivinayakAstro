@@ -20,6 +20,7 @@ import { setupSocketHandlers } from "./sockets/chatHandler.js";
 import { initializeMinuteBillingCron } from "./jobs/minuteBilling.js";
 import { fetchHoroscopes } from "./jobs/fetchHoroscope.js";
 import blogRoutes from "./routes/blogRoutes.js"
+import couponRoutes from "./routes/couponRoutes.js"
 dotenv.config();
 
 const app = express();
@@ -67,6 +68,7 @@ app.use("/api/astrology", astrologyRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/kundali", kundaliPdfRoutes);
 app.use("/api/blog", blogRoutes);
+app.use("/api/coupon", couponRoutes)
 // 404 Handler
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
@@ -85,7 +87,6 @@ const io = new Server(server, {
     credentials: true,
   },
 });
-console.log(process.env.MONGO_URI);
 
 // Start all services
 async function startServer() {
@@ -118,4 +119,3 @@ async function startServer() {
 }
 
 startServer();
-//

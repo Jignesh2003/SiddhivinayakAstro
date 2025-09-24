@@ -4,10 +4,18 @@ import { toast } from "react-toastify";
 import useAuthStore from "../store/useAuthStore";
 import useCartStore from "../store/useCartStore";
 import { Country, State, City } from "country-state-city";
+import { useLocation } from "react-router-dom";
 
 export default function Checkout() {
   const { userId, token, logout } = useAuthStore.getState();
   const { cart, clearCart, fetchCart } = useCartStore.getState();
+  const location = useLocation();
+  const navCoupon = location.state?.appliedCoupon || null;
+  const [couponCode, setCouponCode] = useState(navCoupon?.code || "");
+
+  const appliedCoupon = navCoupon; // fallback to null if nothing passed
+
+  console.log(cart);
 
   const [selectedMethod, setSelectedMethod] = useState(""); // no default, must be explicitly chosen
   const [loading, setLoading] = useState(false);
@@ -120,7 +128,7 @@ export default function Checkout() {
 
     // Validate each cart item against fresh product stock
     for (const item of cart) {
-      const quantity = Number(item.quantity ?? 1);
+      const quantity = Number(item.cartQuantity ?? 1);
       const product = await fetchLiveStock(item.product._id);
       if (!product) throw new Error(`Failed to verify "${item.product.name}"`);
 
@@ -137,7 +145,7 @@ export default function Checkout() {
 
       if (!Number.isFinite(quantity) || quantity < 1)
         throw new Error(
-          `Cart item "${product.name}" has invalid quantity (${item.quantity})`
+          `Cart item "${product.name}" has invalid quantity (${item.cartQuantity})`
         );
       if (quantity > available) {
         throw new Error(`Only ${available} left of "${product.name}"`);
@@ -159,7 +167,7 @@ export default function Checkout() {
       await validateInputs();
 
       const subTotal = cart.reduce(
-        (sum, item) => sum + item.product.price * Number(item.quantity ?? 1),
+        (sum, item) => sum + item.product.price * Number(item.cartQuantity ?? 1),
         0
       );
 
@@ -168,7 +176,7 @@ export default function Checkout() {
 
       const orderItems = cart.map((item) => ({
         product: item.product._id,
-        quantity: Number(item.quantity ?? 1),
+        quantity: Number(item.cartQuantity ?? 1),
         ...(item.size && { size: item.size }),
       }));
 
@@ -184,6 +192,7 @@ export default function Checkout() {
           shippingAddress,
           items: orderItems,
           paymentMethod: "online", // force online payment
+          couponCode,
         },
         {
           headers: { Authorization: token ? `Bearer ${token}` : "" },
@@ -211,15 +220,26 @@ export default function Checkout() {
       setLoading(false);
     }
   };
-
-  // ✅ Compute subtotal, gst, deliveryCharges for UI summary
+  // Compute subtotal, gst, deliveryCharges first
   const subTotal = cart.reduce(
-    (sum, item) => sum + item.product.price * Number(item.quantity ?? 1),
+    (sum, item) => sum + item.product.price * Number(item.cartQuantity ?? 1),
     0
   );
   const gstAmount = Number(((subTotal * 18) / 118).toFixed(2));
   const deliveryCharges = subTotal > 499 ? 0 : 100;
-  const total = subTotal + deliveryCharges;
+
+  // Then compute discount and total after discount
+  const discountAmount = appliedCoupon
+    ? appliedCoupon.discountType === "flat"
+      ? appliedCoupon.discount
+      : Math.min(
+        (subTotal * appliedCoupon.discountValue) / 100,
+        appliedCoupon.maxDiscount || Infinity
+      )
+    : 0;
+
+  const totalAfterDiscount = subTotal + deliveryCharges - discountAmount;
+
 console.log(`Is production? ${import.meta.env.VITE_PROD}`);
 
   return (
@@ -345,39 +365,48 @@ console.log(`Is production? ${import.meta.env.VITE_PROD}`);
       </div>
 
       {/* Order Summary */}
-      <div className="mt-6 border-t pt-4">
+      <div className="mt-6 border-t pt-4 space-y-2">
         <h3 className="font-semibold mb-2">Order Summary</h3>
-        <div className="space-y-1">
-          {cart.map((item, i) => (
+
+        {cart.map((item, i) => {
+          const qty = Number(item.cartQuantity) || 1; // fallback to 1
+          const totalPrice = item.product.price * qty;
+          return (
             <div key={i} className="flex justify-between text-sm border-b py-1">
               <span>
-                {item.product.name} (x{item.quantity ?? 1})
+                {item.product.name} (x{qty})
               </span>
-              <span>₹{item.product.price * Number(item.quantity ?? 1)}</span>
+              <span>₹{totalPrice.toFixed(2)}</span>
             </div>
-          ))}
+          );
+        })}
 
-          <div className="flex justify-between text-sm mt-2">
-            <span>Subtotal</span>
-            <span>₹{subTotal}</span>
-          </div>
 
-          <div className="flex justify-between text-sm">
-            <span>Delivery Charges</span>
-            <span>
-              {deliveryCharges === 0 ? "Free" : `₹${deliveryCharges}`}
-            </span>
-          </div>
+        <div className="flex justify-between text-sm">
+          <span>Subtotal</span>
+          <span>₹{subTotal.toFixed(2)}</span>
+        </div>
 
-          <div className="flex justify-between text-sm">
-            <span>GST (included in price)</span>
-            <span>₹{gstAmount}</span>
-          </div>
+        <div className="flex justify-between text-sm">
+          <span>Delivery Charges</span>
+          <span>{deliveryCharges === 0 ? "Free" : `₹${deliveryCharges.toFixed(2)}`}</span>
+        </div>
 
-          <div className="flex justify-between font-bold text-lg border-t pt-2">
-            <span>Total</span>
-            <span>₹{total}</span>
+        <div className="flex justify-between text-sm">
+          <span>GST (included in price)</span>
+          <span>₹{gstAmount.toFixed(2)}</span>
+        </div>
+
+        {appliedCoupon && (
+          <div className="flex justify-between text-sm text-green-700">
+            <span>Coupon {appliedCoupon.code} Applied</span>
+            <span>-₹{discountAmount.toFixed(2)}</span>
           </div>
+        )}
+
+        <div className="flex justify-between font-bold text-lg border-t pt-2">
+          <span>Total</span>
+          <span>₹{totalAfterDiscount.toFixed(2)}</span>
         </div>
       </div>
 

@@ -23,9 +23,9 @@ const sendEmail = async (email, subject, text) => {
       text,
     });
 
-    console.log("✅ Email sent successfully!");
+    console.log("✅ Email sent successfully TO:",email,"FROM:",process.env.ALIAS_EMAIL);
   } catch (error) {
-    console.error("🚨 Email send error:", error.response || error.message);
+    console.error("🚨 Email send error:", error);
   }
 };
 

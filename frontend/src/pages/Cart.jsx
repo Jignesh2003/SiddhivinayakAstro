@@ -4,21 +4,58 @@ import { toast } from "react-toastify";
 import { ClipLoader } from "react-spinners";
 import useCartStore from "../store/useCartStore";
 import assets from "@/assets/assets";
+import CouponItems from "@/utils/CouponItems";
+import useCouponStore from "@/store/useCouponStore";
 
 const Cart = () => {
+  const fetchCoupons = useCouponStore((state) => state.fetchCoupons);
   const cart = useCartStore((state) => state.cart);
   const fetchCart = useCartStore((state) => state.fetchCart);
   const updateCart = useCartStore((state) => state.updateCart);
   const removeFromCart = useCartStore((state) => state.removeFromCart);
   const loading = useCartStore((state) => state.loading);
+  const appliedCoupon = useCouponStore((state) => state.appliedCoupon);
+
+
+  const totalPrice = cart.reduce((total, item) => {
+    const price = Number(item.product?.price ?? 0);
+    const qty = Number(item.cartQuantity ?? item.quantity ?? 1);
+    return total + price * qty;
+  }, 0);
+
+  const discountedTotal = appliedCoupon
+    ? Math.max(
+      totalPrice -
+      (appliedCoupon.discountType === "flat"
+        ? appliedCoupon.discount // flat coupon uses backend discount
+        : Math.min(
+          (totalPrice * appliedCoupon.discountValue) / 100,
+          appliedCoupon.maxDiscount || Infinity
+        )), // percentage coupon recalculated
+      0
+    )
+    : totalPrice;
+
+  useEffect(() => {
+    const loadCartAndCoupons = async () => {
+      await fetchCart();  // ensures cart is loaded
+      await fetchCoupons(); // now cart has items
+    };
+    loadCartAndCoupons();
+  }, []);
 
   useEffect(() => {
     const loadCart = async () => {
       await fetchCart();
-      console.log("✅ fetchCart called on mount");
     };
     loadCart();
-  }, []);
+  }, [fetchCart]);
+
+
+  useEffect(() => {
+    fetchCoupons();
+  }, [cart]); // <-- re-run whenever cart changes
+
 
   useEffect(() => {
     cart.forEach((item) => {
@@ -31,28 +68,28 @@ const Cart = () => {
     });
   }, [cart]);
 
-  const handleUpdateCart = async (
-    productId,
-    newQuantity,
-    availableStock,
-    size
-  ) => {
-    const safeQty = Number(newQuantity);
-    if (!Number.isFinite(safeQty) || safeQty < 1) return;
+  // const handleUpdateCart = async (
+  //   productId,
+  //   newQuantity,
+  //   availableStock,
+  //   size
+  // ) => {
+  //   const safeQty = Number(newQuantity);
+  //   if (!Number.isFinite(safeQty) || safeQty < 1) return;
 
-    if (safeQty > availableStock) {
-      toast.error("Cannot exceed available stock!", { position: "top-right" });
-      return;
-    }
+  //   if (safeQty > availableStock) {
+  //     toast.error("Cannot exceed available stock!", { position: "top-right" });
+  //     return;
+  //   }
 
-    try {
-      await updateCart(productId, safeQty, size, availableStock);
-      toast.success("Cart updated successfully!", { position: "top-right" });
-      await fetchCart();
-    } catch {
-      toast.error("Failed to update cart.", { position: "top-right" });
-    }
-  };
+  //   try {
+  //     await updateCart(productId, safeQty, size, availableStock);
+  //     toast.success("Cart updated successfully!", { position: "top-right" });
+  //     await fetchCart();
+  //   } catch {
+  //     toast.error("Failed to update cart.", { position: "top-right" });
+  //   }
+  // };
 
   const handleRemoveFromCart = async (productId, size) => {
     try {
@@ -69,7 +106,8 @@ const Cart = () => {
     const available = Number(item.availableStock ?? 1);
 
     if (currQty < available) {
-      handleUpdateCart(item.product._id, currQty + 1, available, item.size);
+      // Optimistically update UI
+      updateCart(item.product._id, currQty + 1, item.size, available);
     } else {
       toast.warn("Cannot add more than available stock!", {
         position: "top-right",
@@ -77,23 +115,16 @@ const Cart = () => {
     }
   };
 
+
   const handleDecrement = (item) => {
     const currQty = Number(item.cartQuantity ?? item.quantity ?? 1);
     if (currQty > 1) {
-      handleUpdateCart(
-        item.product._id,
-        currQty - 1,
-        item.availableStock,
-        item.size
-      );
+      updateCart(item.product._id, currQty - 1, item.size, item.availableStock);
     }
   };
 
-  const totalPrice = cart.reduce((total, item) => {
-    const price = Number(item.product?.price ?? 0);
-    const qty = Number(item.cartQuantity ?? item.quantity ?? 1);
-    return total + price * qty;
-  }, 0);
+
+ 
 
   return (
     <div
@@ -202,20 +233,50 @@ const Cart = () => {
             })}
 
             {/* Cart Footer */}
-            <div className="mt-6 flex justify-end gap-4 items-center border-t border-gray-300 pt-6">
-              <h3 className="text-2xl font-semibold text-gray-800">
-                Total: ₹{totalPrice}
-              </h3>
-              <Link
-                to="/checkout"
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
-              >
-                Proceed to Checkout
-              </Link>
-            </div>
+                {/* Cart Footer */}
+                <div className="mt-6 flex justify-end gap-4 items-center border-t border-gray-300 pt-6 flex-col md:flex-row md:items-center">
+                  {appliedCoupon && (
+                    <div className="flex items-center gap-3">
+                      <p className="text-green-700 font-semibold text-lg">
+                        Coupon {appliedCoupon.code} Applied: -₹
+                        {appliedCoupon.discountType === "flat"
+                          ? appliedCoupon.discount.toFixed(2)
+                          : Math.min(
+                            (totalPrice * appliedCoupon.discountValue) / 100,
+                            appliedCoupon.maxDiscount || Infinity
+                          ).toFixed(2)}
+                      </p>
+                      <button
+                        onClick={() => {
+                          useCouponStore.getState().clearCoupon();
+                          toast.info("Coupon removed", { position: "top-right" });
+                        }}
+                        className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+
+                  <h3 className="text-2xl font-semibold text-gray-800">
+                    Total: ₹{discountedTotal.toFixed(2)}
+                  </h3>
+
+                  <Link
+                    to="/checkout"
+                    state={{ appliedCoupon: appliedCoupon }}
+                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+                  >
+                    Proceed to Checkout
+                  </Link>
+                </div>
+
+
+
           </>
         )}
       </div>
+      <CouponItems/>
     </div>
   );
 };

@@ -53,6 +53,8 @@ const orderSchema = new mongoose.Schema(
       ],
       default: "Pending",
     },
+    coupon: { type: mongoose.Schema.Types.ObjectId, ref: "Coupon" }, // reference to Coupon if used
+    discountAmount: { type: Number, default: 0 }, // actual discount given in this order
 
     shippingAddress: {
       name: { type: String, required: true },

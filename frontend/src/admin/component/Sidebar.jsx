@@ -74,6 +74,13 @@ const Sidebar = () => {
           >
             Blog Manager
           </Link>
+          <Link
+            to="/admin/create-coupon"
+            className="block p-2 hover:bg-gray-700 rounded"
+            onClick={handleLinkClick}
+          >
+            Create Coupon
+          </Link>
         </nav>
       )}
 
@@ -128,6 +135,12 @@ const Sidebar = () => {
               className="block p-2 hover:bg-gray-700 rounded"
             >
               Blog Manager
+            </Link>
+            <Link
+              to="/admin/create-coupon"
+              className="block p-2 hover:bg-gray-700 rounded"
+            >
+              Create Coupon
             </Link>
           </li>
         </ul>
