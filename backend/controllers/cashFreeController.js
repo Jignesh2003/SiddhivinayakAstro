@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import Product from "../models/Product.js";
 import PostgresDb from "../config/postgresDb.js"
 import { validateCouponForUser } from "../utils/couponServices.js";
-import Coupon from "../models/Coupon.js";
+import Coupon from "../models/coupon.js";
 
 export const createCashfreeOrder = async (req, res) => {
   const session = await Order.startSession();
