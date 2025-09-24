@@ -1,4 +1,4 @@
-import Coupon from "../models/Coupon.js";
+import Coupon from "../models/coupon.js";
 import User from "../models/User.js";
 import { validateCouponForUser } from "../utils/couponServices.js";
 
