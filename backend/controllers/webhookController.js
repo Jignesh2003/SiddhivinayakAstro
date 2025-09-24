@@ -5,7 +5,7 @@ import PostgresDb from "../config/postgresDb.js";
 import logTransactionToPostgres from "../utils/logTransaction.js";
 import dotenv from "dotenv";
 import sendEmail from "../utils/sendEmail.js";
-import CouponRedemption from "../models/CouponRedemption.js";
+import CouponRedemption from "../models/couponRedemption.js";
 import Coupon from "../models/Coupon.js";
 dotenv.config();
 // Helper for clearly tagged logs
