@@ -1,5 +1,5 @@
-import Coupon from "../models/Coupon.js";
-import CouponRedemption from "../models/CouponRedemption.js";
+import Coupon from "../models/coupon.js";
+import CouponRedemption from "../models/couponRedemption.js";
 import Order from "../models/Order.js";
 
 // Utility to calculate discount
