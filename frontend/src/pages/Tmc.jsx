@@ -130,7 +130,7 @@ const TermsAndConditions = () => {
             </span>
           </p>
           <p className="text-gray-600">
-            📞 Phone: <span className="text-yellow-500">2269010407</span>
+            📞 Phone: <span className="text-yellow-500">+912269010407</span>
           </p>
         </div>
 

@@ -5,9 +5,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.hostinger.com", // Explicitly set the SMTP host
-  port: 587, // Use 587 for TLS (secure) or 465 for SSL
-  secure: false, // Set to true for port 465, false for 587
+  service: "gmail", // simpler than host + port
   auth: {
     user: process.env.MAIN_EMAIL,
     pass: process.env.EMAIL_PASS,
