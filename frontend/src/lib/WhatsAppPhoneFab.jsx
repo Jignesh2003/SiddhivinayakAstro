@@ -4,7 +4,7 @@ import assets from "../assets/assets.js"
 
 // Edit these values as needed
 const WHATSAPP_NUMBER = "+917738067976";
-const PHONE_NUMBER = +912269010407;
+const PHONE_NUMBER = 2269010407;
 const WHATSAPP_TEXT = encodeURIComponent("Hi");
 
 const fabStyles = {

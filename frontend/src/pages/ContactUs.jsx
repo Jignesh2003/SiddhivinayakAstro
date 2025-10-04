@@ -39,7 +39,7 @@ const ContactUs = () => {
             Kandivali East Mumbai India
           </p>
           <p className="text-lg">
-            📞 <strong>Phone:</strong> +912269010407
+            📞 <strong>Phone:</strong> 2269010407
           </p>
           <p className="text-lg">
             📧 <strong>Email:</strong> siddhivinayakastroworld@gmail.com
