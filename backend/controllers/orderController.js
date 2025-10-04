@@ -194,17 +194,15 @@ export const getOrderInvoiceData = async (req, res) => {
       .fillColor("#333333")
       .fontSize(20)
       .text("SV ASTRO PRIVATE LIMITED", 180, 50, { align: "left" })
-      // .fontSize(10)
-      // .text("GSTIN: 22AAAAA0000A1Z5", 180, 75)
-      .text("www.siddhivinayakastroworld.com", 180, 90)
-      .moveDown();
+      .fontSize(10)
+      .text("www.siddhivinayakastroworld.com", 180, 75);
 
-    drawLine(120);
+    drawLine(100);
 
     // === INVOICE TITLE & DETAILS ===
-    doc.fontSize(18).fillColor("#111111").text("TAX INVOICE", 50, 130);
+    doc.fontSize(18).fillColor("#111111").text("TAX INVOICE", 50, 110);
 
-    const startY = 160;
+    const startY = 140;
     doc
       .fontSize(10)
       .fillColor("#555555")
@@ -216,35 +214,52 @@ export const getOrderInvoiceData = async (req, res) => {
       )
       .text(`Payment Method: ${order.paymentMethod}`, 50, startY + 30)
       .text(`Payment Status: ${order.paymentStatus}`, 50, startY + 45)
-      .text(`Order Status: ${order.orderStatus}`, 50, startY + 60);
 
     // === BILL TO (CUSTOMER) ===
     const billToX = 350;
+    const billToWidth = 195; // A4 width (595) - billToX (350) - right margin (50)
+
+    // Save current Y position before address block
+    const beforeAddressY = 110;
+
     doc
       .fontSize(10)
       .fillColor("#555555")
-      .text("Bill To:", billToX, 130)
+      .text("Bill To:", billToX, beforeAddressY, { width: billToWidth })
       .font("Helvetica-Bold")
       .fillColor("#000000")
-      .text(order.shippingAddress.name, billToX, 145)
+      .text(order.shippingAddress.name || 'N/A', billToX, beforeAddressY + 15, {
+        width: billToWidth,
+        continued: false
+      })
       .font("Helvetica")
-      .text(`Phone: ${order.shippingAddress.phone}`, billToX, 160)
-      .text(order.shippingAddress.address, billToX, 175)
+      .fillColor("#333333")
+      .text(`Phone: ${order.shippingAddress.phone || 'N/A'}`, billToX, doc.y, {
+        width: billToWidth
+      })
+      .text(order.shippingAddress.address || '', billToX, doc.y, {
+        width: billToWidth
+      })
       .text(
         `${order.shippingAddress.city}, ${order.shippingAddress.state} - ${order.shippingAddress.pincode}`,
         billToX,
-        190
+        doc.y,
+        { width: billToWidth }
       );
 
     if (order.shippingAddress.landmark) {
-      doc.text(`Landmark: ${order.shippingAddress.landmark}`, billToX, 205);
+      doc.text(`Landmark: ${order.shippingAddress.landmark}`, billToX, doc.y, {
+        width: billToWidth
+      });
     }
 
-    drawLine(230);
+    // Get the maximum Y position between left details and right address
+    const afterDetailsY = Math.max(doc.y, startY + 80);
+
+    drawLine(afterDetailsY + 10);
 
     // === TABLE HEADER ===
-    const tableTop = 250;
-    const itemX = 50;
+    const tableTop = afterDetailsY + 30;
     const qtyX = 60;
     const prodX = 100;
     const priceX = 350;
@@ -268,17 +283,22 @@ export const getOrderInvoiceData = async (req, res) => {
     order.items.forEach((item) => {
       const itemTotal = item.quantity * (item.product.price || 0);
 
+      // Save starting Y for this row
+      const rowStartY = y;
+
       doc
         .text(item.quantity, qtyX, y)
-        .text(item.product.name, prodX, y)
-        .text(`RS ${item.product.price.toFixed(2)}`, priceX, y, {
+        .text(item.product.name, prodX, y, { width: 240 })
+        .text(`Rs${item.product.price.toFixed(2)}`, priceX, rowStartY, {
           width: 90,
           align: "right",
         })
-        .text(`RS ${itemTotal.toFixed(2)}`, totalX, y, { align: "right" });
+        .text(`Rs${itemTotal.toFixed(2)}`, totalX, rowStartY, { align: "right" });
 
-      y += 20;
-      drawLine(y - 5);
+      // Update Y position based on product name height
+      y = Math.max(doc.y, y) + 5;
+      drawLine(y);
+      y += 5;
     });
 
     // === SUMMARY BOX ===
@@ -297,18 +317,18 @@ export const getOrderInvoiceData = async (req, res) => {
       .fontSize(11)
       .font("Helvetica")
       .text(`Subtotal:`, 350, y + 30)
-      .text(`RS ${subTotal.toFixed(2)}`, 460, y + 30, { align: "right" })
+      .text(`Rs${subTotal.toFixed(2)}`, 460, y + 30, { align: "right" })
       .text(`GST:`, 350, y + 50)
-      .text(`RS ${(order.gstAmount || 0).toFixed(2)}`, 460, y + 50, {
+      .text(`Rs${(order.gstAmount || 0).toFixed(2)}`, 460, y + 50, {
         align: "right",
       })
       .text(`Delivery Charges:`, 350, y + 70)
-      .text(`RS ${(order.deliveryCharges || 0).toFixed(2)}`, 460, y + 70, {
+      .text(`Rs${(order.deliveryCharges || 0).toFixed(2)}`, 460, y + 70, {
         align: "right",
       })
       .font("Helvetica-Bold")
       .text(`Grand Total:`, 350, y + 90)
-      .text(`RS ${order.totalAmount.toFixed(2)}`, 460, y + 90, {
+      .text(`Rs${order.totalAmount.toFixed(2)}`, 460, y + 90, {
         align: "right",
       });
 
@@ -317,12 +337,14 @@ export const getOrderInvoiceData = async (req, res) => {
     doc.text(
       "Thank you for your purchase! For any queries, contact siddhivinayakastroworld@gmail.com",
       50,
-      780,
+      770,
       { align: "center", width: 500 }
     );
-    doc.end();    
+
+    doc.end();
   } catch (error) {
     console.error("Invoice PDF generation failed:", error);
     res.status(500).send("Server error");
   }
-}
+};
+
