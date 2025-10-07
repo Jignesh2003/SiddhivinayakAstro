@@ -8,6 +8,8 @@ import { Eye, EyeOff } from "lucide-react";
 import ClipLoader from "react-spinners/ClipLoader";
 import Select from "react-select";
 import { Country, State, City } from "country-state-city";
+import { FaGoogle } from "react-icons/fa";
+
 
 const Signup = () => {
   const { login } = useAuthStore();
@@ -102,6 +104,16 @@ const Signup = () => {
         })
       )
     : [];
+
+  // Google OAuth login
+  const googleLoginHandler = async () => {
+    try {
+      window.location.href = `${import.meta.env.VITE_BASE_URL}/google`;
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to initiate Google login!");
+    }
+  };
 
   return (
     <div className="relative min-h-screen w-full overflow-auto pb-20">
@@ -365,6 +377,21 @@ const Signup = () => {
               </button>
             </div>
           </form>
+          {/* Divider */}
+          <div className="flex items-center my-5">
+            <hr className="flex-grow border-gray-300" />
+            <span className="mx-2 text-gray-400">or</span>
+            <hr className="flex-grow border-gray-300" />
+          </div>
+
+          {/* Google Login */}
+          <button
+            onClick={googleLoginHandler}
+            className="w-full flex items-center justify-center gap-2 border border-gray-300 py-3 rounded-md hover:bg-gray-100 transition"
+          >
+            <FaGoogle size={20} />
+            Sign-up  with Google
+          </button>
 
           <div className="mt-4 text-center">
             <p className="text-sm text-blue-100">

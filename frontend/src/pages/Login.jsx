@@ -6,6 +6,7 @@ import axios from "axios";
 import useAuthStore from "../store/useAuthStore";
 import { toast } from "react-toastify";
 import ClipLoader from "react-spinners/ClipLoader"; // Spinner
+import {FaGoogle} from "react-icons/fa"
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -49,6 +50,17 @@ const Login = () => {
       toast.error("Invalid email or password!", { position: "top-right" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Google OAuth login
+  const googleLoginHandler = async () => {
+    try {
+      window.location.href = `${import.meta.env.VITE_BASE_URL}/google`;
+    } catch (error) {
+      console.error(error)
+      setLoading(false);
+      toast.error("Failed to initiate Google login!");
     }
   };
 
@@ -135,6 +147,22 @@ const Login = () => {
               </button>
             </div>
           </form>
+
+          {/* Divider */}
+          <div className="flex items-center my-5">
+            <hr className="flex-grow border-gray-300" />
+            <span className="mx-2 text-gray-400">or</span>
+            <hr className="flex-grow border-gray-300" />
+          </div>
+
+          {/* Google Login */}
+          <button
+            onClick={googleLoginHandler}
+            className="w-full flex items-center justify-center gap-2 border border-gray-300 py-3 rounded-md hover:bg-gray-100 transition"
+          >
+            <FaGoogle size={20} />
+            Login with Google
+          </button>
 
           {/* Sign-up Links */}
           <Link to="/sign-up" className="block font-semibold text-yellow-400 hover:text-yellow-300 text-center text-xl pt-5">

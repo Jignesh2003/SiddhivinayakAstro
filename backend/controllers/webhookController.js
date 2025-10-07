@@ -257,8 +257,8 @@ export const verifyPayment = async (req, res) => {
 
             await sendEmail(
               [
-                "shruti@siddhivinayakastroworld.com",
                 "siddhivinayakastroworld@gmail.com",
+                "shruti.rdf@gmail.com",
               ],
               "New Paid Order: #" + updatedOrder._id,
               `New order received!\nOrder ID: ${updatedOrder._id}\nUser: ${

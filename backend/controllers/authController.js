@@ -473,3 +473,26 @@ export const verifyAstrologerKyc = async (req, res) => {
       .json({ message: "Server error while verifying KYC." });
   }
 };
+
+
+export const acceptTmc = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(400).json({ message: "Invalid user data!" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found!" });
+    }
+
+    user.agreeToTmc = true; // ✅ correct field name from your schema
+    await user.save();
+
+    return res.json({ message: "Terms accepted", agreeToTmc: true });
+  } catch (error) {
+    console.error("Error in acceptTmc:", error);
+    return res.status(500).json({ message: "Internal Server Error in acceptTmc!" });
+  }
+};

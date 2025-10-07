@@ -11,9 +11,12 @@ const userSchema = new mongoose.Schema(
     // Basic info
     firstName: { type: String },
     lastName: { type: String },
-    phone: { type: String, required: true },
+    phone: { type: String},
     email: { type: String, required: true, unique: true },
     password: { type: String },
+    googleId: { type: String, unique: true, sparse: true },
+    facebookId: { type: String, unique: true, sparse: true },
+    instagramId: { type: String, unique: true, sparse: true },
 
     // Address
     address: { type: String },
@@ -70,7 +73,10 @@ const userSchema = new mongoose.Schema(
     isOnline: { type: Boolean, default: false }, // 🟢 Astrologer status
     averageRating: { type: Number, default: 0 }, // 🟢 Updated after reviews
     totalSessions: { type: Number, default: 0 }, // 🟢 Increment after each completed session
-    agreeToTmc: { type: Boolean, default: false },
+    agreeToTmc: {
+      type: Boolean,
+      required: true,
+      default: false },
   },
   { timestamps: true }
 );

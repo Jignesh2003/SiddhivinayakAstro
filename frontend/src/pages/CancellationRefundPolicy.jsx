@@ -167,7 +167,7 @@ const CancellationRefundPolicy = () => {
               href="mailto:support@zerakijewels.com"
               className="text-yellow-600 underline"
             >
-              support@siddhivinayakastroworld.com
+              siddhivinayakastroworld@gmail.com or support@siddhivinayakastroworld.com
             </a>
             . Our team will verify and resolve the issue by replacing the order
             if damage is confirmed.

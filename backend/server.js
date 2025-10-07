@@ -21,6 +21,7 @@ import { initializeMinuteBillingCron } from "./jobs/minuteBilling.js";
 import { fetchHoroscopes } from "./jobs/fetchHoroscope.js";
 import blogRoutes from "./routes/blogRoutes.js"
 import couponRoutes from "./routes/couponRoutes.js"
+import "./config/passport.js";
 dotenv.config();
 
 const app = express();

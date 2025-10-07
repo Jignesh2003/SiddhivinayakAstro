@@ -57,6 +57,8 @@ import BlogList from "@/pages/blogs/BlogList";
 import BlogDetail from "@/pages/blogs/BlogDetails";
 import DailyPredictionBySign from "@/pages/dailyPrediction/DailyPredictionBySign";
 import AdminCreateCoupon from "@/admin/pages/AdminCreateCoupon";
+import OAuthSuccess from "@/pages/OAuthSuccess";
+import AcceptTerms from "@/pages/AcceptTerms";
 
 const AppRoutes = () => {
   return (
@@ -99,6 +101,9 @@ const AppRoutes = () => {
 
         {/* ✅ Private Info Page */}
         <Route path="/private-info" element={<Private />} />
+        <Route path="/oauth-success" element={<OAuthSuccess />} />
+        <Route path="/accept-terms" element={<AcceptTerms />} />
+
 
         {/* ✅ Protected Routes */}
         <Route element={<ProtectedRoute />}>
