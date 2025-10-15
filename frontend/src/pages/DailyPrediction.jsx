@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Sun, BookOpen } from "lucide-react";
+import { Loader2, Sun, BookOpen, Calendar } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 
@@ -26,6 +26,7 @@ import "swiper/css/navigation";
 // Zodiac images & basic info
 import assets from "../assets/assets";
 import { useNavigate } from "react-router-dom";
+
 const SIGN_IMAGES = {
   aries: assets.Aries,
   taurus: assets.Taurus,
@@ -40,6 +41,7 @@ const SIGN_IMAGES = {
   aquarius: assets.Aquarius,
   pisces: assets.Pisces,
 };
+
 const ZODIAC_INFO = {
   aries: "Aries are bold, ambitious, and confident leaders.",
   taurus: "Taurus are reliable, patient, and enjoy the finer things.",
@@ -62,6 +64,18 @@ export default function DailyPrediction() {
   const [knowledgeSign, setKnowledgeSign] = useState("");
   const cardRefs = useRef({});
   const navigate = useNavigate();
+
+  // Get current date and day
+  const getCurrentDate = () => {
+    const now = new Date();
+    const options = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    };
+    return now.toLocaleDateString('en-US', options);
+  };
 
   // Fetch the full daily_predictions array
   useEffect(() => {
@@ -102,6 +116,10 @@ export default function DailyPrediction() {
           <h1 className="text-4xl sm:text-5xl font-extrabold flex justify-center items-center gap-3">
             <Sun className="text-yellow-400" /> Daily Zodiac Predictions
           </h1>
+          <div className="flex items-center justify-center gap-2 text-gray-300">
+            <Calendar className="w-5 h-5" />
+            <p className="text-lg font-medium">{getCurrentDate()}</p>
+          </div>
           <p className="text-gray-400 text-lg">
             Swipe or tap your zodiac sign below
           </p>
@@ -128,11 +146,10 @@ export default function DailyPrediction() {
                 <SwiperSlide key={key}>
                   <button
                     onClick={() => navigate(`/daily-prediction/${key}`)}
-                    className={`w-full h-24 sm:h-28 flex items-center justify-center rounded-xl overflow-hidden transition ${
-                      key === selectedSign
+                    className={`w-full h-24 sm:h-28 flex items-center justify-center rounded-xl overflow-hidden transition ${key === selectedSign
                         ? "ring-4 ring-yellow-400"
                         : "hover:ring-2 hover:ring-gray-600"
-                    }`}
+                      }`}
                   >
                     <img
                       src={SIGN_IMAGES[key]}
@@ -187,11 +204,10 @@ export default function DailyPrediction() {
                 <div
                   key={key}
                   ref={(el) => (cardRefs.current[key] = el)}
-                  className={`transition-all rounded-2xl ${
-                    key === selectedSign
+                  className={`transition-all rounded-2xl ${key === selectedSign
                       ? "ring-4 ring-yellow-400"
                       : "hover:ring-2 hover:ring-gray-600"
-                  }`}
+                    }`}
                 >
                   <Card className="bg-gray-800/80 border border-gray-700 p-6 rounded-2xl shadow-lg">
                     <CardHeader className="pb-4">
