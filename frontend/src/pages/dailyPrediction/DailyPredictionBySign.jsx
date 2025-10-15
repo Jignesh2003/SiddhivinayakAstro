@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Sun } from "lucide-react";
+import { Sun, Calendar } from "lucide-react";
 import assets from "../../assets/assets";
 
 const SIGN_IMAGES = {
@@ -21,10 +21,22 @@ const SIGN_IMAGES = {
 };
 
 export default function DailyPredictionBySign() {
-  const { sign } = useParams(); // Extract sign from URL
+  const { sign } = useParams();
   const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Get current date and day (same as DailyPrediction component)
+  const getCurrentDate = () => {
+    const now = new Date();
+    const options = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    };
+    return now.toLocaleDateString('en-US', options);
+  };
 
   useEffect(() => {
     async function fetchPrediction() {
@@ -61,6 +73,13 @@ export default function DailyPredictionBySign() {
           {sign}
         </h1>
       </div>
+
+      {/* Date Display - matching DailyPrediction component */}
+      <div className="flex items-center justify-center gap-2 text-gray-300 mb-4">
+        <Calendar className="w-5 h-5" />
+        <p className="text-lg font-medium">{getCurrentDate()}</p>
+      </div>
+
       <Card className="bg-gray-800 p-6 rounded-xl shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl font-semibold text-yellow-300">
