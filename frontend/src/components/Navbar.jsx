@@ -28,17 +28,17 @@ const Navbar = () => {
   const audioRef = useRef(null);
   const navigate = useNavigate();
 
-useEffect(() => {
-  if (isOpen) {
-    document.body.style.overflow = "hidden";
-  } else {
-    document.body.style.overflow = "auto";
-  }
-  // Cleanup in case of unmount
-  return () => {
-    document.body.style.overflow = "auto";
-  };
-}, [isOpen]);
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+    // Cleanup in case of unmount
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -101,11 +101,24 @@ useEffect(() => {
     setIsPlaying(!isPlaying);
   };
 
+  // Handle home click with role-based redirect
+  const handleHomeClick = (e) => {
+    if (role === "admin") {
+      e.preventDefault();
+      navigate("/admin");
+    }
+  };
+
   // --- Navigation Menus ---
   const userLinks = (
     <>
-      <Link to="/my-orders" className="text-white hover:text-purple-400 text-lg">My Orders</Link>
-      <Link to="/wishlist" className="text-white hover:text-purple-400 text-lg flex items-center gap-1">
+      <Link to="/my-orders" className="text-white hover:text-purple-400 text-lg">
+        My Orders
+      </Link>
+      <Link
+        to="/wishlist"
+        className="text-white hover:text-purple-400 text-lg flex items-center gap-1"
+      >
         <Heart className="w-5 h-5" />
         Wishlist
       </Link>
@@ -117,7 +130,10 @@ useEffect(() => {
           </span>
         )}
       </Link>
-      <Link to="/wallet" className="flex items-center gap-1 text-white hover:text-purple-400 text-lg">
+      <Link
+        to="/wallet"
+        className="flex items-center gap-1 text-white hover:text-purple-400 text-lg"
+      >
         <Wallet size={20} /> Wallet
       </Link>
     </>
@@ -125,9 +141,36 @@ useEffect(() => {
 
   const astroLinks = (
     <>
-      <Link to="/astrologer-dashboard" className="text-white hover:text-purple-400 text-lg">Astrologer Dashboard</Link>
-      <Link to="/astrologer-chat-request" className="text-white hover:text-purple-400 text-lg">Chat Requests</Link>
-      <Link to="/wallet" className="flex items-center gap-1 text-white hover:text-purple-400 text-lg">
+      <Link
+        to="/astrologer-dashboard"
+        className="text-white hover:text-purple-400 text-lg"
+      >
+        Astrologer Dashboard
+      </Link>
+      <Link
+        to="/astrologer-chat-request"
+        className="text-white hover:text-purple-400 text-lg"
+      >
+        Chat Requests
+      </Link>
+      <Link
+        to="/wallet"
+        className="flex items-center gap-1 text-white hover:text-purple-400 text-lg"
+      >
+        <Wallet size={20} /> Wallet
+      </Link>
+    </>
+  );
+
+  const adminLinks = (
+    <>
+      <Link to="/admin" className="text-white hover:text-purple-400 text-lg">
+        Admin Dashboard
+      </Link>
+      <Link
+        to="/wallet"
+        className="flex items-center gap-1 text-white hover:text-purple-400 text-lg"
+      >
         <Wallet size={20} /> Wallet
       </Link>
     </>
@@ -157,7 +200,11 @@ useEffect(() => {
 
         <div className="w-full max-w-7xl px-4 mx-auto flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3">
+          <Link
+            to="/"
+            onClick={handleHomeClick}
+            className="flex items-center gap-3"
+          >
             <img
               src={assets.SiddhivinayakAstroLogo}
               alt="Logo"
@@ -175,7 +222,7 @@ useEffect(() => {
 
           {/* Desktop Nav */}
           <div className="hidden lg:flex items-center gap-6">
-            <Link to="/" className="text-white hover:text-purple-400 text-lg">
+            <Link to="/" onClick={handleHomeClick} className="text-white hover:text-purple-400 text-lg">
               Home
             </Link>
             <Link
@@ -200,9 +247,8 @@ useEffect(() => {
               >
                 Astrology
                 <svg
-                  className={`w-4 h-4 transition-transform duration-200 ${
-                    isAstroDropdownOpen ? "rotate-180" : "rotate-0"
-                  }`}
+                  className={`w-4 h-4 transition-transform duration-200 ${isAstroDropdownOpen ? "rotate-180" : "rotate-0"
+                    }`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -221,11 +267,10 @@ useEffect(() => {
                 onMouseLeave={() => setIsAstroDropdownOpen(false)}
                 className={`absolute top-full left-0 mt-2 w-48 bg-black bg-opacity-90 rounded shadow-lg ring-1 ring-black ring-opacity-5 z-50
       transition-all duration-200 origin-top
-      ${
-        isAstroDropdownOpen
-          ? "opacity-100 scale-y-100 visible"
-          : "opacity-0 scale-y-95 invisible"
-      }
+      ${isAstroDropdownOpen
+                    ? "opacity-100 scale-y-100 visible"
+                    : "opacity-0 scale-y-95 invisible"
+                  }
     `}
               >
                 {[
@@ -247,12 +292,13 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* Other links are removed from desktop that now appear in dropdown */}
-
+            {/* Role-based links */}
             {isAuthenticated
-              ? role !== "astrologer"
-                ? userLinks
-                : astroLinks
+              ? role === "admin"
+                ? adminLinks
+                : role === "astrologer"
+                  ? astroLinks
+                  : userLinks
               : null}
 
             {isAuthenticated ? (
@@ -288,9 +334,8 @@ useEffect(() => {
               ON/OFF{" "}
               <Music
                 size={20}
-                className={`ml-2 ${
-                  isPlaying ? "text-yellow-400" : "text-white"
-                }`}
+                className={`ml-2 ${isPlaying ? "text-yellow-400" : "text-white"
+                  }`}
               />
             </button>
           </div>
@@ -315,8 +360,11 @@ useEffect(() => {
             <div className="w-full h-px bg-yellow-600 my-2" />
             <Link
               to="/"
+              onClick={(e) => {
+                handleHomeClick(e);
+                setIsOpen(false);
+              }}
               className="text-white text-lg hover:text-purple-500"
-              onClick={() => setIsOpen(false)}
             >
               Home
             </Link>
@@ -377,7 +425,48 @@ useEffect(() => {
               How to wear ?
             </Link>
             {isAuthenticated ? (
-              role !== "astrologer" ? (
+              role === "admin" ? (
+                <>
+                  <Link
+                    to="/admin"
+                    className="text-white text-lg hover:text-purple-500"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Admin Dashboard
+                  </Link>
+                  <Link
+                    to="/wallet"
+                    className="flex items-center gap-1 text-white hover:text-purple-500 text-lg"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <Wallet size={20} /> Wallet
+                  </Link>
+                </>
+              ) : role === "astrologer" ? (
+                <>
+                  <Link
+                    to="/astrologer-dashboard"
+                    className="text-white text-lg hover:text-purple-500"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Astrologer Dashboard
+                  </Link>
+                  <Link
+                    to="/astrologer-chat-request"
+                    className="text-white text-lg hover:text-purple-500"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Chat Requests
+                  </Link>
+                  <Link
+                    to="/wallet"
+                    className="flex items-center gap-1 text-white hover:text-purple-500 text-lg"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <Wallet size={20} /> Wallet
+                  </Link>
+                </>
+              ) : (
                 <>
                   <Link
                     to="/my-orders"
@@ -389,6 +478,7 @@ useEffect(() => {
                   <Link
                     to="/wishlist"
                     className="text-white hover:text-purple-400 text-lg flex items-center gap-1"
+                    onClick={() => setIsOpen(false)}
                   >
                     <Heart className="w-5 h-5" />
                     Wishlist
@@ -413,30 +503,6 @@ useEffect(() => {
                     onClick={() => setIsOpen(false)}
                   >
                     <LucideBadgePoundSterling size={20} /> Blogs
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link
-                    to="/astrologer-dashboard"
-                    className="text-white text-lg hover:text-purple-500"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Astrologer Dashboard
-                  </Link>
-                  <Link
-                    to="/astrologer-chat-request"
-                    className="text-white text-lg hover:text-purple-500"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Chat Requests
-                  </Link>
-                  <Link
-                    to="/wallet"
-                    className="flex items-center gap-1 text-white hover:text-purple-500 text-lg"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <Wallet size={20} /> Wallet
                   </Link>
                 </>
               )
@@ -479,7 +545,7 @@ useEffect(() => {
                 size={25}
                 className={`${isPlaying ? "text-yellow-400" : "text-white"}`}
               />
-               Turn ON/OFF Music
+              Turn ON/OFF Music
             </button>
           </div>
         )}
