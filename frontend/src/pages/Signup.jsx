@@ -15,7 +15,7 @@ const Signup = () => {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "", // Will be empty
-    // phone: "",
+    phone: "",
     email: "",
     // address: "",
     // pincode: "",
@@ -64,6 +64,7 @@ const Signup = () => {
           firstName: formData.firstName,
           lastName: formData.lastName, // Empty string
           email: formData.email,
+          phone: formData.phone,
           password: formData.password,
           agreedToTerms: formData.agreedToTerms,
         }
@@ -154,7 +155,7 @@ const Signup = () => {
                 htmlFor="firstName"
                 className="block text-sm font-medium text-blue-100"
               >
-                Full Name
+                 Name
               </label>
               <input
                 type="text"
@@ -163,7 +164,7 @@ const Signup = () => {
                 value={formData.firstName}
                 onChange={handleChange}
                 required
-                placeholder="Enter your full name"
+                placeholder="Enter your  name"
                 className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
               />
             </div>
@@ -189,7 +190,7 @@ const Signup = () => {
             </div> */}
 
             {/* COMMENTED OUT: Phone */}
-            {/* <div>
+            <div>
               <label
                 htmlFor="phone"
                 className="block text-sm font-medium text-blue-100"
@@ -207,7 +208,7 @@ const Signup = () => {
                 placeholder="Phone Number"
                 className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
               />
-            </div> */}
+            </div>
 
             {/* Email - KEPT */}
             <div>

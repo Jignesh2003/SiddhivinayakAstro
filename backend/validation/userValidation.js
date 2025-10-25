@@ -8,7 +8,14 @@ export const signupValidation = Joi.object({
     "string.empty": "Name is required",
     "string.min": "Name must be at least 2 characters",
   }),
-  lastName: Joi.string().max(30).allow("", null).optional().default(""), // Optional, can be empty
+  lastName: Joi.string().max(30).allow("", null).optional().default(""), 
+  phone: Joi.string() // ✅ Fixed order
+    .pattern(/^[0-9]{10}$/)
+    .required()
+    .messages({
+      "string.pattern.base": "Phone number must be 10 digits",
+      "string.empty": "Phone number is required"
+    }),
   password: Joi.string()
     .min(6)
     .max(30)
@@ -21,11 +28,7 @@ export const signupValidation = Joi.object({
     "any.only": "You must agree to the terms and conditions",
   }),
 
-  // COMMENTED OUT: Not needed for simplified signup
-  // phone: Joi.string()
-  //   .pattern(/^[0-9]{10}$/)
-  //   .messages({ "string.pattern.base": "Phone number must be 10 digits" })
-  //   .allow("", null),
+
 
   // address: Joi.string().max(1000).allow("", null),
 

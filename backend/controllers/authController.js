@@ -24,6 +24,7 @@ export const signupUser = async (req, res) => {
       lastName,
       password,
       agreedToTerms,
+      phone
     } = value;
 
     // Normalize email to lowercase
@@ -43,6 +44,7 @@ export const signupUser = async (req, res) => {
       firstName,
       lastName: lastName || "", // Empty string if not provided
       email,
+      phone,
       password: hashedPassword,
       isVerified: false,
       agreeToTmc: agreedToTerms,
