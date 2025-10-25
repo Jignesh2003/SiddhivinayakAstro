@@ -23,6 +23,7 @@ import blogRoutes from "./routes/blogRoutes.js"
 import couponRoutes from "./routes/couponRoutes.js"
 import keepaliveRouter from "./routes/keepAlive.js"
 import "./config/passport.js";
+import visitorRouter from "./routes/vistorRoutes.js"
 dotenv.config();
 
 const app = express();
@@ -71,7 +72,9 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/kundali", kundaliPdfRoutes);
 app.use("/api/blog", blogRoutes);
 app.use("/api/coupon", couponRoutes)
+app.use('/api/visit', visitorRouter)
 app.use('/api', keepaliveRouter);
+
 // 404 Handler
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });

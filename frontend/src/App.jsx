@@ -7,6 +7,7 @@ import AllRoutes from "../Routes/AllRoutes";
 import { ToastContainer } from "react-toastify";
 import { Toaster } from "react-hot-toast";
 import WhatsAppPhoneFAB from "./lib/WhatsAppPhoneFab";
+import VisitorPopup from "./pages/VisitorPopUp";
 
 const App = () => {
   const { login, isAuthenticated } = useAuthStore();
@@ -48,6 +49,7 @@ const App = () => {
     <>
       <Navbar isAuthenticated={isAuthenticated} />
       <ToastContainer position="top-right" autoClose={3000} />
+      <VisitorPopup isAuthenticated={isAuthenticated} />
       <Toaster position="top-right" />
       <WhatsAppPhoneFAB/>
       <AllRoutes />
