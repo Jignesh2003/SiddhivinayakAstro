@@ -28,6 +28,10 @@ const SingleProduct = () => {
   const { userId, token, logout } = useAuthStore();
 
   useEffect(() => {
+    window.scrollTo({ top: -5, behavior: 'smooth' });
+  }, [id]); 
+
+  useEffect(() => {
     (async () => {
       try {
         const { data } = await axios.get(
