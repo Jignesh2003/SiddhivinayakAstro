@@ -7,7 +7,7 @@ import Product from "../models/Product.js";
 import { signupValidation ,loginSchema} from "../validation/userValidation.js";
 import PostgresDb from '../config/postgresDb.js'
 
-// ✅ Signup Controller
+//  Signup Controller
 export const signupUser = async (req, res) => {
   try {
     // 1. Validate input
@@ -17,23 +17,19 @@ export const signupUser = async (req, res) => {
       return res.status(400).json({ message: 'Validation failed', errors });
     }
 
-    // 2. Normalize email to lowercase for consistency
+    // 2. Destructure ONLY the fields we're actually sending
     let {
       email,
       firstName,
       lastName,
-      phone,
-      address,
-      pincode,
-      city,
-      state,
       password,
-      country,
       agreedToTerms,
     } = value;
+
+    // Normalize email to lowercase
     email = email.trim().toLowerCase();
 
-    // 3. Check for duplicate email (in lowercase)
+    // 3. Check for duplicate email
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(409).json({ message: "User already exists! Please log in." });
@@ -42,20 +38,15 @@ export const signupUser = async (req, res) => {
     // 4. Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 5. Create Mongo user (store normalized email)
+    // 5. Create Mongo user with ONLY the fields we have
     const newUser = new User({
       firstName,
-      lastName,
+      lastName: lastName || "", // Empty string if not provided
       email,
-      phone,
-      address,
-      pincode,
-      city,
-      state,
-      country,
       password: hashedPassword,
       isVerified: false,
       agreeToTmc: agreedToTerms,
+      // phone, address, pincode, city, state, country removed
     });
 
     await newUser.save();
@@ -87,6 +78,7 @@ export const signupUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 // ✅ Login Controller
 export const loginUser = async (req, res) => {
   try {

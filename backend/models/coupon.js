@@ -9,7 +9,6 @@ const CouponSchema = new Schema(
             required: true,
             uppercase: true,
             trim: true,
-            index: true,
         },
         description: { type: String },
 
