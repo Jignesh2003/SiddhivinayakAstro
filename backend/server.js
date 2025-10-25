@@ -21,6 +21,7 @@ import { initializeMinuteBillingCron } from "./jobs/minuteBilling.js";
 import { fetchHoroscopes } from "./jobs/fetchHoroscope.js";
 import blogRoutes from "./routes/blogRoutes.js"
 import couponRoutes from "./routes/couponRoutes.js"
+import keepaliveRouter from "./routes/keepAlive.js"
 import "./config/passport.js";
 dotenv.config();
 
@@ -70,6 +71,7 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/kundali", kundaliPdfRoutes);
 app.use("/api/blog", blogRoutes);
 app.use("/api/coupon", couponRoutes)
+app.use('/api', keepaliveRouter);
 // 404 Handler
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
