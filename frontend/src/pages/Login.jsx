@@ -149,20 +149,20 @@ const Login = () => {
           </form>
 
           {/* Divider */}
-          <div className="flex items-center my-5">
+          {/* <div className="flex items-center my-5">
             <hr className="flex-grow border-gray-300" />
             <span className="mx-2 text-gray-400">or</span>
             <hr className="flex-grow border-gray-300" />
-          </div>
+          </div> */}
 
           {/* Google Login */}
-          <button
+          {/* <button
             onClick={googleLoginHandler}
             className="w-full flex items-center justify-center gap-2 border border-gray-300 py-3 rounded-md hover:bg-gray-100 transition"
           >
             <FaGoogle size={20} />
             Login with Google
-          </button>
+          </button> */}
 
           {/* Sign-up Links */}
           <Link to="/sign-up" className="block font-semibold text-yellow-400 hover:text-yellow-300 text-center text-xl pt-5">

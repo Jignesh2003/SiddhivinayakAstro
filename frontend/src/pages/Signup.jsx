@@ -378,20 +378,20 @@ const Signup = () => {
             </div>
           </form>
           {/* Divider */}
-          <div className="flex items-center my-5">
+          {/* <div className="flex items-center my-5">
             <hr className="flex-grow border-gray-300" />
             <span className="mx-2 text-gray-400">or</span>
             <hr className="flex-grow border-gray-300" />
-          </div>
+          </div> */}
 
           {/* Google Login */}
-          <button
+          {/* <button
             onClick={googleLoginHandler}
             className="w-full flex items-center justify-center gap-2 border border-gray-300 py-3 rounded-md hover:bg-gray-100 transition"
           >
             <FaGoogle size={20} />
             Sign-up  with Google
-          </button>
+          </button> */}
 
           <div className="mt-4 text-center">
             <p className="text-sm text-blue-100">
