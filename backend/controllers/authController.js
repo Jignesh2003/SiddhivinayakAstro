@@ -288,78 +288,48 @@ export const deleteReview = async (req, res) => {
 
 export const addProduct = async (req, res) => {
   try {
+    // Validate image upload
     if (!req.files || req.files.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "At least one image is required." });
+      return res.status(400).json({ message: "At least one image is required." });
     }
+
     const {
       name,
-      price,
       description,
       miniDesc,
       tags,
       category,
       subcategory,
       brand,
-      sizeType,
-      stock: stockRaw,
       howToWear,
       benefits,
       bestDayToWear,
+      // NEW: Variant fields
+      hasVariants,
+      variants: variantsRaw,
+      // Legacy fields (only used if hasVariants = false)
+      price,
+      sizeType,
+      stock: stockRaw,
     } = req.body;
-console.log(category);
 
-    if (!name || !price || !description || !category || !stockRaw || !howToWear || !benefits || !bestDayToWear) {
+    console.log("Request body:", req.body);
+
+    // Validate required fields
+    if (!name || !description || !category) {
       return res.status(400).json({
-        message: "name, price, description, category, stock, howToWear, benefits, and bestDayToWear are required.",
+        message: "name, description, and category are required.",
       });
     }
 
-    let stock;
-    try {
-      stock = JSON.parse(stockRaw);
-      if (!Array.isArray(stock) || stock.length === 0) throw new Error();
-      stock.forEach((entry) => {
-        if (typeof entry.quantity !== "number")
-          throw new Error("Quantity must be numeric");
-        if (sizeType !== "Quantity" && !entry.size)
-          throw new Error("Size is required");
-      });
-    } catch {
-      return res.status(400).json({ message: "Invalid stock format." });
-    }
-
-    const image = req.files.map((f) => f.path);
-    const imagePublicId = req.files.map((f) => f.filename);
-
-    let tagsArray = [];
-    if (tags) {
-      if (typeof tags === "string") {
-        try {
-          tagsArray = JSON.parse(tags);
-        } catch {
-          tagsArray = tags
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean);
-        }
-      } else if (Array.isArray(tags)) {
-        tagsArray = tags;
-      }
-    }
-
-    // Utility to handle the new fields (accept comma-separated, JSON, or arrays)
+    // Helper function to parse array fields
     function parseMultiField(val) {
       if (!val) return [];
       if (typeof val === "string") {
         try {
           return JSON.parse(val);
         } catch {
-          return val
-            .split(",")
-            .map((v) => v.trim())
-            .filter(Boolean);
+          return val.split(",").map((v) => v.trim()).filter(Boolean);
         }
       } else if (Array.isArray(val)) {
         return val;
@@ -367,31 +337,132 @@ console.log(category);
       return [];
     }
 
-    const product = await Product.create({
+    // Parse common array fields
+    const tagsArray = parseMultiField(tags);
+    const howToWearArray = parseMultiField(howToWear);
+    const benefitsArray = parseMultiField(benefits);
+    const bestDayToWearArray = parseMultiField(bestDayToWear);
+
+    // Handle images
+    const image = req.files.map((f) => f.path);
+    const imagePublicId = req.files.map((f) => f.filename);
+
+    // Build base product data
+    const productData = {
       name,
-      price,
       description,
-      miniDesc: miniDesc ?? "",
+      miniDesc: miniDesc || "",
       tags: tagsArray,
       category,
-      subcategory,
-      brand,
-      sizeType,
-      stock,
+      subcategory: subcategory || "",
+      brand: brand || "",
       image,
       imagePublicId,
-      howToWear: parseMultiField(howToWear),
-      benefits: parseMultiField(benefits),
-      bestDayToWear: parseMultiField(bestDayToWear),
-    });
-console.log(product);
+      howToWear: howToWearArray,
+      benefits: benefitsArray,
+      bestDayToWear: bestDayToWearArray,
+      hasVariants: hasVariants === "true" || hasVariants === true,
+    };
 
-    res.status(201).json({ message: "Product added!", product });
+    // NEW: Conditional handling for variants vs legacy
+    if (productData.hasVariants) {
+      // ===== VARIANT PRODUCT =====
+      let parsedVariants;
+      try {
+        parsedVariants = typeof variantsRaw === "string"
+          ? JSON.parse(variantsRaw)
+          : variantsRaw;
+      } catch (err) {
+        return res.status(400).json({ message: "Invalid variants JSON format." });
+      }
+
+      // Validate variants array
+      if (!Array.isArray(parsedVariants) || parsedVariants.length === 0) {
+        return res.status(400).json({
+          message: "At least one variant is required when hasVariants is true.",
+        });
+      }
+
+      // Validate each variant
+      for (const variant of parsedVariants) {
+        if (!variant.variantName || !variant.price || variant.stock === undefined) {
+          return res.status(400).json({
+            message: "Each variant must have variantName, price, and stock.",
+          });
+        }
+        if (typeof variant.price !== "number" || typeof variant.stock !== "number") {
+          return res.status(400).json({
+            message: "Variant price and stock must be numbers.",
+          });
+        }
+      }
+
+      productData.variants = parsedVariants;
+
+      console.log("Creating variant product with variants:", parsedVariants);
+    } else {
+      // ===== LEGACY PRODUCT =====
+      if (!price) {
+        return res.status(400).json({
+          message: "price is required for standard products.",
+        });
+      }
+
+      let stock;
+      try {
+        stock = typeof stockRaw === "string" ? JSON.parse(stockRaw) : stockRaw;
+
+        if (!Array.isArray(stock) || stock.length === 0) {
+          throw new Error("Stock must be a non-empty array");
+        }
+
+        // Validate stock entries
+        stock.forEach((entry) => {
+          if (typeof entry.quantity !== "number") {
+            throw new Error("Quantity must be numeric");
+          }
+          if (sizeType !== "Quantity" && !entry.size) {
+            throw new Error("Size is required for non-quantity products");
+          }
+        });
+      } catch (err) {
+        return res.status(400).json({
+          message: "Invalid stock format: " + err.message,
+        });
+      }
+
+      productData.price = Number(price);
+      productData.sizeType = sizeType || "Quantity";
+      productData.stock = stock;
+
+      console.log("Creating legacy product with price:", price, "and stock:", stock);
+    }
+
+    // Create product
+    const product = await Product.create(productData);
+    console.log("Product created successfully:", product._id);
+
+    res.status(201).json({
+      message: "Product added successfully!",
+      product,
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    console.error("Error adding product:", err);
+
+    if (err.name === "ValidationError") {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: Object.values(err.errors).map((e) => e.message),
+      });
+    }
+
+    res.status(500).json({
+      message: "Server error",
+      error: err.message,
+    });
   }
 };
+
 
 export const getPendingKycAstrologers = async (req, res) => {
   const userId = req.user.id;

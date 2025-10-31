@@ -10,7 +10,15 @@ const useCartStore = create((set, get) => ({
   cartCount: 0,
   loading: false,
 
-  addToCart: async ({ product, size = "", quantity = 1, availableStock = 1 }) => {
+  // 🆕 Updated addToCart with variant support
+  addToCart: async ({
+    product,
+    size = "",
+    quantity = 1,
+    availableStock = 1,
+    variantId = null,        // 🆕 Variant ID
+    variant = null           // 🆕 Full variant object
+  }) => {
     set({ loading: true });
 
     try {
@@ -22,15 +30,22 @@ const useCartStore = create((set, get) => ({
 
       await get().fetchCart();
       const state = get();
+
+      // 🆕 Updated duplicate check to include variant
       const cartItem = state.cart.find(
         (item) =>
           item.product._id === product &&
-          ((size && item.size === size) || (!size && !item.size))
+          // Check variant match
+          ((variantId && item.variantId === variantId) ||
+            // Or check size match (legacy)
+            (size && item.size === size) ||
+            // Or no variant/size (simple product)
+            (!variantId && !size && !item.variantId && !item.size))
       );
 
       if (cartItem) {
         toast.success("Product already in cart!");
-        return; // ✅ Don't increment quantity
+        return;
       }
 
       if (Number(quantity) > availableStock) {
@@ -38,9 +53,16 @@ const useCartStore = create((set, get) => ({
         return;
       }
 
+      // 🆕 Send variant info to backend
       const { data } = await axios.post(
         `${BASE}/add-cart`,
-        { product, size, quantity: Number(quantity) },
+        {
+          product,
+          size,
+          quantity: Number(quantity),
+          variantId,      // 🆕 Include variant ID
+          variant         // 🆕 Include variant details
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -54,6 +76,7 @@ const useCartStore = create((set, get) => ({
       return data;
 
     } catch (err) {
+      console.error("❌ addToCart error:", err);
       toast.error("Failed to add to cart.");
       throw err;
     } finally {
@@ -61,6 +84,7 @@ const useCartStore = create((set, get) => ({
     }
   },
 
+  // 🆕 Updated fetchCart with variant support
   fetchCart: async () => {
     set({ loading: true });
 
@@ -79,18 +103,17 @@ const useCartStore = create((set, get) => ({
       }
 
       const allItems = response.data.items;
-
-      // Filter out items with availableStock <= 0
       const validItems = [];
 
       for (const item of allItems) {
         const available = Number(item.availableStock ?? 0);
 
         if (available <= 0) {
-          // 🔥 Remove item from cart if out of stock
+          // Remove out-of-stock items
           const productId = item.product._id;
           const size = item.size || null;
-          await get().removeFromCart(productId, size);
+          const variantId = item.variantId || null; // 🆕 Include variantId
+          await get().removeFromCart(productId, size, variantId);
           console.warn(`Removed OOS item from cart:`, item.product.name);
         } else {
           validItems.push({
@@ -98,6 +121,9 @@ const useCartStore = create((set, get) => ({
             cartQuantity: Number(item.cartQuantity ?? item.quantity ?? 1),
             availableStock: available,
             size: item.size ?? null,
+            // 🆕 Include variant info
+            variantId: item.variantId ?? null,
+            variant: item.variant ?? null,
             _id: item._id,
           });
         }
@@ -114,7 +140,14 @@ const useCartStore = create((set, get) => ({
     }
   },
 
-  updateCart: async (productId, quantity, size = null, availableStock = null) => {
+  // 🆕 Updated updateCart with variant support
+  updateCart: async (
+    productId,
+    quantity,
+    size = null,
+    availableStock = null,
+    variantId = null  // 🆕 Add variantId parameter
+  ) => {
     set({ loading: true });
     try {
       const { userId, token } = useAuthStore.getState();
@@ -129,28 +162,48 @@ const useCartStore = create((set, get) => ({
 
       if (safeQuantity < 1) safeQuantity = 1;
 
+      // 🆕 Include variantId in update request
       await axios.put(
         `${BASE}/update`,
-        { productId, quantity: safeQuantity, size },
+        {
+          productId,
+          quantity: safeQuantity,
+          size,
+          variantId  // 🆕 Send variantId
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       await get().fetchCart();
     } catch (error) {
-      console.log(error);
+      console.error("❌ updateCart error:", error);
       await get().fetchCart();
     } finally {
       set({ loading: false });
     }
   },
 
-  removeFromCart: async (product, size = null) => {
+  // 🆕 Updated removeFromCart with variant support
+  removeFromCart: async (product, size = null, variantId = null) => {
+    // 🆕 Optimistic update - remove from local state immediately
     set((state) => ({
       cart: state.cart.filter(
         (item) =>
-          item.product._id !== product || (size && item.size !== size)
+          !(
+            item.product._id === product &&
+            // Match variant if provided
+            ((variantId && item.variantId === variantId) ||
+              // Match size if provided (legacy)
+              (size && item.size === size) ||
+              // Match simple product (no variant/size)
+              (!variantId && !size && !item.variantId && !item.size))
+          )
       ),
-      cartCount: state.cartCount - 1,
+    }));
+
+    // Recalculate cart count
+    set((state) => ({
+      cartCount: state.cart.reduce((sum, item) => sum + item.cartQuantity, 0),
     }));
 
     set({ loading: true });
@@ -159,14 +212,15 @@ const useCartStore = create((set, get) => ({
       const { userId, token } = useAuthStore.getState();
       if (!token || !userId) return;
 
+      // 🆕 Include variantId in delete request
       await axios.delete(
-        `${BASE}/remove/${product}?userId=${userId}&size=${size ?? ""}`,
+        `${BASE}/remove/${product}?userId=${userId}&size=${size ?? ""}&variantId=${variantId ?? ""}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       await get().fetchCart();
     } catch (error) {
-      console.log(error);
+      console.error("❌ removeFromCart error:", error);
       await get().fetchCart();
     } finally {
       set({ loading: false });
@@ -185,7 +239,7 @@ const useCartStore = create((set, get) => ({
         headers: { Authorization: `Bearer ${token}` },
       });
     } catch (error) {
-      console.log(error);
+      console.error("❌ clearCart error:", error);
     } finally {
       set({ loading: false });
     }

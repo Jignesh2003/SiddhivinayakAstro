@@ -1,28 +1,50 @@
 import mongoose from "mongoose";
 
-const cartSchema = new mongoose.Schema({
-  userId: {
+const cartItemSchema = new mongoose.Schema({
+  product: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: "Product",
     required: true,
   },
-  items: [
-    {
-      product: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Product",
-        required: true,
-      },
-      quantity:{
-        type:Number , required:true,default:1
-      },
-       size: {
-      type: String,
-      default: "",       // or you could make it `required: true` if every item must have one
-    },
-    },
-  ],
+  quantity: {
+    type: Number,
+    required: true,
+    default: 1,
+    min: 1,
+  },
+  // Legacy size field (for non-variant products)
+  size: {
+    type: String,
+    default: null,
+  },
+  // 🆕 Variant support
+  variantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null,
+  },
+  variant: {
+    variantName: String,
+    gram: Number,
+    price: Number,
+    stock: Number,
+    sku: String,
+  },
 });
 
-const Cart = mongoose.model("Cart",cartSchema);
+const cartSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+    },
+    items: [cartItemSchema],
+  },
+  { timestamps: true }
+);
+
+// Index for faster queries
+
+const Cart = mongoose.model("Cart", cartSchema);
 export default Cart;

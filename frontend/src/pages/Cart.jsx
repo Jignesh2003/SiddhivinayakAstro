@@ -16,9 +16,48 @@ const Cart = () => {
   const loading = useCartStore((state) => state.loading);
   const appliedCoupon = useCouponStore((state) => state.appliedCoupon);
 
+  // 🆕 Helper to get item price (variant or legacy)
+  const getItemPrice = (item) => {
+    if (item.variantId && item.variant?.price) {
+      return Number(item.variant.price);
+    }
+    return Number(item.product?.price ?? 0);
+  };
 
+  // 🆕 Helper to get available stock (variant or legacy)
+  const getAvailableStock = (item) => {
+    if (item.variantId && item.variant?.stock !== undefined) {
+      return Number(item.variant.stock);
+    }
+    return Number(item.availableStock ?? 1);
+  };
+
+  // 🆕 Helper to get item display name
+  const getItemDisplayName = (item) => {
+    const baseName = item.product?.name || "Unknown Product";
+
+    if (item.variantId && item.variant?.variantName) {
+      return `${baseName} (${item.variant.variantName})`;
+    }
+
+    if (item.size) {
+      return `${baseName} (Size: ${item.size})`;
+    }
+
+    return baseName;
+  };
+
+  // 🆕 Helper to get unique item key (for React keys and cart operations)
+  const getItemKey = (item) => {
+    if (item.variantId) {
+      return `${item.product._id}-${item.variantId}`;
+    }
+    return `${item.product._id}${item.size ? `-${item.size}` : ""}`;
+  };
+
+  // Updated total price calculation with variant support
   const totalPrice = cart.reduce((total, item) => {
-    const price = Number(item.product?.price ?? 0);
+    const price = getItemPrice(item);
     const qty = Number(item.cartQuantity ?? item.quantity ?? 1);
     return total + price * qty;
   }, 0);
@@ -27,19 +66,19 @@ const Cart = () => {
     ? Math.max(
       totalPrice -
       (appliedCoupon.discountType === "flat"
-        ? appliedCoupon.discount // flat coupon uses backend discount
+        ? appliedCoupon.discount
         : Math.min(
           (totalPrice * appliedCoupon.discountValue) / 100,
           appliedCoupon.maxDiscount || Infinity
-        )), // percentage coupon recalculated
+        )),
       0
     )
     : totalPrice;
 
   useEffect(() => {
     const loadCartAndCoupons = async () => {
-      await fetchCart();  // ensures cart is loaded
-      await fetchCoupons(); // now cart has items
+      await fetchCart();
+      await fetchCoupons();
     };
     loadCartAndCoupons();
   }, []);
@@ -51,49 +90,36 @@ const Cart = () => {
     loadCart();
   }, [fetchCart]);
 
-
   useEffect(() => {
     fetchCoupons();
-  }, [cart]); // <-- re-run whenever cart changes
+  }, [cart]);
 
-
+  // 🆕 Updated out-of-stock handler with variant support
   useEffect(() => {
     cart.forEach((item) => {
-      if (item.availableStock === 0) {
-        removeFromCart(item.product._id, item.size ?? null);
-        toast.warn(`Removed ${item.product.name} (Out of Stock)`, {
+      const stock = getAvailableStock(item);
+      if (stock === 0) {
+        // Remove with variant ID if applicable
+        if (item.variantId) {
+          removeFromCart(item.product._id, item.size ?? null, item.variantId);
+        } else {
+          removeFromCart(item.product._id, item.size ?? null);
+        }
+        toast.warn(`Removed ${getItemDisplayName(item)} (Out of Stock)`, {
           position: "top-right",
         });
       }
     });
   }, [cart]);
 
-  // const handleUpdateCart = async (
-  //   productId,
-  //   newQuantity,
-  //   availableStock,
-  //   size
-  // ) => {
-  //   const safeQty = Number(newQuantity);
-  //   if (!Number.isFinite(safeQty) || safeQty < 1) return;
-
-  //   if (safeQty > availableStock) {
-  //     toast.error("Cannot exceed available stock!", { position: "top-right" });
-  //     return;
-  //   }
-
-  //   try {
-  //     await updateCart(productId, safeQty, size, availableStock);
-  //     toast.success("Cart updated successfully!", { position: "top-right" });
-  //     await fetchCart();
-  //   } catch {
-  //     toast.error("Failed to update cart.", { position: "top-right" });
-  //   }
-  // };
-
-  const handleRemoveFromCart = async (productId, size) => {
+  // 🆕 Updated remove handler with variant support
+  const handleRemoveFromCart = async (item) => {
     try {
-      await removeFromCart(productId, size);
+      await removeFromCart(
+        item.product._id,
+        item.size ?? null,
+        item.variantId ?? null
+      );
       toast.success("Item removed from cart!", { position: "top-right" });
       await fetchCart();
     } catch {
@@ -101,13 +127,19 @@ const Cart = () => {
     }
   };
 
+  // 🆕 Updated increment handler with variant support
   const handleIncrement = (item) => {
     const currQty = Number(item.cartQuantity ?? item.quantity ?? 1);
-    const available = Number(item.availableStock ?? 1);
+    const available = getAvailableStock(item);
 
     if (currQty < available) {
-      // Optimistically update UI
-      updateCart(item.product._id, currQty + 1, item.size, available);
+      updateCart(
+        item.product._id,
+        currQty + 1,
+        item.size,
+        available,
+        item.variantId ?? null
+      );
     } else {
       toast.warn("Cannot add more than available stock!", {
         position: "top-right",
@@ -115,16 +147,21 @@ const Cart = () => {
     }
   };
 
-
+  // 🆕 Updated decrement handler with variant support
   const handleDecrement = (item) => {
     const currQty = Number(item.cartQuantity ?? item.quantity ?? 1);
+    const available = getAvailableStock(item);
+
     if (currQty > 1) {
-      updateCart(item.product._id, currQty - 1, item.size, item.availableStock);
+      updateCart(
+        item.product._id,
+        currQty - 1,
+        item.size,
+        available,
+        item.variantId ?? null
+      );
     }
   };
-
-
- 
 
   return (
     <div
@@ -156,40 +193,56 @@ const Cart = () => {
               if (!item.product) return null;
 
               const currQty = Number(item.cartQuantity ?? item.quantity ?? 1);
-              const availableStock = Number(item.availableStock ?? 1);
+              const availableStock = getAvailableStock(item);
+              const itemPrice = getItemPrice(item);
+              const displayName = getItemDisplayName(item);
+              const itemKey = getItemKey(item);
 
               return (
                 <div
-                  key={item.product._id + (item.size ?? "")}
+                  key={itemKey}
                   className="flex items-center justify-between border-b border-gray-300 py-4"
                 >
                   <img
                     src={item.product?.image?.[0] || "/placeholder.png"}
-                    alt={item.product.name || "Product Image"}
+                    alt={displayName}
                     className="w-28 h-28 object-cover rounded-md mr-6"
                   />
 
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-800 text-lg">
-                      {item.product.name || "Unknown Product"}{" "}
-                      {item.size ? `(Size: ${item.size})` : ""}
+                      {displayName}
                     </h3>
+
+                    {/* 🆕 Enhanced price display with variant info */}
                     <p className="text-gray-600">
-                      Price: ₹{item.product.price ?? "N/A"}
+                      Price: ₹{itemPrice}
+                      {item.variant?.gram && (
+                        <span className="text-sm text-gray-500 ml-2">
+                          ({item.variant.gram}g)
+                        </span>
+                      )}
                     </p>
+
+                    {/* 🆕 Show SKU if available */}
+                    {item.variant?.sku && (
+                      <p className="text-xs text-gray-500">
+                        SKU: {item.variant.sku}
+                      </p>
+                    )}
+
                     <p
                       className={
                         availableStock === 0
                           ? "text-red-600"
                           : availableStock < 10
-                          ? "text-orange-600"
-                          : "text-green-600"
+                            ? "text-orange-600"
+                            : "text-green-600"
                       }
                     >
                       {availableStock > 0
-                        ? `Stock: ${availableStock}${
-                            availableStock < 10 ? " (Hurry!)" : ""
-                          }`
+                        ? `Stock: ${availableStock}${availableStock < 10 ? " (Hurry!)" : ""
+                        }`
                         : "SORRY! Out of Stock"}
                     </p>
                     <p className="font-semibold mt-1">Quantity: {currQty}</p>
@@ -198,11 +251,10 @@ const Cart = () => {
                     <div className="flex gap-3 mt-3">
                       <button
                         onClick={() => handleIncrement(item)}
-                        className={`px-3 py-1 rounded ${
-                          currQty >= availableStock
+                        className={`px-3 py-1 rounded ${currQty >= availableStock
                             ? "bg-gray-300 cursor-not-allowed"
                             : "bg-green-600 text-white hover:bg-green-700"
-                        }`}
+                          }`}
                         disabled={currQty >= availableStock}
                       >
                         +
@@ -215,9 +267,7 @@ const Cart = () => {
                         -
                       </button>
                       <button
-                        onClick={() =>
-                          handleRemoveFromCart(item.product._id, item.size)
-                        }
+                        onClick={() => handleRemoveFromCart(item)}
                         className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
                       >
                         Remove
@@ -226,57 +276,53 @@ const Cart = () => {
                   </div>
 
                   <p className="font-bold text-gray-900 text-xl">
-                    ₹{Number(item.product.price ?? 0) * currQty}
+                    ₹{itemPrice * currQty}
                   </p>
                 </div>
               );
             })}
 
             {/* Cart Footer */}
-                {/* Cart Footer */}
-                <div className="mt-6 flex justify-end gap-4 items-center border-t border-gray-300 pt-6 flex-col md:flex-row md:items-center">
-                  {appliedCoupon && (
-                    <div className="flex items-center gap-3">
-                      <p className="text-green-700 font-semibold text-lg">
-                        Coupon {appliedCoupon.code} Applied: -₹
-                        {appliedCoupon.discountType === "flat"
-                          ? appliedCoupon.discount.toFixed(2)
-                          : Math.min(
-                            (totalPrice * appliedCoupon.discountValue) / 100,
-                            appliedCoupon.maxDiscount || Infinity
-                          ).toFixed(2)}
-                      </p>
-                      <button
-                        onClick={() => {
-                          useCouponStore.getState().clearCoupon();
-                          toast.info("Coupon removed", { position: "top-right" });
-                        }}
-                        className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
-
-                  <h3 className="text-2xl font-semibold text-gray-800">
-                    Total: ₹{discountedTotal.toFixed(2)}
-                  </h3>
-
-                  <Link
-                    to="/checkout"
-                    state={{ appliedCoupon: appliedCoupon }}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+            <div className="mt-6 flex justify-end gap-4 items-center border-t border-gray-300 pt-6 flex-col md:flex-row md:items-center">
+              {appliedCoupon && (
+                <div className="flex items-center gap-3">
+                  <p className="text-green-700 font-semibold text-lg">
+                    Coupon {appliedCoupon.code} Applied: -₹
+                    {appliedCoupon.discountType === "flat"
+                      ? appliedCoupon.discount.toFixed(2)
+                      : Math.min(
+                        (totalPrice * appliedCoupon.discountValue) / 100,
+                        appliedCoupon.maxDiscount || Infinity
+                      ).toFixed(2)}
+                  </p>
+                  <button
+                    onClick={() => {
+                      useCouponStore.getState().clearCoupon();
+                      toast.info("Coupon removed", { position: "top-right" });
+                    }}
+                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
                   >
-                    Proceed to Checkout
-                  </Link>
+                    Remove
+                  </button>
                 </div>
+              )}
 
+              <h3 className="text-2xl font-semibold text-gray-800">
+                Total: ₹{discountedTotal.toFixed(2)}
+              </h3>
 
-
+              <Link
+                to="/checkout"
+                state={{ appliedCoupon: appliedCoupon }}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+              >
+                Proceed to Checkout
+              </Link>
+            </div>
           </>
         )}
       </div>
-      <CouponItems/>
+      <CouponItems />
     </div>
   );
 };

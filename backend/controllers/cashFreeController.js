@@ -1,6 +1,6 @@
 import axios from "axios";
-import User from "../models/User.js"; // assuming you have a User model
-import Order from "../models/Order.js"; // Make sure this is imported
+import User from "../models/User.js";
+import Order from "../models/Order.js";
 import { v4 as uuidv4 } from "uuid";
 import Product from "../models/Product.js";
 import PostgresDb from "../config/postgresDb.js"
@@ -34,26 +34,49 @@ export const createCashfreeOrder = async (req, res) => {
 
     customOrderId = `PREORDER_${userId}_${Date.now()}`;
 
-    // ✅ Validate items & stock
+    // 🆕 Validate items & stock (with variant support)
     let subTotal = 0;
     for (const item of items) {
       const product = await Product.findById(item.product);
       if (!product) throw new Error(`Product not found: ${item.product}`);
 
       const qty = Number(item.quantity ?? 1);
-      if (product.sizeType !== "Quantity" && item.size) {
-        const variant = product.stock.find((v) => v.size === item.size);
-        if (!variant || variant.quantity < qty) {
-          throw new Error(`Not enough stock for ${product.name} (${item.size})`);
+      let available = 0;
+      let itemPrice = product.price;
+
+      // 🆕 Check variant stock
+      if (item.variantId && product.hasVariants) {
+        const variant = product.variants.find(
+          (v) => v._id.toString() === item.variantId.toString()
+        );
+        if (!variant) {
+          throw new Error(`Variant not found for ${product.name}`);
         }
-      } else {
-        const availableQty = Array.isArray(product.stock)
+        available = variant.stock;
+        itemPrice = variant.price;
+      }
+      // Check legacy size stock
+      else if (product.sizeType !== "Quantity" && item.size) {
+        const stockItem = product.stock.find((s) => s.size === item.size);
+        if (!stockItem) {
+          throw new Error(`Size ${item.size} not found for ${product.name}`);
+        }
+        available = stockItem.quantity;
+      }
+      // Check simple product stock
+      else {
+        available = Array.isArray(product.stock)
           ? product.stock.reduce((sum, s) => sum + Number(s.quantity || 0), 0)
           : Number(product.stock?.quantity ?? 0);
-        if (availableQty < qty) throw new Error(`Not enough stock for ${product.name}`);
       }
 
-      subTotal += product.price * qty;
+      if (available < qty) {
+        throw new Error(`Not enough stock for ${product.name}`);
+      }
+
+      // 🆕 Use item price if provided, otherwise use variant/product price
+      const finalPrice = item.price || itemPrice;
+      subTotal += finalPrice * qty;
     }
 
     // ✅ Calculate GST & Delivery
@@ -70,16 +93,17 @@ export const createCashfreeOrder = async (req, res) => {
         cartValue: subTotal,
         cartItems: items.map(i => ({
           productId: i.product,
+          variantId: i.variantId || null, // 🆕
           categoryId: i.categoryId || null,
         })),
       });
       if (couponResult.valid) {
-        discount =couponResult.discount;
+        discount = couponResult.discount;
         const couponDoc = await Coupon.findOne({ code: couponCode });
         if (couponDoc) {
           couponId = couponDoc._id;
         }
-      } 
+      }
     }
 
     totalAmount = subTotal + deliveryCharges - discount;
@@ -93,7 +117,7 @@ export const createCashfreeOrder = async (req, res) => {
           totalAmount,
           gstAmount,
           deliveryCharges,
-          discountAmount:discount,
+          discountAmount: discount,
           paymentMethod: "online",
           paymentStatus: "Initiated",
           orderStatus: "Pending",
@@ -184,8 +208,6 @@ export const createCashfreeOrder = async (req, res) => {
   }
 };
 
-
-
 export const checkPaymentStatus = async (req, res) => {
   try {
     const { order_id } = req.query;
@@ -207,5 +229,4 @@ export const checkPaymentStatus = async (req, res) => {
     console.error("Error checking payment status:", err.response?.data || err.message);
     return res.status(500).json({ message: "Failed to fetch payment status" });
   }
-}
-
+};

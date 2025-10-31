@@ -13,11 +13,11 @@ export default function Checkout() {
   const navCoupon = location.state?.appliedCoupon || null;
   const [couponCode, setCouponCode] = useState(navCoupon?.code || "");
 
-  const appliedCoupon = navCoupon; // fallback to null if nothing passed
+  const appliedCoupon = navCoupon;
 
   console.log(cart);
 
-  const [selectedMethod, setSelectedMethod] = useState(""); // no default, must be explicitly chosen
+  const [selectedMethod, setSelectedMethod] = useState("");
   const [loading, setLoading] = useState(false);
   const [cashfreeInstance, setCashfreeInstance] = useState(null);
   const [shippingAddress, setShippingAddress] = useState({
@@ -31,7 +31,6 @@ export default function Checkout() {
     landmark: "",
   });
 
-  // To hold dropdown options
   const [countryOptions, setCountryOptions] = useState([]);
   const [stateOptions, setStateOptions] = useState([]);
   const [cityOptions, setCityOptions] = useState([]);
@@ -43,10 +42,9 @@ export default function Checkout() {
     script.async = true;
     script.onload = () => {
       if (window.Cashfree) {
-        const instance = window.Cashfree({ mode:`${import.meta.env.VITE_PROD}` });
+        const instance = window.Cashfree({ mode: `${import.meta.env.VITE_PROD}` });
         setCashfreeInstance(instance);
         console.log(instance);
-        
       } else {
         toast.error("❌ Failed to initialize Cashfree");
       }
@@ -113,7 +111,7 @@ export default function Checkout() {
     }
   };
 
-  // ✅ Validate inputs and live stock before order
+  // 🆕 Validate inputs and live stock before order (with variant support)
   const validateInputs = async () => {
     if (!userId) throw new Error("User not logged in");
     if (!cart.length) throw new Error("Cart is empty");
@@ -134,10 +132,20 @@ export default function Checkout() {
 
       let available = 0;
 
-      if (product.sizeType !== "Quantity" && item.size) {
-        const variant = product.stock.find((v) => v.size === item.size);
-        available = variant ? Number(variant.quantity) : 0;
-      } else {
+      // 🆕 Check variant stock
+      if (item.variantId && product.hasVariants) {
+        const variant = product.variants.find(
+          (v) => v._id === item.variantId
+        );
+        available = variant ? variant.stock : 0;
+      }
+      // Check legacy size stock
+      else if (product.sizeType !== "Quantity" && item.size) {
+        const stockItem = product.stock.find((v) => v.size === item.size);
+        available = stockItem ? Number(stockItem.quantity) : 0;
+      }
+      // Check simple product stock
+      else {
         available = Array.isArray(product.stock)
           ? product.stock.reduce((sum, s) => sum + Number(s.quantity || 0), 0)
           : Number(product.stock?.quantity ?? 0);
@@ -152,7 +160,6 @@ export default function Checkout() {
       }
     }
 
-    // Require the online payment method selection
     if (!selectedMethod) {
       throw new Error("Please select a payment method");
     }
@@ -166,21 +173,25 @@ export default function Checkout() {
       await fetchCart();
       await validateInputs();
 
-      const subTotal = cart.reduce(
-        (sum, item) => sum + item.product.price * Number(item.cartQuantity ?? 1),
-        0
-      );
+      // 🆕 Calculate subtotal with variant prices
+      const subTotal = cart.reduce((sum, item) => {
+        const itemPrice = item.variant?.price || item.product.price;
+        return sum + itemPrice * Number(item.cartQuantity ?? 1);
+      }, 0);
 
       const gstAmount = Number(((subTotal * 18) / 118).toFixed(2));
       const deliveryCharges = subTotal > 499 ? 0 : 100;
 
+      // 🆕 Include variant data in order items
       const orderItems = cart.map((item) => ({
         product: item.product._id,
         quantity: Number(item.cartQuantity ?? 1),
+        price: item.variant?.price || item.product.price,
+        ...(item.variantId && { variantId: item.variantId }),
+        ...(item.variant && { variant: item.variant }),
         ...(item.size && { size: item.size }),
       }));
 
-      // ✅ Online Payment (Cashfree)
       if (!cashfreeInstance) throw new Error("Cashfree SDK not ready");
 
       const cfRes = await axios.post(
@@ -191,7 +202,7 @@ export default function Checkout() {
           deliveryCharges,
           shippingAddress,
           items: orderItems,
-          paymentMethod: "online", // force online payment
+          paymentMethod: "online",
           couponCode,
         },
         {
@@ -209,7 +220,6 @@ export default function Checkout() {
         redirectTarget: "_self",
       });
       console.log(payment_session_id);
-
     } catch (err) {
       console.error("❌ Checkout error:", err);
       toast.error(
@@ -220,15 +230,16 @@ export default function Checkout() {
       setLoading(false);
     }
   };
-  // Compute subtotal, gst, deliveryCharges first
-  const subTotal = cart.reduce(
-    (sum, item) => sum + item.product.price * Number(item.cartQuantity ?? 1),
-    0
-  );
+
+  // 🆕 Compute subtotal with variant prices
+  const subTotal = cart.reduce((sum, item) => {
+    const itemPrice = item.variant?.price || item.product.price;
+    return sum + itemPrice * Number(item.cartQuantity ?? 1);
+  }, 0);
+
   const gstAmount = Number(((subTotal * 18) / 118).toFixed(2));
   const deliveryCharges = subTotal > 499 ? 0 : 100;
 
-  // Then compute discount and total after discount
   const discountAmount = appliedCoupon
     ? appliedCoupon.discountType === "flat"
       ? appliedCoupon.discount
@@ -240,7 +251,7 @@ export default function Checkout() {
 
   const totalAfterDiscount = subTotal + deliveryCharges - discountAmount;
 
-console.log(`Is production? ${import.meta.env.VITE_PROD}`);
+  console.log(`Is production? ${import.meta.env.VITE_PROD}`);
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg">
@@ -279,7 +290,6 @@ console.log(`Is production? ${import.meta.env.VITE_PROD}`);
           autoComplete="off"
         />
 
-        {/* Country dropdown */}
         <select
           name="country"
           value={shippingAddress.country}
@@ -295,7 +305,6 @@ console.log(`Is production? ${import.meta.env.VITE_PROD}`);
           ))}
         </select>
 
-        {/* State dropdown */}
         <select
           name="state"
           value={shippingAddress.state}
@@ -312,7 +321,6 @@ console.log(`Is production? ${import.meta.env.VITE_PROD}`);
           ))}
         </select>
 
-        {/* City dropdown */}
         <select
           name="city"
           value={shippingAddress.city}
@@ -369,18 +377,20 @@ console.log(`Is production? ${import.meta.env.VITE_PROD}`);
         <h3 className="font-semibold mb-2">Order Summary</h3>
 
         {cart.map((item, i) => {
-          const qty = Number(item.cartQuantity) || 1; // fallback to 1
-          const totalPrice = item.product.price * qty;
+          const qty = Number(item.cartQuantity) || 1;
+          const itemPrice = item.variant?.price || item.product.price;
+          const totalPrice = itemPrice * qty;
           return (
             <div key={i} className="flex justify-between text-sm border-b py-1">
               <span>
-                {item.product.name} (x{qty})
+                {item.product.name}
+                {item.variant && ` (${item.variant.variantName})`}
+                {item.size && ` - Size ${item.size}`} (x{qty})
               </span>
               <span>₹{totalPrice.toFixed(2)}</span>
             </div>
           );
         })}
-
 
         <div className="flex justify-between text-sm">
           <span>Subtotal</span>
@@ -389,7 +399,9 @@ console.log(`Is production? ${import.meta.env.VITE_PROD}`);
 
         <div className="flex justify-between text-sm">
           <span>Delivery Charges</span>
-          <span>{deliveryCharges === 0 ? "Free" : `₹${deliveryCharges.toFixed(2)}`}</span>
+          <span>
+            {deliveryCharges === 0 ? "Free" : `₹${deliveryCharges.toFixed(2)}`}
+          </span>
         </div>
 
         <div className="flex justify-between text-sm">
@@ -413,11 +425,10 @@ console.log(`Is production? ${import.meta.env.VITE_PROD}`);
       <button
         onClick={handleOrderSubmit}
         disabled={loading}
-        className={`mt-4 w-full py-2 rounded ${
-          loading
+        className={`mt-4 w-full py-2 rounded ${loading
             ? "bg-gray-400 cursor-not-allowed"
             : "bg-yellow-500 hover:bg-yellow-600 text-white"
-        } font-bold transition`}
+          } font-bold transition`}
       >
         {loading ? "Processing…" : "Place Order"}
       </button>

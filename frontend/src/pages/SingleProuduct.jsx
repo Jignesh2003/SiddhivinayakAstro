@@ -22,14 +22,15 @@ const SingleProduct = () => {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState("");
+  const [selectedVariant, setSelectedVariant] = useState(null); // 🆕 For variant products
   const [products, setProducts] = useState([]);
 
   const addToCart = useCartStore((state) => state.addToCart);
   const { userId, token, logout } = useAuthStore();
 
   useEffect(() => {
-    window.scrollTo({ top: -5, behavior: 'smooth' });
-  }, [id]); 
+    window.scrollTo({ top: -5, behavior: "smooth" });
+  }, [id]);
 
   useEffect(() => {
     (async () => {
@@ -44,7 +45,15 @@ const SingleProduct = () => {
             (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
           )
         );
-        if (data.sizeType !== "Quantity" && data.stock.length > 0) {
+
+        // 🆕 Initialize variant or size selection
+        if (data.hasVariants && data.variants?.length > 0) {
+          // Set default variant (marked as default or first one)
+          const defaultVariant =
+            data.variants.find((v) => v.isDefault) || data.variants[0];
+          setSelectedVariant(defaultVariant);
+        } else if (data.sizeType !== "Quantity" && data.stock?.length > 0) {
+          // Legacy size selection
           setSelectedSize(data.stock[0].size);
         }
       } catch (err) {
@@ -83,30 +92,68 @@ const SingleProduct = () => {
     );
   }
 
-  const totalStock = product.stock.reduce((sum, v) => sum + v.quantity, 0);
-  const variant = product.stock.find((v) => v.size === selectedSize);
-  const selectedStock = variant?.quantity || 0;
+  // 🆕 Calculate stock and price based on product type
+  const getCurrentPrice = () => {
+    if (product.hasVariants && selectedVariant) {
+      return selectedVariant.price;
+    }
+    return product.price;
+  };
 
+  const getCurrentStock = () => {
+    if (product.hasVariants && selectedVariant) {
+      return selectedVariant.stock;
+    }
+    if (product.sizeType !== "Quantity" && selectedSize) {
+      const variant = product.stock.find((v) => v.size === selectedSize);
+      return variant?.quantity || 0;
+    }
+    return product.stock.reduce((sum, v) => sum + v.quantity, 0);
+  };
+
+  const totalStock = getCurrentStock();
+  const currentPrice = getCurrentPrice();
+
+  // 🆕 Updated Add to Cart handler with variant support
   const handleAddToCart = async () => {
     if (!userId) {
       toast.error("Please log in first!");
       logout();
       return navigate("/login");
     }
-    if (product.sizeType !== "Quantity" && !selectedSize) {
+
+    // Variant product validation
+    if (product.hasVariants && !selectedVariant) {
+      return toast.error("Please select a variant!");
+    }
+
+    // Legacy product validation
+    if (!product.hasVariants && product.sizeType !== "Quantity" && !selectedSize) {
       return toast.error("Please select a size!");
     }
-    const stockToUse =
-      product.sizeType !== "Quantity" ? selectedStock : totalStock;
-    if (stockToUse === 0) {
+
+    if (totalStock === 0) {
       return toast.error("Out of stock!");
     }
+
     try {
       await addToCart({
         product: product._id,
-        size: selectedSize,
+        // 🆕 Send variant info if applicable
+        variantId: selectedVariant?._id || null,
+        variant: selectedVariant
+          ? {
+            variantName: selectedVariant.variantName,
+            gram: selectedVariant.gram,
+            price: selectedVariant.price,
+            stock: selectedVariant.stock,
+            sku: selectedVariant.sku,
+          }
+          : null,
+        // Legacy size info
+        size: selectedSize || null,
         quantity: 1,
-        availableStock: stockToUse,
+        availableStock: totalStock,
       });
       toast.success("Added to cart!");
     } catch {
@@ -127,6 +174,21 @@ const SingleProduct = () => {
     original: img,
     thumbnail: img,
   }));
+
+  // 🆕 Helper to get product display price
+  const getPriceDisplay = () => {
+    if (product.hasVariants && product.variants?.length > 0) {
+      const prices = product.variants.map((v) => v.price);
+      const minPrice = Math.min(...prices);
+      const maxPrice = Math.max(...prices);
+
+      if (minPrice === maxPrice) {
+        return `₹${minPrice}`;
+      }
+      return `₹${minPrice} - ₹${maxPrice}`;
+    }
+    return `₹${product.price}`;
+  };
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -165,19 +227,76 @@ const SingleProduct = () => {
               <p className="text-md text-gray-100 mb-4">
                 {product.description}
               </p>
-              <p className="text-2xl font-semibold text-yellow-400 mb-2">
-                ₹{product.price}
-              </p>
+
+              {/* 🆕 Price display - shows range or selected variant price */}
+              {product.hasVariants ? (
+                <div className="mb-2">
+                  {!selectedVariant ? (
+                    <p className="text-2xl font-semibold text-yellow-400">
+                      {getPriceDisplay()}
+                    </p>
+                  ) : (
+                    <p className="text-2xl font-semibold text-yellow-400">
+                      ₹{selectedVariant.price}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-2xl font-semibold text-yellow-400 mb-2">
+                  ₹{product.price}
+                </p>
+              )}
+
               <p
-                className={`mb-4 font-semibold ${
-                  totalStock ? "text-green-400" : "text-red-500"
-                }`}
+                className={`mb-4 font-semibold ${totalStock ? "text-green-400" : "text-red-500"
+                  }`}
               >
-                {totalStock ? "In Stock" : "Out of Stock"}
+                {totalStock ? `In Stock (${totalStock} available)` : "Out of Stock"}
               </p>
 
-              {/* Size selection */}
-              {product.sizeType !== "Quantity" && (
+              {/* 🆕 Variant selection (for variant products) */}
+              {product.hasVariants && product.variants?.length > 0 && (
+                <div className="mb-4">
+                  <label className="block text-gray-300 mb-2 font-medium">
+                    Select Variant:
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {product.variants.map((variant) => (
+                      <button
+                        key={variant._id}
+                        onClick={() => setSelectedVariant(variant)}
+                        className={`border-2 rounded-lg p-3 text-left transition ${selectedVariant?._id === variant._id
+                            ? "border-yellow-400 bg-yellow-400/20"
+                            : "border-gray-600 hover:border-gray-400"
+                          }`}
+                      >
+                        <p className="font-medium">{variant.variantName}</p>
+                        {variant.gram && (
+                          <p className="text-xs text-gray-400">
+                            {variant.gram}g
+                          </p>
+                        )}
+                        <p className="text-yellow-400 font-semibold mt-1">
+                          ₹{variant.price}
+                        </p>
+                        <p
+                          className={`text-xs mt-1 ${variant.stock > 0
+                              ? "text-green-400"
+                              : "text-red-400"
+                            }`}
+                        >
+                          {variant.stock > 0
+                            ? `${variant.stock} in stock`
+                            : "Out of stock"}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Legacy size selection (for non-variant products) */}
+              {!product.hasVariants && product.sizeType !== "Quantity" && (
                 <div className="mb-4">
                   <label className="block text-gray-300 mb-1">
                     Select {product.sizeType}:
@@ -189,11 +308,18 @@ const SingleProduct = () => {
                   >
                     {product?.stock?.map((v) => (
                       <option key={v._id} value={v.size}>
-                        {v.size}
+                        {v.size} ({v.quantity} available)
                       </option>
                     ))}
                   </select>
                 </div>
+              )}
+
+              {/* 🆕 Show SKU for selected variant */}
+              {selectedVariant?.sku && (
+                <p className="text-sm text-gray-400 mb-4">
+                  SKU: {selectedVariant.sku}
+                </p>
               )}
 
               {/* Average rating */}
@@ -223,21 +349,15 @@ const SingleProduct = () => {
               <div className="flex gap-4 mt-auto">
                 <button
                   onClick={handleAddToCart}
-                  disabled={
-                    (product.sizeType !== "Quantity" && selectedStock === 0) ||
-                    (product.sizeType === "Quantity" && totalStock === 0)
-                  }
-                  className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black py-3 rounded-lg flex items-center justify-center gap-2 disabled:bg-gray-400"
+                  disabled={totalStock === 0}
+                  className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black py-3 rounded-lg flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   <ShoppingCart size={20} /> Add to Cart
                 </button>
                 <button
                   onClick={handleBuyNow}
-                  disabled={
-                    (product.sizeType !== "Quantity" && selectedStock === 0) ||
-                    (product.sizeType === "Quantity" && totalStock === 0)
-                  }
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg flex items-center justify-center gap-2 disabled:bg-gray-400"
+                  disabled={totalStock === 0}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   <CreditCard size={20} /> Buy Now
                 </button>
@@ -310,6 +430,14 @@ const SingleProduct = () => {
                       </span>
                     </div>
                   )}
+
+                  {/* 🆕 Show variant name in review if applicable */}
+                  {r.variantName && (
+                    <p className="text-xs text-gray-400 mb-2">
+                      Variant: {r.variantName}
+                    </p>
+                  )}
+
                   <div className="flex items-center mb-2">
                     {[...Array(r.rating)].map((_, i) => (
                       <Star key={i} className="text-yellow-400" size={18} />
@@ -350,28 +478,36 @@ const SingleProduct = () => {
             >
               {products
                 .filter((p) => p._id !== product._id)
-                .map((p) => (
-                  <SwiperSlide key={p._id}>
-                    <div
-                      onClick={() => navigate(`/single-product/${p._id}`)}
-                      className="cursor-pointer bg-gray-900 rounded-lg overflow-hidden"
-                    >
-                      <img
-                        src={p.image[0]}
-                        alt={p.name}
-                        className="w-full h-70 object-cover"
-                      />
-                      <div className="p-4">
-                        <h3 className="text-lg font-medium text-white truncate">
-                          {p.name}
-                        </h3>
-                        <p className="mt-1 text-yellow-400 font-semibold">
-                          ₹{p.price}
-                        </p>
+                .map((p) => {
+                  // 🆕 Get price display for related products
+                  const relatedPrice = p.hasVariants
+                    ? `₹${Math.min(...p.variants.map(v => v.price))}`
+                    : `₹${p.price}`;
+
+                  return (
+                    <SwiperSlide key={p._id}>
+                      <div
+                        onClick={() => navigate(`/single-product/${p._id}`)}
+                        className="cursor-pointer bg-gray-900 rounded-lg overflow-hidden hover:scale-105 transition"
+                      >
+                        <img
+                          src={p.image[0]}
+                          alt={p.name}
+                          className="w-full h-70 object-cover"
+                        />
+                        <div className="p-4">
+                          <h3 className="text-lg font-medium text-white truncate">
+                            {p.name}
+                          </h3>
+                          <p className="mt-1 text-yellow-400 font-semibold">
+                            {relatedPrice}
+                            {p.hasVariants && " onwards"}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </SwiperSlide>
-                ))}
+                    </SwiperSlide>
+                  );
+                })}
             </Swiper>
           </div>
         </div>

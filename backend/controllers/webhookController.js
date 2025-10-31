@@ -8,17 +8,15 @@ import sendEmail from "../utils/sendEmail.js";
 import CouponRedemption from "../models/couponRedemption.js";
 import Coupon from "../models/coupon.js";
 dotenv.config();
-// Helper for clearly tagged logs
+
 function logWithTS(...args) {
   console.log(`[${new Date().toISOString()}]`, ...args);
 }
 
 export const verifyPayment = async (req, res) => {
-  // Unique id per webhook for trace/debug in logs
   const requestId = crypto.randomBytes(5).toString("hex");
 
   try {
-    // 1. Signature and payload validation
     if (!Buffer.isBuffer(req.body)) {
       logWithTS(`[${requestId}] ❌ Invalid webhook format: not a Buffer`);
       return res.status(400).send("Invalid webhook format");
@@ -39,7 +37,6 @@ export const verifyPayment = async (req, res) => {
       return res.status(400).send("Invalid signature");
     }
 
-    // 2. Parse webhook
     let payload;
     try {
       payload = JSON.parse(rawBody);
@@ -56,7 +53,6 @@ export const verifyPayment = async (req, res) => {
     }
     logWithTS(`[${requestId}] Full payload:`, JSON.stringify(payload, null, 2));
 
-    // Extract needed values
     const {
       order: { order_id: orderId } = {},
       payment: {
@@ -82,7 +78,6 @@ export const verifyPayment = async (req, res) => {
       `[${requestId}] 📝 Handling orderId=${orderId} status=${paymentStatus} amount=${paymentAmount}`
     );
 
-    // --- Handle PREORDER_xxx payments in Mongo ---
     const statusMap = {
       SUCCESS: {
         paymentStatus: "Paid",
@@ -118,7 +113,6 @@ export const verifyPayment = async (req, res) => {
             throw new Error(`No order found with customOrderId=${orderId}`);
           }
 
-          // ⚠️ Idempotency check — only update if status actually changes
           if (
             existingOrder.paymentStatus === "Paid" &&
             paymentStatus === "SUCCESS"
@@ -127,41 +121,62 @@ export const verifyPayment = async (req, res) => {
               `[${requestId}] ℹ️ Order ${orderId} already marked Paid, skipping stock deduction`
             );
             updatedOrder = existingOrder;
-            return; // exit — already processed successfully
+            return;
           }
 
-          // Update order status
           Object.assign(existingOrder, mongoUpdate);
           await existingOrder.save({ session: mongoSession });
           updatedOrder = existingOrder;
 
-          // Deduct stock only on first success
+          // 🆕 Deduct stock only on first success (with variant support)
           if (paymentStatus === "SUCCESS") {
             for (const item of existingOrder.items) {
-              const prodRes = await Product.findOneAndUpdate(
-                {
-                  _id: item.product,
-                  "stock.quantity": { $gte: item.quantity },
-                },
-                { $inc: { "stock.$.quantity": -item.quantity } },
-                { session: mongoSession, new: true }
-              );
-              if (!prodRes) {
-                throw new Error(
-                  `Insufficient stock or product not found for: ${item.product}`
-                );
+              const product = await Product.findById(item.product, null, { session: mongoSession });
+
+              if (!product) {
+                throw new Error(`Product not found: ${item.product}`);
               }
+
+              // Handle variants
+              if (item.variantId && product.hasVariants) {
+                const variant = product.variants.id(item.variantId);
+                if (!variant || variant.stock < item.quantity) {
+                  throw new Error(`Insufficient variant stock: ${item.variant?.variantName}`);
+                }
+                variant.stock -= item.quantity;
+                logWithTS(`[${requestId}] 📦 Variant stock reduced: ${item.variant?.variantName}`);
+              }
+              // Handle legacy products with size
+              else if (item.size && product.stock) {
+                const stockItem = product.stock.find(s => s.size === item.size);
+                if (!stockItem || stockItem.quantity < item.quantity) {
+                  throw new Error(`Insufficient stock for size: ${item.size}`);
+                }
+                stockItem.quantity -= item.quantity;
+                logWithTS(`[${requestId}] 📦 Size stock reduced: ${item.size}`);
+              }
+              // Handle simple products
+              else {
+                let remaining = item.quantity;
+                for (const stockItem of product.stock) {
+                  if (remaining <= 0) break;
+                  const toReduce = Math.min(stockItem.quantity, remaining);
+                  stockItem.quantity -= toReduce;
+                  remaining -= toReduce;
+                }
+                logWithTS(`[${requestId}] 📦 Product stock reduced`);
+              }
+
+              await product.save({ session: mongoSession });
             }
           }
-          // ----------------- COUPON REDEMPTION (idempotent & atomic) -----------------
-          // Only attempt on SUCCESS and when a coupon exists on the order
+
           try {
             if (paymentStatus === "SUCCESS" && existingOrder.coupon) {
-              const couponId = existingOrder.coupon; // assume ObjectId
+              const couponId = existingOrder.coupon;
               const userId = existingOrder.user?._id || null;
               const orderIdMongo = existingOrder._id;
 
-              // Idempotency: check redemption already exists for this order
               const alreadyRedeemed = await CouponRedemption.findOne(
                 { orderId: orderIdMongo },
                 null,
@@ -169,12 +184,9 @@ export const verifyPayment = async (req, res) => {
               );
 
               if (!alreadyRedeemed) {
-                // compute discount snapshot (if you want to store what was given)
                 let discountGiven = existingOrder.discountAmount || 0;
-                // If discountAmount not set for some reason, try to compute safely:
                 if (typeof discountGiven !== "number") discountGiven = 0;
 
-                // Create redemption record (snapshot)
                 await CouponRedemption.create(
                   [
                     {
@@ -194,7 +206,6 @@ export const verifyPayment = async (req, res) => {
                   { session: mongoSession }
                 );
 
-                // Atomically increment coupon usage and possibly deactivate
                 const coupon = await Coupon.findOneAndUpdate(
                   { _id: couponId },
                   { $inc: { usageCount: 1 } },
@@ -202,7 +213,6 @@ export const verifyPayment = async (req, res) => {
                 );
 
                 if (coupon) {
-                  // If usageLimit is defined and reached -> deactivate
                   if (
                     typeof coupon.usageLimit === "number" &&
                     (coupon.usageCount || 0) >= coupon.usageLimit
@@ -211,7 +221,6 @@ export const verifyPayment = async (req, res) => {
                     await coupon.save({ session: mongoSession });
                   }
                 } else {
-                  // Log: coupon record missing (shouldn't happen normally)
                   logWithTS(
                     `[${requestId}] ⚠️ Coupon ${couponId} referenced by order ${orderId} not found`
                   );
@@ -227,24 +236,17 @@ export const verifyPayment = async (req, res) => {
               }
             }
           } catch (couponErr) {
-            // Don't abort the whole transaction for a redemption logging failure,
-            // but surface the error and continue: you can decide if you want to throw instead.
             logWithTS(
               `[${requestId}] ⚠️ Coupon redemption failed (inside transaction):`,
               couponErr.message || couponErr
             );
-            // If you want strict atomicity (i.e., redeeming must succeed), uncomment next line:
-            // throw couponErr;
           }
 
-          // optional: final save if you changed anything else
           await existingOrder.save({ session: mongoSession });
-          // ---------------------------------------------------------------------------
 
           try {
             console.log("USER  EMAIL Sending .....");
 
-            //user mail
             await sendEmail(
               updatedOrder?.user?.email,
               "Order Confirmation: #" + updatedOrder._id,
@@ -252,7 +254,6 @@ export const verifyPayment = async (req, res) => {
             );
             console.log("USER  EMAIL SENDED .....");
 
-            //admin mail
             console.log("admin  EMAIL SENDED .....");
 
             await sendEmail(
@@ -261,8 +262,7 @@ export const verifyPayment = async (req, res) => {
                 "shruti.rdf@gmail.com",
               ],
               "New Paid Order: #" + updatedOrder._id,
-              `New order received!\nOrder ID: ${updatedOrder._id}\nUser: ${
-                updatedOrder?.user?.email
+              `New order received!\nOrder ID: ${updatedOrder._id}\nUser: ${updatedOrder?.user?.email
               }\nAmount: ₹${updatedOrder.totalAmount || paymentAmount}`
             );
             console.log("admin  EMAIL SENDED .....");
@@ -309,7 +309,6 @@ export const verifyPayment = async (req, res) => {
             `[${requestId}] ✅ Postgres productorders_transactions synced for ${orderId}`
           );
         }
-        // ✅ Redeem coupon if used
         const alreadyRedeemed = await CouponRedemption.findOne({
           userId: updatedOrder.user,
           couponId: updatedOrder.coupon,
@@ -340,7 +339,6 @@ export const verifyPayment = async (req, res) => {
       }
     }
 
-    // --- Handle WALLET_xxx wallet top-ups ---
     if (orderId.startsWith("WALLET_")) {
       try {
         await PostgresDb.transaction(async (trx) => {
@@ -371,7 +369,6 @@ export const verifyPayment = async (req, res) => {
 
           const txn = updatedTxnRows[0];
 
-          // Credit wallet only if payment SUCCESS
           if (paymentStatus === "SUCCESS") {
             const wallet = await trx("wallet")
               .where({ id: txn.wallet_id })
@@ -403,11 +400,10 @@ export const verifyPayment = async (req, res) => {
         return res.status(500).send("Wallet credit failed.");
       }
     }
-    //kundli
+
     if (orderId.startsWith("PRE_KUNDLI_") || orderId.startsWith("PRE_K")) {
       try {
         await PostgresDb.transaction(async (trx) => {
-          // Insert payment event into premium_services_payment table
           await trx("premium_services_payment")
             .insert({
               order_id: orderId,
@@ -417,7 +413,7 @@ export const verifyPayment = async (req, res) => {
               amount: paymentAmount,
               currency: paymentCurrency,
               payment_method: JSON.stringify(paymentMethod || {}),
-              payment_time: eventTime, // convert epoch seconds to JS Date
+              payment_time: eventTime,
               customer_email: customerEmail,
               customer_phone: customerPhone,
               signature: incomingSignature,
@@ -425,7 +421,7 @@ export const verifyPayment = async (req, res) => {
               audit_logged_at: trx.fn.now(),
             })
             .onConflict("order_id")
-            .merge(); // Ensures only one row per order_id, always latest status
+            .merge();
         });
         logWithTS(
           `[${requestId}] 📝 PG audit log: premium services payment event for ${orderId}`
@@ -442,7 +438,6 @@ export const verifyPayment = async (req, res) => {
     if (orderId.startsWith("PRE_PANCH_") || orderId.startsWith("PRE_P")) {
       try {
         await PostgresDb.transaction(async (trx) => {
-          // Insert payment event into premium_services_payment table
           await trx("premium_services_payment")
             .insert({
               order_id: orderId,
@@ -452,7 +447,7 @@ export const verifyPayment = async (req, res) => {
               amount: paymentAmount,
               currency: paymentCurrency,
               payment_method: JSON.stringify(paymentMethod || {}),
-              payment_time: eventTime, // convert epoch seconds to JS Date
+              payment_time: eventTime,
               customer_email: customerEmail,
               customer_phone: customerPhone,
               signature: incomingSignature,
@@ -460,7 +455,7 @@ export const verifyPayment = async (req, res) => {
               audit_logged_at: trx.fn.now(),
             })
             .onConflict("order_id")
-            .merge(); // Ensures only one row per order_id, always latest status
+            .merge();
         });
 
         logWithTS(
@@ -474,10 +469,10 @@ export const verifyPayment = async (req, res) => {
         return res.status(500).send("Postgres insert failed.");
       }
     }
+
     if (orderId.startsWith("PRE_MATCH_") || orderId.startsWith("PRE_M")) {
       try {
         await PostgresDb.transaction(async (trx) => {
-          // Insert payment event into premium_services_payment table
           await trx("premium_services_payment")
             .insert({
               order_id: orderId,
@@ -487,7 +482,7 @@ export const verifyPayment = async (req, res) => {
               amount: paymentAmount,
               currency: paymentCurrency,
               payment_method: JSON.stringify(paymentMethod || {}),
-              payment_time: eventTime, // convert epoch seconds to JS Date
+              payment_time: eventTime,
               customer_email: customerEmail,
               customer_phone: customerPhone,
               signature: incomingSignature,
@@ -495,7 +490,7 @@ export const verifyPayment = async (req, res) => {
               audit_logged_at: trx.fn.now(),
             })
             .onConflict("order_id")
-            .merge(); // Ensures only one row per order_id, always latest status
+            .merge();
         });
         logWithTS(
           `[${requestId}] 📝 PG audit log: premium services payment event for ${orderId}`
@@ -508,7 +503,7 @@ export const verifyPayment = async (req, res) => {
         return res.status(500).send("Postgres insert failed.");
       }
     }
-    // --- Audit payment event in Postgres ---
+
     try {
       await PostgresDb.transaction(async (trx) => {
         await logTransactionToPostgres(
@@ -543,4 +538,3 @@ export const verifyPayment = async (req, res) => {
     return res.status(500).send("Internal Server Error");
   }
 };
-//

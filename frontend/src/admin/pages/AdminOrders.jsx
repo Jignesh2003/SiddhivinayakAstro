@@ -67,6 +67,48 @@ const AdminOrders = () => {
     )
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+  // NEW: Helper function to display variant info
+  const getVariantDisplay = (item) => {
+    // If item has variantId, it's a variant product
+    if (item.variantId || item.variant) {
+      const variant = item.variant || {};
+      return (
+        <>
+          {variant.variantName && (
+            <p className="text-sm text-gray-600">
+              <span className="font-medium">Variant:</span> {variant.variantName}
+            </p>
+          )}
+          {variant.gram && (
+            <p className="text-sm text-gray-600">
+              <span className="font-medium">Weight:</span> {variant.gram}g
+            </p>
+          )}
+          {variant.sku && (
+            <p className="text-xs text-gray-500">SKU: {variant.sku}</p>
+          )}
+        </>
+      );
+    }
+    // Legacy product with size
+    if (item.size) {
+      return (
+        <p className="text-sm text-gray-600">
+          <span className="font-medium">Size:</span> {item.size}
+        </p>
+      );
+    }
+    return null;
+  };
+
+  // NEW: Helper to get item price (from variant or product)
+  const getItemPrice = (item) => {
+    if (item.variant?.price) return item.variant.price;
+    if (item.price) return item.price;
+    if (item.product?.price) return item.product.price;
+    return 0;
+  };
+
   if (loading) return <p>Loading orders...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
 
@@ -207,29 +249,41 @@ const AdminOrders = () => {
                   )}
                 </div>
 
-                {/* Products List */}
+                {/* Products List - UPDATED WITH VARIANT SUPPORT */}
                 <div className="mt-4">
                   <h4 className="font-medium text-gray-800 mb-2">🛍 Products</h4>
-                  <ul className="space-y-2">
+                  <ul className="space-y-3">
                     {order.items.map((item, i) => (
                       <li
                         key={i}
-                        className="flex items-center gap-4 bg-gray-50 p-2 rounded-md"
+                        className="flex items-start gap-4 bg-gray-50 p-3 rounded-md border"
                       >
+                        {/* Product Image */}
                         {item.product?.images?.[0] && (
                           <img
                             src={item.product.images[0]}
                             alt={item.product?.name}
-                            className="w-12 h-12 object-cover border rounded"
+                            className="w-16 h-16 object-cover border rounded flex-shrink-0"
                           />
                         )}
-                        <div>
-                          <p className="font-medium">{item.product?.name}</p>
-                          <p className="text-sm text-gray-500">
-                            Qty: {item.quantity}
+
+                        {/* Product Details */}
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-800">
+                            {item.product?.name || "Unknown Product"}
                           </p>
-                          <p className="text-sm text-gray-500">
-                            Size: {item.size || "N/A"}
+
+                          {/* NEW: Display variant info or size */}
+                          {getVariantDisplay(item)}
+
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Quantity:</span> {item.quantity}
+                          </p>
+
+                          {/* Price */}
+                          <p className="text-sm font-medium text-green-600">
+                            ₹{getItemPrice(item)} × {item.quantity} = ₹
+                            {getItemPrice(item) * item.quantity}
                           </p>
                         </div>
                       </li>
@@ -239,9 +293,9 @@ const AdminOrders = () => {
                   {/* Invoice Redirect */}
                   <button
                     onClick={() => navigate(`/admin/invoice/${order._id}`)}
-                    className="mt-3 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                    className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
                   >
-                    📄 Invoice
+                    📄 View Invoice
                   </button>
                 </div>
               </div>

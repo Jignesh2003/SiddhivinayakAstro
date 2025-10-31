@@ -31,7 +31,6 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
-  const [showTopBtn, setShowTopBtn] = useState(false);
 
   const navigate = useNavigate();
 
@@ -40,20 +39,96 @@ const Products = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const logout = useAuthStore((state) => state.logout);
 
-  // Unique filter options
+  // 🆕 Helper to get product price (variant or legacy)
+  const getProductPrice = (product) => {
+    if (product.hasVariants && product.variants?.length > 0) {
+      const prices = product.variants.map(v => v.price);
+      const minPrice = Math.min(...prices);
+      const maxPrice = Math.max(...prices);
+
+      if (minPrice === maxPrice) {
+        return `₹${minPrice}`;
+      }
+      return `₹${minPrice} - ₹${maxPrice}`;
+    }
+    return `₹${product.price || 0}`;
+  };
+
+  // 🆕 Helper to get total stock (variant or legacy)
+  const getTotalStock = (product) => {
+    if (product.hasVariants && product.variants?.length > 0) {
+      return product.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+    }
+
+    if (Array.isArray(product.stock)) {
+      return product.stock.reduce((sum, s) => sum + (s.quantity || 0), 0);
+    }
+
+    return 0;
+  };
+
+  // 🆕 Helper to get all sizes (for filtering - works with both variant and legacy)
+  const getAllSizes = (products) => {
+    const sizes = new Set();
+
+    products.forEach(product => {
+      // Variant products
+      if (product.hasVariants && product.variants?.length > 0) {
+        product.variants.forEach(variant => {
+          if (variant.variantName) {
+            sizes.add(variant.variantName);
+          }
+        });
+      }
+      // Legacy products with stock array
+      else if (Array.isArray(product.stock)) {
+        product.stock.forEach(s => {
+          if (s.size) {
+            sizes.add(s.size);
+          }
+        });
+      }
+    });
+
+    return Array.from(sizes);
+  };
+
+  // 🆕 Helper to check if product matches size filter (works with variants)
+  const matchesSizeFilter = (product, sizeFilters) => {
+    if (!sizeFilters.length) return true;
+
+    // Check variant products
+    if (product.hasVariants && product.variants?.length > 0) {
+      return product.variants.some(variant =>
+        sizeFilters.includes(variant.variantName)
+      );
+    }
+
+    // Check legacy products
+    if (Array.isArray(product.stock)) {
+      return product.stock.some(s => sizeFilters.includes(s.size));
+    }
+
+    return false;
+  };
+
+  // 🆕 Helper to get min price for sorting/filtering (works with variants)
+  const getMinPrice = (product) => {
+    if (product.hasVariants && product.variants?.length > 0) {
+      return Math.min(...product.variants.map(v => v.price));
+    }
+    return product.price || 0;
+  };
+
+  // Unique filter options (updated to handle variants)
   const uniqueCategories = [
     ...new Set(products.map((p) => p.category).filter(Boolean)),
   ];
   const uniqueBrands = [
     ...new Set(products.map((p) => p.brand).filter(Boolean)),
   ];
-  const uniqueSizes = [
-    ...new Set(
-      products.flatMap((p) =>
-        Array.isArray(p.stock) ? p.stock.map((s) => s.size).filter(Boolean) : []
-      )
-    ),
-  ];
+  const uniqueSizes = getAllSizes(products); // 🆕 Updated to use helper
+
   const priceRanges = [
     { label: "Below ₹1000", value: "below1000" },
     { label: "₹1000 - 2000", value: "1000-2000" },
@@ -81,7 +156,7 @@ const Products = () => {
     fetchProducts();
   }, []);
 
-  // Search and filtering combined
+  // 🆕 Updated search and filtering to handle variants
   useEffect(() => {
     let result = products.filter((p) =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -90,17 +165,18 @@ const Products = () => {
     if (filters.category.length) {
       result = result.filter((p) => filters.category.includes(p.category));
     }
+
     if (filters.brand.length) {
       result = result.filter((p) => filters.brand.includes(p.brand));
     }
+
     if (filters.size.length) {
-      result = result.filter((p) =>
-        p.stock?.some((s) => filters.size.includes(s.size))
-      );
+      result = result.filter((p) => matchesSizeFilter(p, filters.size)); // 🆕 Updated
     }
+
     if (filters.priceRange) {
       result = result.filter((p) => {
-        const price = p.price || 0;
+        const price = getMinPrice(p); // 🆕 Updated to use min price
         switch (filters.priceRange) {
           case "below1000":
             return price < 1000;
@@ -116,10 +192,11 @@ const Products = () => {
       });
     }
 
+    // 🆕 Updated sorting to handle variants
     if (sortOption === "priceLowHigh") {
-      result.sort((a, b) => a.price - b.price);
+      result.sort((a, b) => getMinPrice(a) - getMinPrice(b));
     } else if (sortOption === "priceHighLow") {
-      result.sort((a, b) => b.price - a.price);
+      result.sort((a, b) => getMinPrice(b) - getMinPrice(a));
     } else if (sortOption === "nameAZ") {
       result.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortOption === "nameZA") {
@@ -261,7 +338,10 @@ const Products = () => {
             </div>
 
             <div className="mt-4">
-              <h3 className="font-semibold text-white mb-2">Size</h3>
+              <h3 className="font-semibold text-white mb-2">
+                {/* 🆕 Updated label to be more generic */}
+                Size / Variant
+              </h3>
               {uniqueSizes.map((size) => (
                 <label
                   key={size}
@@ -316,24 +396,19 @@ const Products = () => {
             ) : filteredProducts.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredProducts.map((product) => {
-                  const totalStock = Array.isArray(product.stock)
-                    ? product.stock.reduce(
-                        (sum, v) => sum + (v.quantity || 0),
-                        0
-                      )
-                    : 0;
-                  const fakeRating = 5; // static 5-star
-                  const reviewCount = 5; // static count
+                  const totalStock = getTotalStock(product); // 🆕 Updated
+                  const fakeRating = 5;
+                  const reviewCount = 5;
                   const isOutOfStock = totalStock === 0;
+                  const priceDisplay = getProductPrice(product); // 🆕 Updated
 
                   return (
                     <div
                       key={product._id}
-                      className={`w-full bg-gray-800/80 border border-gray-700 rounded-lg p-4 relative flex flex-col justify-between transition hover:shadow-xl ${
-                        isOutOfStock
+                      className={`w-full bg-gray-800/80 border border-gray-700 rounded-lg p-4 relative flex flex-col justify-between transition hover:shadow-xl ${isOutOfStock
                           ? "opacity-60 pointer-events-none grayscale"
                           : "hover:scale-[1.02]"
-                      }`}
+                        }`}
                       style={{
                         boxShadow: "0 1px 0 0 #232323, 1px 0 0 0 #232323",
                       }}
@@ -365,11 +440,10 @@ const Products = () => {
                         <img
                           src={product.image?.[0]}
                           alt={product.name}
-                          className={`absolute inset-0 w-full h-full object-contain ${
-                            isOutOfStock
+                          className={`absolute inset-0 w-full h-full object-contain ${isOutOfStock
                               ? "grayscale pointer-events-none"
                               : "hover:scale-105 transition-transform duration-300"
-                          }`}
+                            }`}
                         />
                       </div>
 
@@ -391,13 +465,15 @@ const Products = () => {
                         <p className="text-sm text-gray-400 mb-1 pt-1">
                           {product?.miniDesc}
                         </p>
+
+                        {/* 🆕 Updated price display - shows range for variants */}
                         <p className="text-xl font-bold mb-1 text-white">
-                          ₹{product.price}
+                          {priceDisplay}
                         </p>
+
                         <p
-                          className={`text-sm font-medium mb-2 ${
-                            isOutOfStock ? "text-red-400" : "text-green-400"
-                          }`}
+                          className={`text-sm font-medium mb-2 ${isOutOfStock ? "text-red-400" : "text-green-400"
+                            }`}
                         >
                           {isOutOfStock ? "Out of Stock" : "In Stock"}
                         </p>
@@ -511,7 +587,7 @@ const Products = () => {
               </div>
 
               <div className="mt-4">
-                <h4 className="font-semibold mb-2 text-white">Size</h4>
+                <h4 className="font-semibold mb-2 text-white">Size / Variant</h4>
                 {uniqueSizes.map((size) => (
                   <label
                     key={size}
@@ -595,7 +671,7 @@ const Products = () => {
           </div>
         )}
 
-  <GoToTopButton/>
+        <GoToTopButton />
 
         {/* Footer */}
         <Footer />

@@ -1,33 +1,57 @@
 import mongoose from "mongoose";
 
+//  Order Item Schema with Variant Support
+const orderItemSchema = new mongoose.Schema({
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    required: true,
+  },
+  quantity: {
+    type: Number,
+    required: true,
+    min: 1
+  },
+  price: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  // Legacy size field (for non-variant products)
+  size: {
+    type: String,
+    default: null,
+  },
+  // Variant support
+  variantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null,
+  },
+  variant: {
+    variantName: String,
+    gram: Number,
+    price: Number,
+    sku: String,
+  },
+});
+
 const orderSchema = new mongoose.Schema(
   {
-    // Default MongoDB ObjectId _id
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
 
-    items: [
-      {
-        product: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Product",
-          required: true,
-        },
-        quantity: { type: Number, required: true },
-      },
-    ],
+    items: [orderItemSchema], // Using the new schema with variant support
 
     totalAmount: { type: Number, required: true },
-    gstAmount: { type: Number, required: true }, // calculated GST total
-    deliveryCharges: { type: Number, default: 0 }, // delivery fees
+    gstAmount: { type: Number, required: true },
+    deliveryCharges: { type: Number, default: 0 },
 
-    // ── New field to store your Cashfree string ID ──
+    // Cashfree custom order ID
     customOrderId: {
       type: String,
-      index: true, // index for fast lookups in webhook
       default: null,
     },
 
@@ -54,8 +78,15 @@ const orderSchema = new mongoose.Schema(
       ],
       default: "Pending",
     },
-    coupon: { type: mongoose.Schema.Types.ObjectId, ref: "Coupon" }, // reference to Coupon if used
-    discountAmount: { type: Number, default: 0 }, // actual discount given in this order
+
+    coupon: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Coupon"
+    },
+    discountAmount: {
+      type: Number,
+      default: 0
+    },
 
     shippingAddress: {
       name: { type: String, required: true },
@@ -69,5 +100,10 @@ const orderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Indexes for better query performance
+orderSchema.index({ user: 1, createdAt: -1 });
+orderSchema.index({ orderStatus: 1 });
+orderSchema.index({ customOrderId: 1 });
 
 export default mongoose.model("Order", orderSchema);

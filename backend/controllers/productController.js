@@ -1,34 +1,40 @@
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
-import cloudinary from "../config/cloudinary.js"; // wherever you configure your Cloudinary SDK
+import cloudinary from "../config/cloudinary.js";
 
-// get products list for user
+// Get products list for user
 export const getProducts = async (req, res) => {
   try {
     const products = await Product.find()
-      .select("-reviews")               // omit reviews if you don’t need them here
-      .sort({ createdAt: 1 });         // maybe newest first
+      .select("-reviews") // omit reviews
+      .sort({ createdAt: -1 }); // newest first
+
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: "Error fetching products", error: error.message });
   }
 };
 
-// get single product detail (including reviews)
+// Get single product detail (including reviews)
 export const getSingleProductDetail = async (req, res) => {
   try {
+    // Don't use .lean() because we need virtuals (totalStock, priceRange, defaultVariant)
     const product = await Product.findById(req.params.id)
-      .populate("reviews.userId", "name avatar").lean() // bring in user info if desired
+      .populate("reviews.userId", "name avatar");
 
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    res.status(200).json(product);
+    // Convert to object to include virtuals
+    const productObj = product.toObject();
+
+    res.status(200).json(productObj);
   } catch (error) {
     console.error("Error fetching product:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
+// Edit product (admin) - UPDATED WITH VARIANTS SUPPORT
 export const editAdminProduct = async (req, res) => {
   const { id } = req.params;
   const {
@@ -45,6 +51,9 @@ export const editAdminProduct = async (req, res) => {
     howToWear,
     benefits,
     bestDayToWear,
+    // NEW FIELDS FOR VARIANTS
+    hasVariants,
+    variants: variantsRaw,
   } = req.body;
 
   try {
@@ -53,61 +62,86 @@ export const editAdminProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // Parse stock
-    let incomingStock;
-    if (typeof stockRaw === "string") {
-      try {
-        incomingStock = JSON.parse(stockRaw);
-      } catch {
-        return res.status(400).json({ message: "Invalid stock JSON" });
-      }
-    } else {
-      incomingStock = stockRaw;
-    }
-
-    if (!Array.isArray(incomingStock)) {
-      return res.status(400).json({ message: "Stock must be an array" });
-    }
-
-    // Build final stock array, falling back to old sizes
-    const finalStock = incomingStock.map((entry, idx) => {
-      const quantity = Number(entry.quantity) || 0;
-      let size = entry.size || "";
-
-      if (sizeType !== "Quantity" && !size && product.stock[idx]) {
-        size = product.stock[idx].size;
-      }
-
-      return { size, quantity };
-    });
-
-    // Parse tags, howToWear, benefits, bestDayToWear
-    // If string, parse JSON or fallback to empty array
-    function parseArrayField(field) {
-      if (!field) return [];
+    // Helper function to parse array fields
+    function parseArrayField(field, fallback = []) {
+      if (!field) return fallback;
       if (Array.isArray(field)) return field;
       try {
         return JSON.parse(field);
       } catch {
-        return [];
+        return fallback;
       }
     }
 
-    const parsedTags = parseArrayField(tags) || product.tags;
-    const parsedHowToWear =
-      parseArrayField(howToWear) || product.howToWear || [];
-    const parsedBenefits = parseArrayField(benefits) || product.benefits || [];
-    const parsedBestDayToWear =
-      parseArrayField(bestDayToWear) || product.bestDayToWear || [];
+    // Parse tags, howToWear, benefits, bestDayToWear
+    const parsedTags = parseArrayField(tags, product.tags);
+    const parsedHowToWear = parseArrayField(howToWear, product.howToWear);
+    const parsedBenefits = parseArrayField(benefits, product.benefits);
+    const parsedBestDayToWear = parseArrayField(bestDayToWear, product.bestDayToWear);
+
+    // NEW: Parse variants if product uses variant system
+    let parsedVariants = product.variants;
+    const useVariants = hasVariants === true || hasVariants === "true";
+
+    if (useVariants && variantsRaw) {
+      try {
+        parsedVariants = typeof variantsRaw === "string"
+          ? JSON.parse(variantsRaw)
+          : variantsRaw;
+      } catch {
+        return res.status(400).json({ message: "Invalid variants JSON" });
+      }
+
+      if (!Array.isArray(parsedVariants)) {
+        return res.status(400).json({ message: "Variants must be an array" });
+      }
+    }
+
+    // Parse legacy stock (for products without variants)
+    let finalStock = product.stock;
+    if (!useVariants && stockRaw) {
+      let incomingStock;
+      if (typeof stockRaw === "string") {
+        try {
+          incomingStock = JSON.parse(stockRaw);
+        } catch {
+          return res.status(400).json({ message: "Invalid stock JSON" });
+        }
+      } else {
+        incomingStock = stockRaw;
+      }
+
+      if (!Array.isArray(incomingStock)) {
+        return res.status(400).json({ message: "Stock must be an array" });
+      }
+
+      // Build final stock array, falling back to old sizes
+      finalStock = incomingStock.map((entry, idx) => {
+        const quantity = Number(entry.quantity) || 0;
+        let size = entry.size || "";
+
+        if (sizeType !== "Quantity" && !size && product.stock[idx]) {
+          size = product.stock[idx].size;
+        }
+
+        return { size, quantity };
+      });
+    }
 
     // Handle image replacement
     let newImages = product.image.slice();
     let newPublicIds = product.imagePublicId.slice();
 
     if (req.files && req.files.length) {
-      for (let pubId of product.imagePublicId) {
-        await cloudinary.uploader.destroy(pubId);
+      // Delete old images from Cloudinary
+      if (product.imagePublicId && product.imagePublicId.length > 0) {
+        for (let pubId of product.imagePublicId) {
+          if (pubId && pubId.trim() !== "") {
+            await cloudinary.uploader.destroy(pubId);
+          }
+        }
       }
+
       newImages = req.files.map((f) => f.path);
       newPublicIds = req.files.map((f) => f.filename);
     }
@@ -115,21 +149,32 @@ export const editAdminProduct = async (req, res) => {
     // Build update object
     const updates = {
       name: name ?? product.name,
-      price: price ?? product.price,
       description: description ?? product.description,
       miniDesc: miniDesc ?? product.miniDesc,
       tags: parsedTags,
       category: category ?? product.category,
       subcategory: subcategory ?? product.subcategory,
       brand: brand ?? product.brand,
-      sizeType: sizeType ?? product.sizeType,
-      stock: finalStock,
       howToWear: parsedHowToWear,
       benefits: parsedBenefits,
       bestDayToWear: parsedBestDayToWear,
       image: newImages,
       imagePublicId: newPublicIds,
+      // NEW: Add variants support
+      hasVariants: useVariants,
     };
+
+    // Add variant-specific or legacy-specific fields
+    if (useVariants) {
+      updates.variants = parsedVariants;
+      // Don't update legacy fields when using variants
+    } else {
+      updates.price = price ?? product.price;
+      updates.sizeType = sizeType ?? product.sizeType;
+      updates.stock = finalStock;
+      // Clear variants if switching back to legacy
+      updates.variants = undefined;
+    }
 
     const updated = await Product.findByIdAndUpdate(id, updates, {
       new: true,
@@ -148,8 +193,7 @@ export const editAdminProduct = async (req, res) => {
   }
 };
 
-
-// delete a product (admin)
+// Delete a product (admin)
 export const deleteAdminProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -159,20 +203,22 @@ export const deleteAdminProduct = async (req, res) => {
 
     console.log("imagePublicId:", product.imagePublicId);
 
-    // Remove images from Cloudinary
+    // Remove main product images from Cloudinary
     if (Array.isArray(product.imagePublicId) && product.imagePublicId.length) {
       for (const publicId of product.imagePublicId) {
         if (typeof publicId === "string" && publicId.trim() !== "") {
           await cloudinary.uploader.destroy(publicId);
-        } else {
-          console.error("Invalid publicId in array, skipping:", publicId);
         }
       }
-    } else if (
-      typeof product.imagePublicId === "string" &&
-      product.imagePublicId.trim() !== ""
-    ) {
-      await cloudinary.uploader.destroy(product.imagePublicId);
+    }
+
+    // NEW: Remove variant-specific images from Cloudinary
+    if (product.hasVariants && product.variants && product.variants.length > 0) {
+      for (const variant of product.variants) {
+        if (variant.imagePublicId && variant.imagePublicId.trim() !== "") {
+          await cloudinary.uploader.destroy(variant.imagePublicId);
+        }
+      }
     }
 
     // Delete product document from database
@@ -187,7 +233,7 @@ export const deleteAdminProduct = async (req, res) => {
   }
 };
 
-// admin: mark an order as paid
+// Admin: mark an order as paid
 export const markAsPaid = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -205,4 +251,49 @@ export const markAsPaid = async (req, res) => {
   }
 };
 
+// NEW: Get product stock by variant (helper for cart/checkout)
+export const getProductStock = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { variantId, size } = req.query;
 
+    const product = await Product.findById(id);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+
+    let stockInfo = {};
+
+    if (product.hasVariants && product.variants) {
+      // Find stock for specific variant
+      const variant = variantId
+        ? product.variants.id(variantId)
+        : product.variants[0];
+
+      if (variant) {
+        stockInfo = {
+          stock: variant.stock,
+          price: variant.price,
+          variantId: variant._id,
+          variantName: variant.variantName,
+        };
+      }
+    } else if (product.stock) {
+      // Legacy stock system
+      const stockItem = size
+        ? product.stock.find(s => s.size === size)
+        : product.stock[0];
+
+      if (stockItem) {
+        stockInfo = {
+          stock: stockItem.quantity,
+          price: product.price,
+          size: stockItem.size,
+        };
+      }
+    }
+
+    res.status(200).json(stockInfo);
+  } catch (error) {
+    console.error("Error fetching stock:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
