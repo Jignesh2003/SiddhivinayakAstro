@@ -102,6 +102,7 @@ const productSchema = new mongoose.Schema(
         "Money Magnet",
         "Pyramids",
         "Home Decor",
+        "Stone", 
         "Customized",
       ],
     },
