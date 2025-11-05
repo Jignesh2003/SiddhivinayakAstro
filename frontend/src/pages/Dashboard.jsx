@@ -53,10 +53,19 @@ const Home = () => {
     assets.Scorpio,
   ];
 
-  const getTotalStock = (stockArr) =>
-    Array.isArray(stockArr)
-      ? stockArr.reduce((sum, s) => sum + (s.quantity || 0), 0)
-      : 0;
+  const getTotalStock = (product) => {
+    // Check if product has variants
+    if (product.hasVariants && Array.isArray(product.variants) && product.variants.length > 0) {
+      return product.variants.reduce((sum, variant) => sum + (variant.stock || 0), 0);
+    }
+
+    // Legacy approach: sum up stock array
+    if (Array.isArray(product.stock) && product.stock.length > 0) {
+      return product.stock.reduce((sum, s) => sum + (s.quantity || 0), 0);
+    }
+
+    return 0;
+  };
 
   // Unique filters options
   const uniqueCategories = [
@@ -67,11 +76,24 @@ const Home = () => {
   ];
   const uniqueSizes = [
     ...new Set(
-      products.flatMap((p) =>
-        Array.isArray(p.stock) ? p.stock.map((s) => s.size).filter(Boolean) : []
-      )
+      products.flatMap((p) => {
+        // Get sizes from variants
+        if (p.hasVariants && Array.isArray(p.variants)) {
+          return p.variants
+            .filter((v) => v.variantName)
+            .map((v) => v.variantName);
+        }
+        // Get sizes from legacy stock
+        if (Array.isArray(p.stock)) {
+          return p.stock
+            .filter((s) => s.size)
+            .map((s) => s.size);
+        }
+        return [];
+      })
     ),
   ];
+
   const priceRanges = [
     { label: "Below ₹1000", value: "below1000" },
     { label: "₹1000 - 2000", value: "1000-2000" },
@@ -132,13 +154,27 @@ const Home = () => {
       result = result.filter((p) => filters.brand.includes(p.brand));
     }
     if (filters.size.length) {
-      result = result.filter((p) =>
-        p.stock?.some((s) => filters.size.includes(s.size))
-      );
+      result = result.filter((p) => {
+        // For variant products, check variant names
+        if (p.hasVariants && p.variants) {
+          return p.variants.some((v) => filters.size.includes(v.variantName));
+        }
+        // For legacy products, check stock sizes
+        return p.stock?.some((s) => filters.size.includes(s.size));
+      });
     }
+
     if (filters.priceRange) {
       result = result.filter((p) => {
-        const price = p.price || 0;
+        // Get price based on product type
+        let price;
+        if (p.hasVariants && Array.isArray(p.variants) && p.variants.length > 0) {
+          // For variants, use the minimum price
+          price = Math.min(...p.variants.map(v => v.price || 0));
+        } else {
+          price = p.price || 0;
+        }
+
         switch (filters.priceRange) {
           case "below1000":
             return price < 1000;
@@ -154,13 +190,27 @@ const Home = () => {
       });
     }
 
-    if (sortOption === "priceLowHigh") result.sort((a, b) => a.price - b.price);
-    else if (sortOption === "priceHighLow")
-      result.sort((a, b) => b.price - a.price);
-    else if (sortOption === "nameAZ")
+
+    // Add this helper function before applyFiltersAndSort
+    const getProductPrice = (product) => {
+      if (product.hasVariants && Array.isArray(product.variants) && product.variants.length > 0) {
+        // For variants, use minimum price for sorting
+        return Math.min(...product.variants.map(v => v.price || 0));
+      }
+      return product.price || 0;
+    };
+
+    // Update your sorting logic
+    if (sortOption === "priceLowHigh") {
+      result.sort((a, b) => getProductPrice(a) - getProductPrice(b));
+    } else if (sortOption === "priceHighLow") {
+      result.sort((a, b) => getProductPrice(b) - getProductPrice(a));
+    } else if (sortOption === "nameAZ") {
       result.sort((a, b) => a.name.localeCompare(b.name));
-    else if (sortOption === "nameZA")
+    } else if (sortOption === "nameZA") {
       result.sort((a, b) => b.name.localeCompare(a.name));
+    }
+
 
     setFilteredProducts(result);
     setShowFilterModal(false);
@@ -358,21 +408,27 @@ const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5
           </h2>
           <div className="grid grid-cols-2 gap-[2px] md:grid-cols-3 lg:grid-cols-4">
             {filteredProducts.map((p) => {
-              const stock = getTotalStock(p.stock);
+              // Get total stock (handles both variants and legacy stock)
+              const stock = getTotalStock(p);
               const isOutOfStock = stock <= 0;
-              // const sizes =
-              Array.isArray(p.stock) && p.stock.length > 0
-                ? p.stock
-                    .filter((s) => !!s.size)
+
+              // Get available sizes based on stock type
+              const sizes = p.hasVariants
+                ? Array.isArray(p.variants) && p.variants.length > 0
+                  ? p.variants
+                    .filter((v) => v.stock > 0) // Only show variants with stock
+                    .map((v) => v.variantName)
+                    .join(", ")
+                  : "-"
+                : Array.isArray(p.stock) && p.stock.length > 0
+                  ? p.stock
+                    .filter((s) => !!s.size && s.quantity > 0)
                     .map((s) => s.size)
                     .join(", ")
-                : "-";
+                  : "-";
+
               const reviews = Array.isArray(p.reviews) ? p.reviews : [];
               const rating = 5;
-              // ? Math.round(
-              //     reviews.reduce((a, r) => a + r.rating, 0) / reviews.length
-              //   )
-              // : 0;
 
               return (
                 <div
@@ -467,8 +523,20 @@ const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5
                     )}
                     <div className="flex items-end justify-between mt-1">
                       <span className="text-lg font-bold text-indigo-400 tracking-tight">
-                        ₹{p.price}
+                        {p.hasVariants && p.variants && p.variants.length > 0 ? (
+                          (() => {
+                            const prices = p.variants.map(v => v.price);
+                            const minPrice = Math.min(...prices);
+                            const maxPrice = Math.max(...prices);
+                            return minPrice === maxPrice
+                              ? `₹${minPrice}`
+                              : `₹${minPrice} - ₹${maxPrice}`;
+                          })()
+                        ) : (
+                          `₹${p.price}`
+                        )}
                       </span>
+
                       {!isOutOfStock && (
                         <button
                           className="bg-gradient-to-r from-indigo-700 to-indigo-900 text-white text-sm font-bold px-4 py-2 rounded-full shadow focus:outline-none hover:from-indigo-800 hover:to-black"

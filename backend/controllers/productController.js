@@ -7,13 +7,32 @@ export const getProducts = async (req, res) => {
   try {
     const products = await Product.find()
       .select("-reviews") // omit reviews
-      .sort({ createdAt: -1 }); // newest first
+      .sort({ createdAt: -1 }) // newest first
+      .lean(); // Convert to plain objects for better performance
 
-    res.json(products);
+    // Add computed fields that would normally be virtuals
+    const enrichedProducts = products.map(product => {
+      // Calculate total stock
+      let totalStock = 0;
+      if (product.hasVariants && Array.isArray(product.variants)) {
+        totalStock = product.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+      } else if (Array.isArray(product.stock)) {
+        totalStock = product.stock.reduce((sum, s) => sum + (s.quantity || 0), 0);
+      }
+
+      return {
+        ...product,
+        totalStock, // Add computed totalStock field
+      };
+    });
+
+    res.json(enrichedProducts);
   } catch (error) {
+    console.error("Error fetching products:", error);
     res.status(500).json({ message: "Error fetching products", error: error.message });
   }
 };
+
 
 // Get single product detail (including reviews)
 export const getSingleProductDetail = async (req, res) => {
