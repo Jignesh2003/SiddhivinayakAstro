@@ -62,20 +62,11 @@ export const signupUser = async (req, res) => {
         status: 'active',
       });
     } catch (walletErr) {
-      console.error("Wallet creation error:", walletErr.message);
-
-      // Compensating transaction: delete the user for DB consistency
-      try {
-        await User.findByIdAndDelete(newUser._id);
-        return res.status(500).json({ message: "Signup failed during wallet setup. User record rolled back." });
-      } catch (deleteErr) {
-        console.error("CRITICAL: User rollback failed:", deleteErr);
-        return res.status(500).json({ message: "Signup failed and rollback failed! Contact support." });
-      }
+      console.warn("⚠️ Wallet creation skipped:", walletErr.message);
     }
 
-    // 7. All OK
-    res.status(201).json({ message: "Signup successful and wallet created!" });
+    // 7. All OK - user created successfully in MongoDB
+    res.status(201).json({ message: "Signup successful!" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
