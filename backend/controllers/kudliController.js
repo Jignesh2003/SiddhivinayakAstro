@@ -315,7 +315,10 @@ export const detailedKundliMatching = async (req, res) => {
     }
 
     // Not in cache → fetch from ProKerala
+    console.log('📡 Fetching from Prokerala API...');
     const token = await getProkeralaToken();
+    console.log('✅ Got token, making API call...');
+    
     const params = new URLSearchParams({
       ayanamsa,
       girl_coordinates,
@@ -327,8 +330,13 @@ export const detailedKundliMatching = async (req, res) => {
 
     const prokRes = await axios.get(
       `${process.env.PROKERALA_MATCH_API}?${params.toString()}`,
-      { headers: { Authorization: `Bearer ${token}` } }
+      { 
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 30000 // 30 second timeout for matching API
+      }
     );
+
+    console.log('✅ Got response from Prokerala');
 
     // Cache the full response body for 6h
     await redis.set(cacheKey, JSON.stringify(prokRes.data), 'EX', 6 * 3600);

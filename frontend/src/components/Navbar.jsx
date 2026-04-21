@@ -276,8 +276,7 @@ const Navbar = () => {
                 {[
                   { to: "/daily-prediction", label: "Daily Prediction" },
                   { to: "/kundli-details", label: "Kundli" },
-                  { to: "/matching-form", label: "Kundli Matching" },
-                  { to: "/panchang-form", label: "Panchang" },
+                  { to: "/matching-form", label: "Kundli Matching" },                  { to: "/free-kundli-match", label: "Free Kundli Match ✨" },                  { to: "/panchang-form", label: "Panchang" },
                   { to: "/life-path-number", label: "Life Path" },
                 ].map(({ to, label }) => (
                   <Link
@@ -395,6 +394,13 @@ const Navbar = () => {
               onClick={() => setIsOpen(false)}
             >
               Kundli Matching
+            </Link>
+            <Link
+              to="/free-kundli-match"
+              className="text-green-400 text-lg font-medium hover:text-green-300"
+              onClick={() => setIsOpen(false)}
+            >
+              Free Kundli Match ✨
             </Link>
             <Link
               to="/panchang-form"

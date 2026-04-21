@@ -11,26 +11,41 @@ export async function getProkeralaToken() {
 
   if (isProd) {
     const cached = await redisClient.get(TOKEN_KEY);
-    if (cached) return cached;
+    if (cached) {
+      console.log('✅ Token from cache');
+      return cached;
+    }
   }
 
-  const body = qs.stringify({
-    grant_type: 'client_credentials',
-    client_id: process.env.PROKERALA_CLIENT_ID,
-    client_secret: process.env.PROKERALA_CLIENT_SECRET
-  });
+  console.log('🔄 Fetching new Prokerala token...');
+  
+  try {
+    const body = qs.stringify({
+      grant_type: 'client_credentials',
+      client_id: process.env.PROKERALA_CLIENT_ID,
+      client_secret: process.env.PROKERALA_CLIENT_SECRET
+    });
 
-  const res = await axios.post(
-    'https://api.prokerala.com/token',
-    body,
-    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-  );
+    const res = await axios.post(
+      'https://api.prokerala.com/token',
+      body,
+      { 
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 10000 // 10 second timeout
+      }
+    );
 
-  const { access_token, expires_in } = res.data;
+    console.log('✅ Token received:', res.data?.access_token?.substring(0, 20) + '...');
+    
+    const { access_token, expires_in } = res.data;
 
-  if (isProd) {
-    await redisClient.setEx(TOKEN_KEY, expires_in - 60, access_token);
+    if (isProd) {
+      await redisClient.setEx(TOKEN_KEY, expires_in - 60, access_token);
+    }
+
+    return access_token;
+  } catch (error) {
+    console.error('❌ Token fetch failed:', error.message);
+    throw error;
   }
-
-  return access_token;
 }

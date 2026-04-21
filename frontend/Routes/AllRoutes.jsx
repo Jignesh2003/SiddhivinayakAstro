@@ -32,6 +32,7 @@ import Wishlist from "../src/pages/Wishlist";
 import SingleProduct from "../src/pages/SingleProuduct";
 import ReviewPage from "../src/pages/ReviewPage";
 import AstrologerSignup from "../src/astrologer/AstrologerSigup";
+import FreeMatchForm from "../src/astrology/FreeMatchForm";
 import AstrologerDashboard from "../src/astrologer/AstrologerDashboard";
 import ChatBox from "../src/chatContext/ChatBot";
 import AstrologerList from "../src/pages/AstrologerList";
@@ -136,6 +137,7 @@ const AppRoutes = () => {
             path="/matching-kundli-result"
             element={<MatchingCompatiblityResult />}
           />
+          <Route path="/free-kundli-match" element={<FreeMatchForm />} />
           <Route path="/panchang-form" element={<PanchangForm />} />
           <Route path="/panchang-result" element={<PanchangResult />} />
           <Route path="/cod-confirmation" element={<CodOrderConfirmation />} />
