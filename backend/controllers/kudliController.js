@@ -203,7 +203,7 @@ export const premiumPanchangOrder = async (req, res) => {
 }
 
 export const premiumKundliMatchingOrder = async (req, res) => {
-  const userId  = req.user.id;
+  const userId = req.user.id;
 
   const user = await User.findOne({ _id: userId })
   if (!user) {
@@ -282,6 +282,15 @@ export const detailedKundliMatching = async (req, res) => {
       la = 'en',
     } = req.query;
 
+    console.log('📋 Received kundli matching params:', {
+      ayanamsa,
+      girl_coordinates,
+      girl_dob,
+      boy_coordinates,
+      boy_dob,
+      la,
+    });
+
     // Validate required
     if (
       !ayanamsa ||
@@ -318,21 +327,21 @@ export const detailedKundliMatching = async (req, res) => {
     console.log('📡 Fetching from Prokerala API...');
     const token = await getProkeralaToken();
     console.log('✅ Got token, making API call...');
-    
-    const params = new URLSearchParams({
-      ayanamsa,
-      girl_coordinates,
-      girl_dob,
-      boy_coordinates,
-      boy_dob,
-      la,
-    });
 
+    // Use axios params option (like tp.js) to avoid double-encoding of + in timezone
     const prokRes = await axios.get(
-      `${process.env.PROKERALA_MATCH_API}?${params.toString()}`,
-      { 
+      process.env.PROKERALA_MATCH_API,
+      {
         headers: { Authorization: `Bearer ${token}` },
-        timeout: 30000 // 30 second timeout for matching API
+        params: {
+          boy_dob: boy_dob,
+          boy_coordinates: boy_coordinates,
+          girl_dob: girl_dob,
+          girl_coordinates: girl_coordinates,
+          ayanamsa: ayanamsa,
+          la: la,
+        },
+        timeout: 30000
       }
     );
 

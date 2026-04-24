@@ -52,7 +52,7 @@ import ShippingDeliveryPolicy from "@/pages/ShippingDeliveryPolicy";
 import CodOrderConfirmation from "../src/pages/CodOrderConfirmation";
 import Wallet from "@/payment/wallet/Wallet";
 import AdminWithdrawalRequests from "../src/admin/pages/AdminWithdrawalRequests";
-import  HowToWear  from "@/pages/HowToWear";
+import HowToWear from "@/pages/HowToWear";
 import AdminBlogManager from "@/admin/pages/AdminBlogManager";
 import BlogList from "@/pages/blogs/BlogList";
 import BlogDetail from "@/pages/blogs/BlogDetails";
@@ -81,6 +81,7 @@ const AppRoutes = () => {
         <Route path="/daily-prediction" element={<DailyPrediction />} />
         <Route path="/life-path-number" element={<LifePathNumber />} />
         <Route path="/how-to-wear" element={<HowToWear />} />
+        <Route path="/matching-result" element={<MatchingCompatiblityResult />} />
 
         <Route
           path="/cancellation-policy"

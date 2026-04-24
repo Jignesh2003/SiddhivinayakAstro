@@ -276,7 +276,9 @@ const Navbar = () => {
                 {[
                   { to: "/daily-prediction", label: "Daily Prediction" },
                   { to: "/kundli-details", label: "Kundli" },
-                  { to: "/matching-form", label: "Kundli Matching" },                  { to: "/free-kundli-match", label: "Free Kundli Match ✨" },                  { to: "/panchang-form", label: "Panchang" },
+                  { to: "/matching-form", label: "Kundli Matching" },
+                  { to: "/free-kundli-match", label: "Free Kundli Match ✨" },
+                  { to: "/panchang-form", label: "Panchang" },
                   { to: "/life-path-number", label: "Life Path" },
                 ].map(({ to, label }) => (
                   <Link

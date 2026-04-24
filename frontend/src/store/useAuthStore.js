@@ -25,13 +25,13 @@ try {
 
 const useAuthStore = create((set, get) => ({
   // 2) Seed the store from that
-  token:      initial.token,
-  role:       initial.role,
+  token: initial.token,
+  role: initial.role,
   isVerified: initial.isVerified,
-  userId:     initial.userId,
+  userId: initial.userId,
   isAuthenticated: Boolean(initial.token),
-  cart:       [],
-  loading:    false,
+  cart: [],
+  loading: false,
 
   // 3) Only overwrite localStorage with a *full* auth object
   login: (token, role, isVerified, userId) => {
@@ -42,7 +42,7 @@ const useAuthStore = create((set, get) => ({
     const authData = { token, role, isVerified, userId };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(authData));
     set({ token, role, isVerified, userId, isAuthenticated: true });
-    
+
     // Start 1-hour auto-logout timer
     clearTimer();
     logoutTimer = setTimeout(() => {
@@ -50,7 +50,7 @@ const useAuthStore = create((set, get) => ({
       get().logout();
       window.location.href = "/login";
     }, INACTIVITY_TIMEOUT);
-    
+
     useWishlistStore.getState().fetchWishlist?.();
   },
 
@@ -71,7 +71,7 @@ const useAuthStore = create((set, get) => ({
   resetTimer: () => {
     const { isAuthenticated, logout } = get();
     if (!isAuthenticated) return;
-    
+
     clearTimer();
     logoutTimer = setTimeout(() => {
       console.log("🔴 Session expired - auto logout");
@@ -80,8 +80,8 @@ const useAuthStore = create((set, get) => ({
     }, INACTIVITY_TIMEOUT);
   },
 
-  setCart:   (items) => set({ cart: items }),
-  clearCart: ()        => set({ cart: [] }),
+  setCart: (items) => set({ cart: items }),
+  clearCart: () => set({ cart: [] }),
 }));
 
 export default useAuthStore;
