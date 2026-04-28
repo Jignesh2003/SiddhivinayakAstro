@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Toaster, toast } from "react-hot-toast";
 import { Globe, User, ArrowRight, MapPin } from "lucide-react";
 import { Country, State, City } from "country-state-city";
@@ -6,14 +7,14 @@ import axios from "axios";
 import useAuthStore from "@/store/useAuthStore";
 
 export default function MatchForm() {
-  // Auth token for API
   const { token } = useAuthStore.getState();
+  const navigate = useNavigate();
 
   // Common
   const [ayanamsa, setAyanamsa] = useState("1");
   const [la, setLa] = useState("en");
 
-  // Girl’s info
+  // Girl's info
   const [girlDob, setGirlDob] = useState("");
   const [girlCountry, setGirlCountry] = useState("");
   const [girlState, setGirlState] = useState("");
@@ -22,7 +23,7 @@ export default function MatchForm() {
   const [girlStates, setGirlStates] = useState([]);
   const [girlCities, setGirlCities] = useState([]);
 
-  // Boy’s info
+  // Boy's info
   const [boyDob, setBoyDob] = useState("");
   const [boyCountry, setBoyCountry] = useState("");
   const [boyState, setBoyState] = useState("");
@@ -148,22 +149,44 @@ export default function MatchForm() {
         body,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      const { orderId,  paymentSessionId } = response.data;
+      const { orderId, paymentSessionId } = response.data;
 
       if (!orderId || !paymentSessionId) {
         toast.error("Payment initiation failed: no session returned.");
         setLoading(false);
         return;
       }
-      const data = response.data;
+
+      // Store matching params for fetching results after payment
+      const matchingParams = {
+        ayanamsa,
+        girl_dob: isoGirl,
+        girl_coordinates: girlCoords,
+        boy_dob: isoBoy,
+        boy_coordinates: boyCoords,
+        la
+      };
 
       cashfreeInstance.checkout({
-        paymentSessionId:data.paymentSessionId, // Cashfree paymentSessionId (token)
+        paymentSessionId: paymentSessionId,
         redirectTarget: "_self",
-        onSuccess: function () {
-          toast.success("Payment successful! Processing...");
-          setLoading(false);
-          // Optionally you can trigger next step or inform user
+        onSuccess: async function () {
+          toast.success("Payment successful! Calculating result...");
+          try {
+            // Fetch matching results after successful payment
+            const params = new URLSearchParams(matchingParams).toString();
+            const matchResponse = await axios.get(
+              `${import.meta.env.VITE_ASTROLOGY_URL}/kundali-matching/detailed?${params}`
+            );
+            setLoading(false);
+            navigate("/matching-kundli-result", {
+              state: { result: matchResponse.data }
+            });
+          } catch (error) {
+            setLoading(false);
+            toast.error("Failed to fetch matching results. Please refresh the page.");
+            console.error(error);
+          }
         },
         onFailure: function () {
           toast.error("Payment failed. Please try again.");
@@ -219,10 +242,10 @@ export default function MatchForm() {
           </div>
         </div>
 
-        {/* Girl’s DOB */}
+        {/* Girl's DOB */}
         <div>
           <label className=" mb-1 flex items-center gap-1">
-            <User /> Girl’s DOB
+            <User /> Girl's DOB
           </label>
           <input
             type="datetime-local"
@@ -233,7 +256,7 @@ export default function MatchForm() {
           />
         </div>
 
-        {/* Girl’s Location */}
+        {/* Girl's Location */}
         <div className="grid grid-cols-3 gap-3">
           <select
             value={girlCountry}
@@ -276,7 +299,7 @@ export default function MatchForm() {
         </div>
         <div className="relative">
           <label className=" mb-1 flex items-center gap-1">
-            <Globe /> Girl’s Coordinates
+            <Globe /> Girl's Coordinates
           </label>
           <input
             type="text"
@@ -287,10 +310,10 @@ export default function MatchForm() {
           <MapPin className="absolute right-2 top-10 text-yellow-400" />
         </div>
 
-        {/* Boy’s DOB */}
+        {/* Boy's DOB */}
         <div>
           <label className=" mb-1 flex items-center gap-1">
-            <User /> Boy’s DOB
+            <User /> Boy's DOB
           </label>
           <input
             type="datetime-local"
@@ -301,7 +324,7 @@ export default function MatchForm() {
           />
         </div>
 
-        {/* Boy’s Location */}
+        {/* Boy's Location */}
         <div className="grid grid-cols-3 gap-3">
           <select
             value={boyCountry}
@@ -344,7 +367,7 @@ export default function MatchForm() {
         </div>
         <div className="relative">
           <label className=" mb-1 flex items-center gap-1">
-            <Globe /> Boy’s Coordinates
+            <Globe /> Boy's Coordinates
           </label>
           <input
             type="text"
