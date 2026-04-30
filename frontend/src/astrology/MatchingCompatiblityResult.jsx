@@ -160,9 +160,18 @@ const MatchingCompatiblityResult = () => {
           </h2>
           <div className="space-y-3">
             {kootaList.map((koota) => {
-              // Get koota values from boy and girl koot objects
-              const boyKootValue = boyKoot[koota.key] || "-";
-              const girlKootValue = girlKoot[koota.key] || "-";
+              // Safely extract koota values (API sometimes returns {} which crashes React)
+              const getSafeValue = (val) => {
+                if (!val) return "-";
+                if (typeof val === 'object') {
+                  if (Object.keys(val).length === 0) return "-";
+                  return val.name || val.description || JSON.stringify(val);
+                }
+                return val;
+              };
+
+              const boyKootValue = getSafeValue(boyKoot[koota.key]);
+              const girlKootValue = getSafeValue(girlKoot[koota.key]);
               
               return (
                 <div key={koota.key}>
@@ -202,7 +211,9 @@ const MatchingCompatiblityResult = () => {
               Astrologer's Insight
             </h3>
             <p className="text-gray-700 text-sm leading-relaxed">
-              {innerData.message.description}
+              {typeof innerData.message.description === 'string' 
+                ? innerData.message.description 
+                : "No specific detailed description provided by the API for this match."}
             </p>
           </div>
         )}

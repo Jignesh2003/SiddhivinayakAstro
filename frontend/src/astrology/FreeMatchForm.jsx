@@ -108,6 +108,7 @@ export default function FreeMatchForm() {
 
     try {
       // ✅ DIRECT API CALL - NO PAYMENT
+
       const res = await axios.get(
         `${import.meta.env.VITE_ASTROLOGY_URL}/kundali-matching/detailed?${params}`
       );
