@@ -12,6 +12,7 @@ import ClipLoader from "react-spinners/ClipLoader";
 
 const Signup = () => {
   const { login } = useAuthStore();
+  const [role, setRole] = useState("user"); // "user" or "astrologer"
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "", // Will be empty
@@ -25,6 +26,15 @@ const Signup = () => {
     password: "",
     confirmPassword: "", // ✅ Added
     agreedToTerms: false,
+    // Astrologer-specific fields
+    expertise: "",
+    yearsOfExperience: "",
+    bio: "",
+    languagesSpoken: "",
+    pricePerMinute: "",
+    gender: "",
+    dob: "",
+    location: "",
   });
 
   // const [selectedCountry, setSelectedCountry] = useState(null);
@@ -58,17 +68,33 @@ const Signup = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_BASE_URL}/signup`,
-        {
-          firstName: formData.firstName,
-          lastName: formData.lastName, // Empty string
-          email: formData.email,
-          phone: formData.phone,
-          password: formData.password,
-          agreedToTerms: formData.agreedToTerms,
-        }
-      );
+      let endpoint = `${import.meta.env.VITE_BASE_URL}/signup`;
+      let payload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName, // Empty string
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        agreedToTerms: formData.agreedToTerms,
+        role: role,
+      };
+
+      if (role === "astrologer") {
+        endpoint = `${import.meta.env.VITE_ASTRO_URL}/astrologer-signup`;
+        payload = {
+          ...payload,
+          expertise: formData.expertise,
+          yearsOfExperience: formData.yearsOfExperience,
+          bio: formData.bio,
+          languagesSpoken: formData.languagesSpoken.split(",").map((l) => l.trim()).filter(Boolean),
+          pricePerMinute: formData.pricePerMinute,
+          gender: formData.gender,
+          dob: formData.dob,
+          location: formData.location,
+        };
+      }
+
+      const response = await axios.post(endpoint, payload);
       if (response.status === 201) {
         toast.success("Account created! Logging you in...", { duration: 3000 });
         if (response.data.token) {
@@ -85,11 +111,13 @@ const Signup = () => {
         error.response?.data || error.message
       );
 
-      if (error.response?.status === 409) {
-        toast.error("User already exists! Redirecting to login...");
-        setTimeout(() => navigate("/login"), 2000);
+      if (error.response?.status === 409 || error.response?.status === 400) {
+        toast.error(error.response?.data?.message || "User already exists!");
+        if (error.response?.status === 409) {
+          setTimeout(() => navigate("/login"), 2000);
+        }
       } else {
-        toast.error(error.response?.data?.errors || "Signup failed!");
+        toast.error(error.response?.data?.errors || error.response?.data?.message || "Signup failed!");
       }
     } finally {
       setIsLoading(false);
@@ -149,6 +177,32 @@ const Signup = () => {
 
         <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-md">
           <form className="space-y-4" onSubmit={handleSubmit}>
+            {/* ✅ ADDED: Role Toggle */}
+            <div className="flex gap-3 mb-6">
+              <button
+                type="button"
+                onClick={() => setRole("user")}
+                className={`flex-1 py-2 px-4 rounded-lg font-semibold transition ${
+                  role === "user"
+                    ? "bg-yellow-500 text-black"
+                    : "bg-gray-600 text-white hover:bg-gray-700"
+                }`}
+              >
+                Sign up as User
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole("astrologer")}
+                className={`flex-1 py-2 px-4 rounded-lg font-semibold transition ${
+                  role === "astrologer"
+                    ? "bg-yellow-500 text-black"
+                    : "bg-gray-600 text-white hover:bg-gray-700"
+                }`}
+              >
+                Sign up as Astrologer
+              </button>
+            </div>
+
             {/* ✅ MODIFIED: Single name field */}
             <div>
               <label
@@ -169,27 +223,7 @@ const Signup = () => {
               />
             </div>
 
-            {/* COMMENTED OUT: Last Name */}
-            {/* <div>
-              <label
-                htmlFor="lastName"
-                className="block text-sm font-medium text-blue-100"
-              >
-                Last Name
-              </label>
-              <input
-                type="text"
-                name="lastName"
-                id="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
-                placeholder="Last Name"
-                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
-              />
-            </div> */}
-
-            {/* COMMENTED OUT: Phone */}
+            {/* Phone */}
             <div>
               <label
                 htmlFor="phone"
@@ -210,7 +244,7 @@ const Signup = () => {
               />
             </div>
 
-            {/* Email - KEPT */}
+            {/* Email */}
             <div>
               <label
                 htmlFor="email"
@@ -230,101 +264,7 @@ const Signup = () => {
               />
             </div>
 
-            {/* COMMENTED OUT: Address */}
-            {/* <div>
-              <label
-                htmlFor="address"
-                className="block text-sm font-medium text-blue-100"
-              >
-                Address
-              </label>
-              <textarea
-                name="address"
-                id="address"
-                rows="3"
-                value={formData.address}
-                onChange={handleChange}
-                required
-                placeholder="Address"
-                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
-              />
-            </div> */}
-
-            {/* COMMENTED OUT: Location Dropdowns */}
-            {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-blue-100">
-                  Country
-                </label>
-                <Select
-                  options={countryOptions}
-                  value={selectedCountry}
-                  onChange={(val) => {
-                    setSelectedCountry(val);
-                    setSelectedState(null);
-                    setSelectedCity(null);
-                    setFormData({
-                      ...formData,
-                      country: val.label,
-                      state: "",
-                      city: "",
-                    });
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-blue-100">
-                  State
-                </label>
-                <Select
-                  options={stateOptions}
-                  value={selectedState}
-                  onChange={(val) => {
-                    setSelectedState(val);
-                    setSelectedCity(null);
-                    setFormData({ ...formData, state: val.label, city: "" });
-                  }}
-                  isDisabled={!selectedCountry}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-blue-100">
-                  City
-                </label>
-                <Select
-                  options={cityOptions}
-                  value={selectedCity}
-                  onChange={(val) => {
-                    setSelectedCity(val);
-                    setFormData({ ...formData, city: val.label });
-                  }}
-                  isDisabled={!selectedState}
-                />
-              </div>
-            </div> */}
-
-            {/* COMMENTED OUT: Pincode */}
-            {/* <div>
-              <label
-                htmlFor="pincode"
-                className="block text-sm font-medium text-blue-100"
-              >
-                Pincode
-              </label>
-              <input
-                type="text"
-                name="pincode"
-                id="pincode"
-                pattern="[0-9]{6}"
-                value={formData.pincode}
-                onChange={handleChange}
-                required
-                placeholder="Pincode"
-                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
-              />
-            </div> */}
-
-            {/* Password - KEPT */}
+            {/* Password */}
             <div>
               <label
                 htmlFor="password"
@@ -353,7 +293,7 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* ✅ ADDED: Confirm Password */}
+            {/* Confirm Password */}
             <div>
               <label
                 htmlFor="confirmPassword"
@@ -388,7 +328,156 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* Terms Checkbox - KEPT */}
+            {/* ✅ ADDED: Astrologer-specific fields (conditional) */}
+            {role === "astrologer" && (
+              <>
+                <div className="border-t border-gray-600 pt-4 mt-4">
+                  <p className="text-yellow-400 text-sm font-semibold mb-4">Professional Details</p>
+                </div>
+
+                {/* Gender */}
+                <div>
+                  <label htmlFor="gender" className="block text-sm font-medium text-blue-100">
+                    Gender
+                  </label>
+                  <select
+                    name="gender"
+                    id="gender"
+                    value={formData.gender}
+                    onChange={handleChange}
+                    className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                {/* Date of Birth */}
+                <div>
+                  <label htmlFor="dob" className="block text-sm font-medium text-blue-100">
+                    Date of Birth
+                  </label>
+                  <input
+                    type="date"
+                    name="dob"
+                    id="dob"
+                    value={formData.dob}
+                    onChange={handleChange}
+                    className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
+                  />
+                </div>
+
+                {/* Location */}
+                <div>
+                  <label htmlFor="location" className="block text-sm font-medium text-blue-100">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    name="location"
+                    id="location"
+                    value={formData.location}
+                    onChange={handleChange}
+                    placeholder="City/Location"
+                    className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
+                  />
+                </div>
+
+                {/* Expertise */}
+                <div>
+                  <label htmlFor="expertise" className="block text-sm font-medium text-blue-100">
+                    Expertise
+                  </label>
+                  <select
+                    name="expertise"
+                    id="expertise"
+                    value={formData.expertise}
+                    onChange={handleChange}
+                    className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
+                  >
+                    <option value="">Select Expertise</option>
+                    <option value="Vedic">Vedic</option>
+                    <option value="Tarot">Tarot</option>
+                    <option value="Numerology">Numerology</option>
+                    <option value="Palmistry">Palmistry</option>
+                    <option value="Horary">Horary</option>
+                    <option value="KP">KP</option>
+                    <option value="Western">Western</option>
+                    <option value="Lal Kitab">Lal Kitab</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                {/* Years of Experience */}
+                <div>
+                  <label htmlFor="yearsOfExperience" className="block text-sm font-medium text-blue-100">
+                    Years of Experience
+                  </label>
+                  <input
+                    type="number"
+                    name="yearsOfExperience"
+                    id="yearsOfExperience"
+                    value={formData.yearsOfExperience}
+                    onChange={handleChange}
+                    placeholder="e.g., 5"
+                    className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
+                  />
+                </div>
+
+                {/* Bio */}
+                <div>
+                  <label htmlFor="bio" className="block text-sm font-medium text-blue-100">
+                    Bio
+                  </label>
+                  <textarea
+                    name="bio"
+                    id="bio"
+                    rows="3"
+                    value={formData.bio}
+                    onChange={handleChange}
+                    placeholder="Brief description about you and your expertise"
+                    className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
+                  />
+                </div>
+
+                {/* Languages */}
+                <div>
+                  <label htmlFor="languagesSpoken" className="block text-sm font-medium text-blue-100">
+                    Languages (comma separated)
+                  </label>
+                  <input
+                    type="text"
+                    name="languagesSpoken"
+                    id="languagesSpoken"
+                    value={formData.languagesSpoken}
+                    onChange={handleChange}
+                    placeholder="e.g., English, Hindi, Sanskrit"
+                    className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
+                  />
+                </div>
+
+                {/* Price per Minute */}
+                <div>
+                  <label htmlFor="pricePerMinute" className="block text-sm font-medium text-blue-100">
+                    Price per Minute (₹)
+                  </label>
+                  <input
+                    type="number"
+                    name="pricePerMinute"
+                    id="pricePerMinute"
+                    value={formData.pricePerMinute}
+                    onChange={handleChange}
+                    placeholder="e.g., 50"
+                    step="0.01"
+                    className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:outline-yellow-600 sm:text-sm"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Terms Checkbox */}
             <div className="flex items-center gap-2 mt-1">
               <input
                 type="checkbox"
@@ -419,7 +508,7 @@ const Signup = () => {
               </label>
             </div>
 
-            {/* Submit Button - KEPT */}
+            {/* Submit Button */}
             <div>
               <button
                 type="submit"
@@ -430,22 +519,6 @@ const Signup = () => {
               </button>
             </div>
           </form>
-
-          {/* COMMENTED OUT: Divider */}
-          {/* <div className="flex items-center my-5">
-            <hr className="flex-grow border-gray-300" />
-            <span className="mx-2 text-gray-400">or</span>
-            <hr className="flex-grow border-gray-300" />
-          </div> */}
-
-          {/* COMMENTED OUT: Google Login */}
-          {/* <button
-            onClick={googleLoginHandler}
-            className="w-full flex items-center justify-center gap-2 border border-gray-300 py-3 rounded-md hover:bg-gray-100 transition"
-          >
-            <FaGoogle size={20} />
-            Sign-up with Google
-          </button> */}
 
           <div className="mt-4 text-center">
             <p className="text-sm text-blue-100">
@@ -458,12 +531,6 @@ const Signup = () => {
               </a>
             </p>
           </div>
-          <Link
-            to="/astrologer-signup"
-            className="block font-semibold text-blue-100 hover:text-yellow-300 text-center text-xl pt-5 text-yellow-500"
-          >
-            Signup as Astrologer
-          </Link>
         </div>
       </div>
     </div>

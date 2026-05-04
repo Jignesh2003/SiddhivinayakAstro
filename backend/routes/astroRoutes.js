@@ -1,4 +1,4 @@
-import {astrologerSignup , astrologerList, uploadDocuments, getAstrologerDetails} from "../controllers/astrologerController.js";
+import {astrologerSignup , astrologerList, uploadDocuments, getAstrologerDetails, astrologerLogin, toggleLiveStatus} from "../controllers/astrologerController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import express from "express";
 import { uploadKycDocs } from "../middlewares/multer.js";
@@ -7,7 +7,11 @@ const router = express.Router();
 
 router.post("/astrologer-signup", astrologerSignup);
 
+router.post("/login", astrologerLogin);
+
 router.get("/list", authMiddleware, astrologerList);
+
+router.put("/toggle-live", authMiddleware, toggleLiveStatus);
 
 router.post(
   "/upload-documents",

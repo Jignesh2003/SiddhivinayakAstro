@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoutes";
+import ProtectedAstrologerRoute from "./ProtectedAstrologerRoute";
 import Layout from "./Layout"; // Import the Layout component
 import DailyPrediction from "../src/pages/DailyPrediction";
 import Invoice from "../src/admin/pages/Invoice";
@@ -34,6 +35,7 @@ import ReviewPage from "../src/pages/ReviewPage";
 import AstrologerSignup from "../src/astrologer/AstrologerSigup";
 import FreeMatchForm from "../src/astrology/FreeMatchForm";
 import AstrologerDashboard from "../src/astrologer/AstrologerDashboard";
+import AstrologerDashboardNew from "../src/pages/astrologer/AstrologerDashboard";
 import ChatBox from "../src/chatContext/ChatBot";
 import AstrologerList from "../src/pages/AstrologerList";
 import AstrologerChatRequests from "../src/astrologer/AstrologerChatRequests";
@@ -101,6 +103,10 @@ const AppRoutes = () => {
         <Route path="/oauth-success" element={<OAuthSuccess />} />
         <Route path="/accept-terms" element={<AcceptTerms />} />
 
+        {/* ✅ Protected Astrologer Routes (New) */}
+        <Route element={<ProtectedAstrologerRoute />}>
+          <Route path="/astrologer/dashboard" element={<AstrologerDashboardNew />} />
+        </Route>
 
         {/* ✅ Protected Routes */}
         <Route element={<ProtectedRoute />}>

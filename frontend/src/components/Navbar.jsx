@@ -231,6 +231,12 @@ const Navbar = () => {
             >
               Products
             </Link>
+            <Link
+              to="/live-astrologers"
+              className="text-white hover:text-purple-400 text-lg"
+            >
+              Live Astrologers
+            </Link>
 
             {/* Astrology Dropdown */}
             <div className="relative" ref={astroDropdownRef}>
@@ -375,6 +381,13 @@ const Navbar = () => {
               onClick={() => setIsOpen(false)}
             >
               Products
+            </Link>
+            <Link
+              to="/live-astrologers"
+              className="text-white text-lg hover:text-purple-500"
+              onClick={() => setIsOpen(false)}
+            >
+              Live Astrologers
             </Link>
             <Link
               to="/daily-prediction"

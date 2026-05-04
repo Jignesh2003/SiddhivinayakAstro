@@ -39,8 +39,8 @@ const Login = () => {
 
         if (role === "admin") {
           navigate("/admin/dashboard");
-        }else if(role === "astrologer"){
-          navigate("/astrologer-dashboard");
+        } else if (role === "astrologer") {
+          navigate("/astrologer/dashboard");
         } else {
           navigate("/products");
         }
