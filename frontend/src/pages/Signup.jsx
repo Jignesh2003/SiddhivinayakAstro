@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import useAuthStore from "../store/useAuthStore";
 import toast from "react-hot-toast";
 import assets from "../assets/assets";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Check } from "lucide-react";
 import ClipLoader from "react-spinners/ClipLoader";
 // import Select from "react-select";
 // import { Country, State, City } from "country-state-city";
@@ -46,9 +46,30 @@ const Signup = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false); // ✅ Added
   const navigate = useNavigate();
 
+  // ✅ Password validation state
+  const [passwordValidation, setPasswordValidation] = useState({
+    hasUppercase: false,
+    hasNumber: false,
+    hasMinLength: false,
+  });
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData({ ...formData, [name]: type === "checkbox" ? checked : value });
+
+    // ✅ Validate password when password field changes
+    if (name === "password") {
+      validatePassword(value);
+    }
+  };
+
+  // ✅ Password validation function
+  const validatePassword = (password) => {
+    setPasswordValidation({
+      hasUppercase: /[A-Z]/.test(password),
+      hasNumber: /[0-9]/.test(password),
+      hasMinLength: password.length >= 8,
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -291,6 +312,62 @@ const Signup = () => {
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
+
+              {/* ✅ Password Validation Indicators */}
+              {formData.password && (
+                <div className="mt-3 space-y-2 p-3 bg-gray-800 rounded-md border border-gray-700">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`flex items-center justify-center w-5 h-5 rounded-full transition-all ${
+                        passwordValidation.hasMinLength
+                          ? "bg-green-500 scale-100 animate-pop"
+                          : "bg-gray-600"
+                      }`}
+                    >
+                      {passwordValidation.hasMinLength && (
+                        <Check size={16} className="text-white" />
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-300">
+                      Minimum 8 characters
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`flex items-center justify-center w-5 h-5 rounded-full transition-all ${
+                        passwordValidation.hasUppercase
+                          ? "bg-green-500 scale-100 animate-pop"
+                          : "bg-gray-600"
+                      }`}
+                    >
+                      {passwordValidation.hasUppercase && (
+                        <Check size={16} className="text-white" />
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-300">
+                      At least 1 uppercase letter (A-Z)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`flex items-center justify-center w-5 h-5 rounded-full transition-all ${
+                        passwordValidation.hasNumber
+                          ? "bg-green-500 scale-100 animate-pop"
+                          : "bg-gray-600"
+                      }`}
+                    >
+                      {passwordValidation.hasNumber && (
+                        <Check size={16} className="text-white" />
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-300">
+                      At least 1 number (0-9)
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Confirm Password */}
