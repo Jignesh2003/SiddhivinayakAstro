@@ -20,10 +20,10 @@ const App = () => {
     try {
       const raw = localStorage.getItem("auth-data");
       if (raw) {
-        const { token, role, isVerified, userId } = JSON.parse(raw);
+        const { token, role, isVerified, userId, hasUsedFreeTrial } = JSON.parse(raw);
         // 2) Only *call* login(...) if *all* fields are present
         if (token && role && typeof isVerified === "boolean" && userId) {
-          login(token, role, isVerified, userId);
+          login(token, role, isVerified, userId, hasUsedFreeTrial);
         }
       }
     } catch (err) {

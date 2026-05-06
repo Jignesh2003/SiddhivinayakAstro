@@ -11,6 +11,7 @@ import {
   verifyAstrologerKyc,
   addProduct,
   acceptTmc,
+  useFreeTrial,
   // bulkUpdateAstrology,
   // getDailyAstrology,
 } from "../controllers/authController.js";
@@ -41,6 +42,7 @@ function sendToken(req, res) {
       agreedToTerms: user.agreedToTerms || false,
       name: user.firstName || "",
       email: user.email,
+      hasUsedFreeTrial: user.hasUsedFreeTrial || false,
     },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
@@ -80,6 +82,8 @@ router.get("/google/callback", (req, res, next) => {
 });
 
 router.post("/accept-terms", authMiddleware, acceptTmc);
+
+router.post("/used-free-trial", authMiddleware, useFreeTrial);
 
 //otp route here
 router.post("/forgot-password", otpLimiter, forgotPassword); //  Forgot Password Route

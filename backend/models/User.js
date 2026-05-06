@@ -77,6 +77,7 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       required: true,
       default: false },
+    hasUsedFreeTrial: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

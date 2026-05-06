@@ -406,8 +406,8 @@ const Products = () => {
                     <div
                       key={product._id}
                       className={`w-full bg-gray-800/80 border border-gray-700 rounded-lg p-4 relative flex flex-col justify-between transition hover:shadow-xl ${isOutOfStock
-                          ? "opacity-60 pointer-events-none grayscale"
-                          : "hover:scale-[1.02]"
+                        ? "opacity-60 pointer-events-none grayscale"
+                        : "hover:scale-[1.02]"
                         }`}
                       style={{
                         boxShadow: "0 1px 0 0 #232323, 1px 0 0 0 #232323",
@@ -441,8 +441,8 @@ const Products = () => {
                           src={product.image?.[0]}
                           alt={product.name}
                           className={`absolute inset-0 w-full h-full object-contain ${isOutOfStock
-                              ? "grayscale pointer-events-none"
-                              : "hover:scale-105 transition-transform duration-300"
+                            ? "grayscale pointer-events-none"
+                            : "hover:scale-105 transition-transform duration-300"
                             }`}
                         />
                       </div>
@@ -672,9 +672,6 @@ const Products = () => {
         )}
 
         <GoToTopButton />
-
-        {/* Footer */}
-        <Footer />
       </div>
     </>
   );
