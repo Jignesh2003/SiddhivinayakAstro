@@ -6,7 +6,8 @@ import axios from "axios";
 const TOKEN_URL = "https://api.prokerala.com/token";
 const DAILY_HOROSCOPE_URL = "https://api.prokerala.com/v2/horoscope/daily";
 const KUNDLI_MATCHING_URL = "https://api.prokerala.com/v2/astrology/kundli-matching";
-
+const PROKERALA_CLIENT_ID = process.env.PRODUCTION_PROKERALA_CLIENT_ID
+const PROKERALA_CLIENT_SECRET = process.env.PRODUCTION_PROKERALA_CLIENT_SECRET
 async function getAccessToken() {
   try {
     const requestBody = new URLSearchParams({
@@ -56,11 +57,11 @@ async function getKundliMatching(token) {
       },
       params: {
         // 👦 Boy
-        boy_dob: "2004-01-01T15:19:21+05:30",
+        boy_dob: "2004-02-01T15:19:21+05:30",
         boy_coordinates: "19.076090,72.877426", //Mumbai
 
         // 👧 Girl
-        girl_dob: "2004-01-01T15:19:21+05:30",
+        girl_dob: "2004-02-01T15:19:21+05:30",
         girl_coordinates: "19.076090,72.877426",
 
         // Required
@@ -91,8 +92,8 @@ async function main() {
   console.log("🔮 Fetching daily horoscope...\n");
   await getDailyHoroscope(token);
 
-  console.log("\n💑 Fetching kundli matching...\n");
-  await getKundliMatching(token);
+  /*console.log("\n💑 Fetching kundli matching...\n");
+  await getKundliMatching(token);*/
 }
 
 main();

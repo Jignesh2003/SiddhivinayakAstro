@@ -56,7 +56,6 @@ import HowToWear from "@/pages/HowToWear";
 import AdminBlogManager from "@/admin/pages/AdminBlogManager";
 import BlogList from "@/pages/blogs/BlogList";
 import BlogDetail from "@/pages/blogs/BlogDetails";
-import DailyPredictionBySign from "@/pages/dailyPrediction/DailyPredictionBySign";
 import AdminCreateCoupon from "@/admin/pages/AdminCreateCoupon";
 import OAuthSuccess from "@/pages/OAuthSuccess";
 import AcceptTerms from "@/pages/AcceptTerms";
@@ -86,10 +85,6 @@ const AppRoutes = () => {
         <Route
           path="/cancellation-policy"
           element={<CancellationRefundPolicy />}
-        />
-        <Route
-          path="/daily-prediction/:sign"
-          element={<DailyPredictionBySign />}
         />
         <Route path="/shipping-policy" element={<ShippingDeliveryPolicy />} />
 

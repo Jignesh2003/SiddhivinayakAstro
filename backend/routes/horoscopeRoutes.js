@@ -1,7 +1,7 @@
 import express from 'express';
-import { allGeneralPredictions } from '../controllers/horoscopeController.js';
+import { getPredictionBySign } from '../controllers/horoscopeController.js';
 
 const router = express.Router();
 
-router.get('/all', allGeneralPredictions);
+router.get('/:sign', getPredictionBySign);
 export default router;

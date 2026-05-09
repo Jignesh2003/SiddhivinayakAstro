@@ -25,12 +25,29 @@ import DashboardPoster from "./utils//dashboardPoster.GIF"
 
 
 const assets = {
-    WhatsAppIcon,PhoneIcon,
- SiddhivinayakAstroLogo,
- GalaxyBackground,
- HeroSelectionBackground,
-
- Aquarius,Aries,Cancer,Capricorn,ChatWithAstroLogo,Gemini,Leo,Libra,Pisces,Sagittarius,Taurus,Virgo,Scorpio,Poster1,Poster2,Poster3,Poster4,Poster5,DashboardPoster
+    WhatsAppIcon, PhoneIcon,
+    SiddhivinayakAstroLogo,
+    GalaxyBackground,
+    HeroSelectionBackground,
+    Aquarius,
+    Aries,
+    Cancer,
+    Capricorn,
+    ChatWithAstroLogo,
+    Gemini,
+    Leo,
+    Libra,
+    Pisces,
+    Sagittarius,
+    Taurus,
+    Virgo,
+    Scorpio,
+    Poster1,
+    Poster2,
+    Poster3,
+    Poster4,
+    Poster5,
+    DashboardPoster
 };
 
 export default assets;

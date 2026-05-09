@@ -18,25 +18,25 @@ export async function getProkeralaToken() {
   }
 
   console.log('🔄 Fetching new Prokerala token...');
-  
+
   try {
     const body = qs.stringify({
       grant_type: 'client_credentials',
-      client_id: process.env.PROKERALA_CLIENT_ID,
-      client_secret: process.env.PROKERALA_CLIENT_SECRET
+      client_id: process.env.PRODUCTION_PROKERALA_CLIENT_ID,
+      client_secret: process.env.PRODUCTION_PROKERALA_CLIENT_SECRET
     });
 
     const res = await axios.post(
       'https://api.prokerala.com/token',
       body,
-      { 
+      {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 10000 // 10 second timeout
       }
     );
 
     console.log('✅ Token received:', res.data?.access_token?.substring(0, 20) + '...');
-    
+
     const { access_token, expires_in } = res.data;
 
     if (isProd) {
