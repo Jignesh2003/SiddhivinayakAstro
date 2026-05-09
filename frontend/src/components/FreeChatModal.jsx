@@ -13,6 +13,8 @@ const FreeChatModal = ({ isOpen, onClose }) => {
   const [timeLeft, setTimeLeft] = useState(60);
   const [isFinished, setIsFinished] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [timeIsUp, setTimeIsUp] = useState(false);
+  const [concludingSent, setConcludingSent] = useState(false);
   const messagesEndRef = useRef(null);
 
   const navigate = useNavigate();
@@ -31,17 +33,25 @@ const FreeChatModal = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (!isOpen) return;
 
-    if (timeLeft > 0 && !isFinished) {
+    if (timeLeft > 0 && !timeIsUp) {
       const timer = setInterval(() => {
         setTimeLeft((prev) => prev - 1);
       }, 1000);
       return () => clearInterval(timer);
-    } else if (timeLeft === 0 && !isFinished) {
-      handleTimeUp();
+    } else if (timeLeft === 0 && !timeIsUp) {
+      setTimeIsUp(true);
     }
-  }, [isOpen, timeLeft, isFinished]);
+  }, [isOpen, timeLeft, timeIsUp]);
 
-  const handleTimeUp = async () => {
+  // Concluding message logic
+  useEffect(() => {
+    if (timeIsUp && !isTyping && !concludingSent) {
+      sendConcludingMessage();
+    }
+  }, [timeIsUp, isTyping, concludingSent]);
+
+  const sendConcludingMessage = async () => {
+    setConcludingSent(true);
     setIsFinished(true);
     setMessages((prev) => [
       ...prev,
@@ -72,7 +82,7 @@ const FreeChatModal = ({ isOpen, onClose }) => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!input.trim() || isFinished) return;
+    if (!input.trim() || timeIsUp || isFinished) return;
 
     const userText = input.trim();
     const userMessage = { id: Date.now(), text: userText, sender: "user" };
@@ -94,7 +104,7 @@ const FreeChatModal = ({ isOpen, onClose }) => {
 
       const aiResponseText = response.data?.reply;
 
-      if (aiResponseText && timeLeft > 0) {
+      if (aiResponseText) {
         setMessages((prev) => [
           ...prev,
           {
@@ -184,13 +194,13 @@ const FreeChatModal = ({ isOpen, onClose }) => {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your message..."
+                placeholder={timeIsUp ? "Time is up..." : "Type your message..."}
                 className="flex-1 bg-gray-100 text-gray-800 border-0 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
-                disabled={isFinished}
+                disabled={timeIsUp || isFinished}
               />
               <button
                 type="submit"
-                disabled={!input.trim() || isFinished}
+                disabled={!input.trim() || timeIsUp || isFinished}
                 className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-3 rounded-xl transition flex items-center justify-center"
               >
                 <Send size={20} />
