@@ -22,7 +22,8 @@ const OAuthSuccess = () => {
                 token,
                 decoded.role,          // extract from JWT
                 decoded.isVerified,    // extract from JWT if present
-                decoded.id             // userId
+                decoded.id,            // userId
+                decoded.hasUsedFreeTrial || false
             );
 
             // redirect user depending on terms & role

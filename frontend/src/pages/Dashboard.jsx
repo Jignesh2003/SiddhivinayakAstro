@@ -19,6 +19,7 @@ import { toast } from "react-toastify";
 import useAuthStore from "../store/useAuthStore";
 import useWishlistStore from "../store/useWishlistStore";
 import GoToTopButton from "@/components/ui/GoToTopButton";
+import FreeChatModal from "../components/FreeChatModal";
 
 const Home = () => {
   const [products, setProducts] = useState([]);
@@ -35,8 +36,10 @@ const Home = () => {
   const [showTopBtn, setShowTopBtn] = useState(false);
 
   const navigate = useNavigate();
-  const { logout, userId, isAuthenticated } = useAuthStore();
+  const { logout, userId, isAuthenticated, hasUsedFreeTrial } = useAuthStore();
   const { addToWishlist, removeFromWishlist, wishlist } = useWishlistStore();
+
+  const [showFreeChatModal, setShowFreeChatModal] = useState(false);
 
   const zodiacImages = [
     assets.Aquarius,
@@ -252,7 +255,7 @@ const Home = () => {
     }
   };
 
-const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5];
+  const posters = [assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5];
   return (
     <div className="bg-gradient-to-b from-black via-black to-indigo-900 text-white min-h-screen flex flex-col font-poppins">
       {/* Logo */}
@@ -434,10 +437,9 @@ const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5
                 <div
                   key={p._id}
                   className={`relative rounded shadow-xs transition hover:shadow-lg flex flex-col bg-gray-800/90 border border-gray-700 text-white
-                    ${
-                      isOutOfStock
-                        ? "opacity-60 pointer-events-none grayscale"
-                        : "hover:scale-[1.02]"
+                    ${isOutOfStock
+                      ? "opacity-60 pointer-events-none grayscale"
+                      : "hover:scale-[1.02]"
                     }
                   `}
                   style={{
@@ -448,11 +450,10 @@ const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5
                     <img
                       src={p?.image?.[0]}
                       alt={p.name}
-                      className={`w-full h-full object-cover transition-transform duration-300 ${
-                        isOutOfStock
-                          ? "grayscale pointer-events-none"
-                          : "hover:scale-105"
-                      }`}
+                      className={`w-full h-full object-cover transition-transform duration-300 ${isOutOfStock
+                        ? "grayscale pointer-events-none"
+                        : "hover:scale-105"
+                        }`}
                       onClick={() =>
                         !isOutOfStock && navigate(`/single-product/${p._id}`)
                       }
@@ -512,11 +513,10 @@ const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5
                     {!isOutOfStock && stock < 10 && (
                       <div
                         className={`inline-block text-xs font-bold px-1.5 py-1 rounded-full shadow mt-1 mb-1
-                        ${
-                          stock < 5
+                        ${stock < 5
                             ? "bg-red-100 text-red-700"
                             : "bg-yellow-50 text-yellow-800"
-                        }`}
+                          }`}
                       >
                         {stock < 5 ? "Only few left!" : "Limited stock"}
                       </div>
@@ -738,6 +738,7 @@ const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5
           ))}
         </Swiper>
       </section>
+
       {/* Testimonials */}
       <section className="py-12 px-4 sm:px-6 bg-black/80 text-center text-white max-w-screen-xl mx-auto">
         <h2 className="text-xl sm:text-2xl font-semibold mb-4">Testimonials</h2>
@@ -746,19 +747,40 @@ const posters = [ assets.Poster2, assets.Poster3, assets.Poster4, assets.Poster5
           service.”
         </p>
         <p className="font-medium mb-6">— SV ASTRO PRIVATE LIMITED</p>
-        <button
-          onClick={() => navigate("/astro-list")}
-          className="text-sm sm:text-base bg-gradient-to-r from-yellow-500 to-yellow-700 text-black hover:from-yellow-600 hover:to-yellow-800 py-1 sm:py-2 px-4 sm:px-6 shadow rounded"
-        >
-          Chat with Astrologer
-        </button>
+
+        {!hasUsedFreeTrial && (
+          <p className="text-sm text-yellow-400 mb-4 font-semibold animate-pulse">
+            ✨ First-time users get a 1-minute FREE chat with our AI Astrologer! ✨
+          </p>
+        )}
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          {!hasUsedFreeTrial && (
+            <button
+              onClick={() => {
+                if (!isAuthenticated) {
+                  toast.error("Please login to use your free chat!");
+                  navigate("/login");
+                  return;
+                }
+                setShowFreeChatModal(true);
+              }}
+              className="text-sm sm:text-base bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 py-2 sm:py-3 px-6 sm:px-8 shadow-lg rounded-full font-bold transition transform hover:scale-105"
+            >
+              Chat for Free
+            </button>
+          )}
+          <button
+            onClick={() => navigate("/astro-list")}
+            className="text-sm sm:text-base bg-gradient-to-r from-yellow-500 to-yellow-700 text-black hover:from-yellow-600 hover:to-yellow-800 py-2 sm:py-3 px-6 sm:px-8 shadow rounded-full font-bold transition"
+          >
+            Chat with Astrologer
+          </button>
+        </div>
       </section>
-<GoToTopButton/>
-      {/* Footer */}
-      <footer className="bg-black text-gray-400 text-center py-4 mt-auto select-none text-sm">
-        © {new Date().getFullYear()} SV ASTRO PRIVATE LIMITED. All rights
-        reserved.
-      </footer>
+
+      <FreeChatModal isOpen={showFreeChatModal} onClose={() => setShowFreeChatModal(false)} />
+      <GoToTopButton />
     </div>
   );
 };

@@ -50,8 +50,8 @@ const Navbar = () => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (response.status === 200) {
-          const { role, isVerified, userId } = response.data;
-          login(token, role, isVerified, userId);
+          const { role, isVerified, userId, hasUsedFreeTrial } = response.data;
+          login(token, role, isVerified, userId, hasUsedFreeTrial);
         }
       } catch (error) {
         console.error("Auth check failed:", error.response?.data || error.message);

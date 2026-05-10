@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import sendEmail from "../utils/sendEmail.js"; // Renamed for clarity
 import crypto from "crypto";
 import Product from "../models/Product.js";
-import { signupValidation ,loginSchema} from "../validation/userValidation.js";
+import { signupValidation, loginSchema } from "../validation/userValidation.js";
 import PostgresDb from '../config/postgresDb.js'
 
 //  Signup Controller
@@ -119,7 +119,7 @@ export const loginUser = async (req, res) => {
 
     return res
       .status(200)
-      .json({ message: "Token sent!", token, role: user.role, isVerified: user.isVerified, userId: user._id });
+      .json({ message: "Token sent!", token, role: user.role, isVerified: user.isVerified, userId: user._id, hasUsedFreeTrial: user.hasUsedFreeTrial });
   } catch (error) {
     console.error("Login Error:", error);
     return res.status(500).json({ message: "Internal server error" });
@@ -127,39 +127,39 @@ export const loginUser = async (req, res) => {
 };
 
 // ✅ Forgot Password - Generate Reset Token & Send Email
-  export const forgotPassword = async (req, res) => {
-    try {
-  const {email} = req.body
-      // ✅ Check if user exists
-      console.log(email);
-      
-      const user = await User.findOne({ email });
-      if (!user) {
-        return res.status(404).json({ message: "User not found!" });
-      }
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body
+    // ✅ Check if user exists
+    console.log(email);
 
-      // ✅ Generate Reset Token
-      const resetToken = crypto.randomBytes(32).toString("hex");
-      const hashedToken = await bcrypt.hash(resetToken, 10);
-
-      // ✅ Store Hashed Token in Database with Expiry
-      user.resetPasswordToken = hashedToken;
-      user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-      await user.save();
-
-      // ✅ Send Reset Email
-      const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
-            // const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
-
-      const message = `Click the link below to reset your password. This link is valid for 10 minutes.\n\n${resetUrl}`;
-
-      await sendEmail(email, "Password Reset Request", message);
-
-      res.status(200).json({ message: "Password reset email sent!", email });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found!" });
     }
-  };
+
+    // ✅ Generate Reset Token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = await bcrypt.hash(resetToken, 10);
+
+    // ✅ Store Hashed Token in Database with Expiry
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    await user.save();
+
+    // ✅ Send Reset Email
+    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+    // const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+
+    const message = `Click the link below to reset your password. This link is valid for 10 minutes.\n\n${resetUrl}`;
+
+    await sendEmail(email, "Password Reset Request", message);
+
+    res.status(200).json({ message: "Password reset email sent!", email });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 export const resetPassword = async (req, res) => {
   try {
@@ -196,31 +196,46 @@ export const resetPassword = async (req, res) => {
   }
 };
 //checking authorization in navbar of fe
-export const checkingAuth = (req, res) => {
-  res.status(200).json({ message: "Authenticated", user: req.user });
+export const checkingAuth = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json({ 
+      message: "Authenticated", 
+      role: user.role,
+      isVerified: user.isVerified,
+      userId: user._id,
+      hasUsedFreeTrial: user.hasUsedFreeTrial
+    });
+  } catch (error) {
+    console.error("checkingAuth error:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
 };
 
 //Add review and rating 
-export const addReviewProduct = async (req,res)=>{
-    try {
-//  const { error, value } = addReviewSchema.validate(req.body);
-//   if (error) return res.status(400).json({ message: error.details[0].message });
+export const addReviewProduct = async (req, res) => {
+  try {
+    //  const { error, value } = addReviewSchema.validate(req.body);
+    //   if (error) return res.status(400).json({ message: error.details[0].message });
     const userId = req.user.id;
-    const {productId} = req.params;
-  const { text, rating, media } = req.body; 
+    const { productId } = req.params;
+    const { text, rating, media } = req.body;
 
-  console.log(productId);
-  
-   
-  if (!userId || !text || !rating) {
-    return res.status(400).json({ message: "User ID, text, and rating are required." });
-  }
-  console.log(text, rating, media);
+    console.log(productId);
 
-  // Validate rating range
-  if (rating < 1 || rating > 5) {
-    return res.status(400).json({ message: "Rating must be between 1 and 5." });
-  }
+
+    if (!userId || !text || !rating) {
+      return res.status(400).json({ message: "User ID, text, and rating are required." });
+    }
+    console.log(text, rating, media);
+
+    // Validate rating range
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ message: "Rating must be between 1 and 5." });
+    }
 
     const product = await Product.findById(productId);
     if (!product) {
@@ -241,7 +256,7 @@ export const addReviewProduct = async (req,res)=>{
     res.status(201).json({ message: "Review added", review: newReview });
   } catch (error) {
     console.log(error);
-    
+
     res.status(500).json({ message: "Error adding review", error });
   }
 }
@@ -489,7 +504,7 @@ export const getPendingKycAstrologers = async (req, res) => {
 export const verifyAstrologerKyc = async (req, res) => {
   const userId = req.user.id
   try {
-   const caller = await User.findById(userId).select("_id role");
+    const caller = await User.findById(userId).select("_id role");
     if (!caller) {
       return res.status(401).json({ message: "Invalid user token" });
     }
@@ -550,5 +565,27 @@ export const acceptTmc = async (req, res) => {
   } catch (error) {
     console.error("Error in acceptTmc:", error);
     return res.status(500).json({ message: "Internal Server Error in acceptTmc!" });
+  }
+};
+
+export const useFreeTrial = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(400).json({ message: "Invalid user data!" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found!" });
+    }
+
+    user.hasUsedFreeTrial = true;
+    await user.save();
+
+    return res.status(200).json({ message: "Free trial marked as used", hasUsedFreeTrial: true });
+  } catch (error) {
+    console.error("Error in useFreeTrial:", error);
+    return res.status(500).json({ message: "Internal Server Error in useFreeTrial!" });
   }
 };

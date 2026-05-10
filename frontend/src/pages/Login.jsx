@@ -28,13 +28,13 @@ const Login = () => {
       );
 
       if (response.status === 200) {
-        const { token, role, isVerified, userId } = response.data;
+        const { token, role, isVerified, userId, hasUsedFreeTrial } = response.data;
         if (!userId) {
           console.error("⚠️ Backend did not return userId!");
           return;
         }
 
-      await  useAuthStore.getState().login(token, role, isVerified, userId);
+      await  useAuthStore.getState().login(token, role, isVerified, userId, hasUsedFreeTrial);
         toast.success("Login successful!", { position: "top-right" });
 
         if (role === "admin") {
